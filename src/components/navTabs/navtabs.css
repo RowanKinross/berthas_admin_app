@@ -37,13 +37,3 @@
   display: flex;
   flex-direction: column;
 }
-.loginButton {
-  background-color: var(--bertha);
-  color: var(--dark);
-  border: solid 2px var(--dark);
-  text-decoration: solid;
-  font-weight: 500;
-}
-.loginButton.active {
-  background-color: var(--bertha);
-}

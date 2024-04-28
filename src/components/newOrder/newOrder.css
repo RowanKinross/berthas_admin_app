@@ -1,0 +1,15 @@
+.newOrder {
+  text-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.today {
+  font-size: large;
+}
+.newOrderForm {
+  border: solid 1px var(--dark);
+  width: 60%;
+  background-color: var(--bertha);
+  padding: 20px;
+}

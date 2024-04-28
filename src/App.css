@@ -26,6 +26,17 @@
   width: 100%;
 }
 .navContent{
-  padding: 1%;
+  padding: 10px;
   background-color: var(--pale);
+}
+
+.button {
+  background-color: var(--bertha);
+  border: solid 1px var(--dark);
+  color: var(--dark);
+  text-decoration: solid;
+  font-weight: 500;
+}
+.button.active {
+  background-color: var(--bertha);
 }

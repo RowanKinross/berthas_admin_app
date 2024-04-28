@@ -68,12 +68,12 @@ function NavTabs() {
       {userRole ? (
         <div className="loginContainer">
           <p className='loggedInStatement '>Bertha's {userRole}</p>
-          <Button className='loginButton' variant="outline-warning" onClick={() => { setUser(null); }}>Logout</Button>
+          <Button className='button' variant="outline-warning" onClick={() => { setUser(null); }}>Logout</Button>
         </div>
       ) : (
         <>
         <Dropdown className='loginContainer' show={dropdownOpen} onToggle={(isOpen) => setDropdownOpen(isOpen)}>
-          <Dropdown.Toggle className='loginButton' variant="outline-warning" id="dropdown-basic">
+          <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
             Login
           </Dropdown.Toggle>
           <Dropdown.Menu>
