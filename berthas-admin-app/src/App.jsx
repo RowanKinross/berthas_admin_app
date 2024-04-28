@@ -15,24 +15,25 @@ function App() {
 
 return (
   <>
-    <div>
-      <header>
+      <Router>
+      <header className='header'>
         <img src={logo} className="logo berthasLogo" alt="Bertha's Logo" />
-        <h1>Bertha's Frozen Pizza</h1>
-        <Router>
           <NavTabs />
+      </header>
+      <div className='body'>
+        <div className='navContent'>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="newOrder" element={<NewOrder />} />
             <Route path="orderHistory" element={<OrderHistory />} />
             <Route path="orders" element={<Orders />} />
             <Route path="inventory" element={<Inventory />} />
-            <Route path="demandSummary/*" element={<DemandSummary />} />
+            <Route path="demandSummary" element={<DemandSummary />} />
           </Routes>
-        </Router>
-    </header>
+        </div>
+      </div>
+      </Router>
       {/* <Footer/> */}
-    </div>
   </>
   )
 }

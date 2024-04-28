@@ -1,0 +1,49 @@
+/* nav bar styling */
+.navBarContainer {
+  width: 100%;
+  padding: 10px;
+  padding-bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: end;
+}
+.navTab {
+  font-size: large;
+}
+.nav-link {
+  padding: 5px 20px 0 20px;
+  color: var(--pale);
+  margin: 0;
+}
+.nav-link.active {
+  border: solid 2px var(--pale);
+  color: var(--dark);
+  background-color: var(--pale);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+
+
+/* login styling */
+.loggedInStatement {
+  color: var(--pale);
+  font-size: small;
+  font-style: italic;
+  margin-bottom: 2px;
+}
+.loginContainer {
+  display: flex;
+  flex-direction: column;
+}
+.loginButton {
+  background-color: var(--bertha);
+  color: var(--dark);
+  border: solid 2px var(--dark);
+  text-decoration: solid;
+  font-weight: 500;
+}
+.loginButton.active {
+  background-color: var(--bertha);
+}
