@@ -6,7 +6,7 @@ import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import dayjs from 'dayjs';
 
-function  NewOrder() {
+function  NewOrder({customerName}) {
   const today = dayjs().format('DD-MMM-YYYY');
     function getNextWeekMonday() {
     const nextMonday = dayjs().subtract(1, 'day').add(1, 'week').startOf('week');
@@ -57,7 +57,7 @@ function  NewOrder() {
 
       <Form noValidate validated={validated} onSubmit={handleSubmit} className='newOrderForm'>
 
-        <h4 className='orderFormFor'>Customer Name: Bertha's Pizza </h4> 
+        <h4 className='orderFormFor'>Customer Name: {customerName} </h4> 
         <p className='today'>{today}</p>
         <p>Account ID: #BERTHA001 </p>
         <p>Address: Bertha's Pizza, The Old Gaol Stables, Cumberland Rd, Bristol BS1 6WW </p>

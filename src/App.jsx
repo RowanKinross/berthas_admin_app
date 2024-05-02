@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 //import { useState } from 'react'
 import logo from './bertha_logo.png'
@@ -12,19 +13,20 @@ import DemandSummary from './components/demandSummary/demandSummary'
 // import Footer from './components/Footer'
 
 function App() {
+  const [customerName, setCustomerName] = useState(null);
 
 return (
   <>
       <Router>
       <header className='header'>
         <img src={logo} className="logo berthasLogo" alt="Bertha's Logo" />
-          <NavTabs />
+          <NavTabs customerName={customerName} setCustomerName={setCustomerName}/>
       </header>
       <div className='body'>
         <div className='navContent'>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="newOrder" element={<NewOrder />} />
+            <Route path="newOrder" element={<NewOrder customerName={customerName}/>} />
             <Route path="orderHistory" element={<OrderHistory />} />
             <Route path="orders" element={<Orders />} />
             <Route path="inventory" element={<Inventory />} />
