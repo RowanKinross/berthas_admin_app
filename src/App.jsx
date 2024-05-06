@@ -10,10 +10,14 @@ import OrderHistory from './components/orderHistory/OrderHistory'
 import Orders from './components/orders/Orders'
 import Inventory from './components/inventory/Inventory'
 import DemandSummary from './components/demandSummary/demandSummary'
-// import Footer from './components/Footer'
 
+  
 function App() {
   const [customerName, setCustomerName] = useState(null);
+
+
+
+
 
 return (
   <>
