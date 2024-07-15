@@ -1,0 +1,13 @@
+.ordersList {
+  display: flex;
+  flex-direction: column;
+}
+
+.orderButton {
+  display: flex;
+  justify-content: space-between;
+}
+.orderButton.complete {
+  background-color: var(--Marg);
+  color: white;
+}

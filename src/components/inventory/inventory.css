@@ -1,0 +1,125 @@
+/* All inventory displayed flex */
+  .inventoryContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+  }
+
+
+/* individual pizza squares */
+  .pizzas {
+    display: flex;
+    flex-direction: column;
+    width: 500px;
+    height: 500px;
+    margin: 1%;
+    background-size: contain;
+    background-repeat: no-repeat;
+  }
+  .pizzaContent {
+    display: flex;
+    flex-direction: column;
+    padding: 5px;
+    margin: 5px;
+  }
+  .pizzaH4 {
+    color: var(--pale);
+    margin: auto;
+    padding: 5%;
+    font-weight:bold;
+  }
+  #pizzasMEA_A1 {
+    background-image: url(./Frozen-Characters-Website-1-copy.webp);
+  }
+  #pizzasMAR_A1 {
+    background-image: url(./Frozen-Characters-Website-2-copy.webp);
+  }
+  #pizzasHAM_A1 {
+    background-image: url(./Frozen-Characters-Website-3-copy.webp);
+  }
+  #pizzasNAP_A1 {
+    background-image: url(./Frozen-Characters-Website-4-copy.webp);
+  }
+  #pizzasROS_B1 {
+    background-image: url(./pizza_rossa_img.jpg);
+  }
+
+
+
+/* add pizza '+' square */
+  .addPizza {
+    background-color: var(--light);
+    font-size: xx-large;
+    align-items: center;
+    justify-content: center;
+    border: dotted 1px var(--darkLight);
+  }
+  .plus{
+    border-radius: 10px;
+    font-weight: bolder;
+  }
+
+
+
+/* new pizza form */
+  .modal {
+    padding: 20%;
+  }
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+  }
+  .inputBox {
+    font-size: small;
+    margin-bottom: 3px !important;
+  }
+  .addIngredient {
+    margin-bottom: 13px;
+  }
+  .ingredientList {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--darkLight);
+    margin: 0 30px 20px 30px;
+    font-style: italic;
+  }
+  .sleeve {
+    display: flex;
+    justify-content: center;
+  }
+
+
+
+/* inventory display */
+  .pizzaTotals {
+    display: flex;
+    flex-direction: column;
+    align-items: end;
+  }
+  .inventoryBox {
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-evenly;
+    color: var(--dark);
+    border: dashed 1px var(--dark);
+  }
+  #totals {
+    border: none;
+    font-weight: bold
+  }
+
+
+/* ingredients list */
+.listContainer {
+  display: flex;
+  justify-content: center;
+}
+.list {
+  text-align: start;
+}
+.ingredientDropdown {
+  max-height: 300px; 
+  overflow-y: auto; 
+}

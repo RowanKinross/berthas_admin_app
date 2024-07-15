@@ -1,0 +1,43 @@
+/* account.css */
+.account {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.account h2 {
+  text-align: center;
+  color: #333;
+  font-family: Arial, sans-serif;
+  margin-bottom: 20px;
+}
+
+.entries {
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  color: #555;
+}
+
+.entries label {
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+  width: 120px;
+}
+
+.editButton {
+  color: var(--dark);
+  cursor: pointer !important;
+  margin-left: auto;
+}
+
+.icon:hover {
+  color: var(--berthas);
+}

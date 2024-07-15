@@ -1,0 +1,34 @@
+.batchDiv {
+  background-color: var(--bertha);
+  display: flex;
+  justify-content: space-between;
+  margin: 2px;
+}
+.batchText {
+  text-align: left;
+  font-weight: bold;
+  width: 100%;
+  border: 0;
+}
+.editForm {
+  border: 1px solid var(--dark);
+  margin: 5px;
+  padding: 5px;
+  text-align: start;
+}
+.input {
+  width: 100%;
+}
+.inputNumber{
+  width: 50px;
+}
+.draft {
+  background-color: var(--grey);
+}
+.batchHeader {
+  padding: 30px 85px 0 10px;
+  background-color: var(--pale);
+}
+.total {
+  padding: 10px 0 0 10px;
+}

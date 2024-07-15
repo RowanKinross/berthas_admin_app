@@ -1,55 +1,188 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate} from 'react-router-dom';
 import './navtabs.css';
-import { Dropdown, Modal, Button } from 'react-bootstrap';
-import { render } from 'react-dom';
-import NewOrder from '../newOrder/NewOrder';
+import { app, db } from '../firebase/firebase';
+import { collection, getDocs, addDoc } from '@firebase/firestore';
+import { Dropdown, Button, Form } from 'react-bootstrap';;
 
-function NavTabs({ customerName, setCustomerName }) {
+
+function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [userRole, setUserRole] = useState(null); // Initially set to null (no user)
   const [dropdownOpen, setDropdownOpen] = useState(false); // dropdown menu visibility (staff or customer?)
-  const [showModal, setShowModal] = useState(false); // modal menu visibility (customer select or new customer)
-  
-  const customers = ["Bertha's Pizza", "Touts", "Five Acre Farm"]
+  const [modalVisible, setModalVisible] = useState(false); // modal menu visibility (customer select or new customer)
+  const [customersArr, setCustomersArr] = useState([]);
+  const [customersData, setCustomersData] = useState([]);
+  const [addCustomer, setAddCustomer] = useState(false); // set add customer to true to view the new customer form
 
+  // form values
+  const [name, setName] = useState("");
+  const [nameNumber, setNameNumber] = useState("")
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [currentRegion, setCurrentRegion] = useState("")
 
-  // Function to set the user role
-  const setUser = (role) => {
-    setUserRole(role === userRole ? null : role); // if role is equal to the user role, set it to null (to toggle login and logout)
-    setDropdownOpen(false)
-    if (!role) {
-      window.location.href = '/'; // Navigate to the home route after logout
+  const [deliveryRegions, setDeliveryRegions] = useState([])
+  const [addDeliveryRegion, setAddDeliveryRegion] = useState(false)
+  const [addRegion, setAddRegion] = useState(false)
+
+  const toggleAddRegion = () => {
+    setAddRegion(!addRegion);
+};
+
+  const handleAddRegion = async (event) => {
+    if (addDeliveryRegion) {
+      event.preventDefault(); // Prevent the default form submission
+      toggleAddRegion(); // Toggles the input box back to the button
+      const region = event.target.value;
+      setCurrentRegion(region);
+      try {
+        const docRef = await addDoc(collection(db, "regions"), {
+          name: region
+        });
+        console.log("Document written with ID: ", docRef.id);
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
     }
-  };
+  }
+  
 
-  const handleUserSelection = (selectedUser) => {
-    setCustomerName(selectedUser); // Set the selected customer's name
-    setUserRole('customer'); // Set the user role to 'customer'
-    setShowModal(false); // Close the modal
-
+  let navigate = useNavigate()
+  
+  // handle inputs changing function
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    switch (name) {
+        case "name":
+            setName(value);
+            break;
+        case "nameNumber":
+            setNameNumber(value.toUpperCase());
+            break;
+        case "street":
+            setStreet(value);
+            break;
+        case "city":
+            setCity(value);
+            break;
+        case "postcode":
+            setPostcode(value);
+            break;
+        case "email":
+            setEmail(value);
+            break;
+        case "phoneNumber":
+            setPhoneNumber(value);
+            break;
+        case "deliveryRegion":
+            setAddDeliveryRegion(true)
+            setCurrentRegion(value);
+            break;
+        default:
+            break;
+    }
   }
 
 
+  
+  // function to get the customer data from firebase
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "customers"));
+        const customersData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setCustomersData(customersData)
+      } catch (error) {
+        console.error("Error fetching customers:", error);
+      }
+    };
+    fetchCustomers();
+  }, []);
 
 
+  
+  const generateAccountID = (name, nameNumber) => {
+    if (!name) {
+        throw new Error("name is required to generate an account ID");
+    }
+    
+    const upperCaseName = name.toUpperCase().trim();
+    const truncatedName = upperCaseName.length > 6 ? upperCaseName.slice(0, 6) : upperCaseName;
+    const cleanTruncatedName = truncatedName.replace(/[^\w]/g, '');
+    const timestamp = Date.now().toString().slice(0, 4);
+    const cleanNameNumber = nameNumber.replace(/[^\w]/g, '');
+    const accountID = `#${cleanTruncatedName}${cleanNameNumber}${timestamp}`;
+    return accountID;
+}
+  
+  
+  //function to add customer data to firebase
+  const handleAddNewCustomer = async () => {
+    try {
+      const newAccountID = generateAccountID(name, nameNumber);
+      setAccountID(newAccountID);
+      setCustomerName(name);
+      handleAddRegion()
+
+
+      const docRef = await addDoc(collection(db, "customers"), {
+        account_ID: newAccountID,
+        customer: name,
+        name_number: nameNumber,
+        street: street,
+        city: city,
+        postcode: postcode,
+        email: email,
+        phone_number: phoneNumber,
+        delivery_region: currentRegion
+      });
+      
+      console.log("Document written with ID: ", docRef.id);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
+  }
+  
+  const handleLogOut = () => {
+    setUserRole(null); 
+    setCustomerName(null);
+    setAccountID(null)
+
+    localStorage.removeItem('customerName');
+    localStorage.removeItem('accountID');
+    localStorage.removeItem('userRole');
+
+    navigate("/");
+  }
+  
   // Render navigation tabs based on user role
   const renderNavTabs = () => {
-    if (userRole === "Bertha's staff") {
+    if (userRole === "staff") {
       return (
         <>
           <NavLink to="/" />
           <NavLink to="/orders" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h2 className="navTab">Orders</h2>
+            <h3 className="navTab">ORDERS</h3>
           </NavLink>
           <NavLink to="/inventory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h2 className="navTab">Inventory</h2>
+            <h3 className="navTab">INVENTORY</h3>
           </NavLink>
           <NavLink to="/demandSummary" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h2 className="navTab">Demand Summary</h2>
+            <h3 className="navTab">DEMAND SUMMARY</h3>
           </NavLink>
+          <NavLink to="/batchCodes" className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'}>
+            <h3 className="navTab">BATCH CODES</h3>
+          </NavLink>          
         </>
       );
     } else if (userRole === "customer") {
@@ -58,32 +191,87 @@ function NavTabs({ customerName, setCustomerName }) {
           <NavLink to="/" />
           <NavLink to="/newOrder" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h2 className="navTab">New Order</h2>
+            <h3 className="navTab">NEW ORDER</h3>
           </NavLink>
           <NavLink to="/orderHistory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h2 className="navTab">Order History</h2>
+            <h3 className="navTab">ORDER HISTORY</h3>
+          </NavLink>
+          <NavLink to="/account" className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'}>
+            <h3 className="navTab">ACCOUNT INFO</h3>
           </NavLink>
         </>
       );
     } else {
       // If user role is not set or unknown, only render the Home tab
       return (
-        <NavLink to="/" />
+          <NavLink to="/"/>
       );
     }
   };
 
+
+// Load user info from localStorage
+useEffect(() => {
+  const storedUserRole = localStorage.getItem('userRole');
+  const storedCustomerName = localStorage.getItem('customerName');
+  const storedAccountID = localStorage.getItem('accountID');
+  if (storedUserRole) setUserRole(storedUserRole);
+  if (storedCustomerName) setCustomerName(storedCustomerName);
+  if (storedAccountID) setAccountID(storedAccountID);
+}, []);
+
+// Update localStorage when userRole or customerName changes
+useEffect(() => {
+  if (userRole) {
+    localStorage.setItem('userRole', userRole);
+  } else {
+    localStorage.removeItem('userRole');
+  }
+  if (customerName) {
+    localStorage.setItem('customerName', customerName);
+  } else {
+    localStorage.removeItem('customerName');
+  }
+  if (accountID) {
+    localStorage.setItem('accountID', accountID);
+  } else {
+    localStorage.removeItem('accountID');
+  }
+}, [userRole, customerName, accountID]);
+
+// fetch delivery regions array
+useEffect(() => {
+  const fetchRegions = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "regions"));
+      const regionData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      const regions = regionData.map(region => region.name)
+      setDeliveryRegions(regions)
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    }
+  };
+  fetchRegions();
+}, []);
+
+
+
   return (
-  <div className="navBarContainer">
+    <div className="navBarContainer">
       {/* Render navigation tabs based on user role */}
       {renderNavTabs()}
       {/* Render dropdown */}
 
       {userRole ? (
         <div className="loginContainer">
-           <p className='loggedInStatement'>{userRole === "Bertha's staff" ? "Bertha's Staff" : customerName || userRole}</p>
-          <Button className='button' variant="outline-warning" onClick={() => { setUser(null); }}>Logout</Button>
+           <p className='loggedInStatement'>{userRole === "customer" ? customerName : userRole === "staff" ? "Bertha's Staff" : null}</p>
+           {/* if userRole is staff, set the login statement to 'Berha's Staff', if */}
+          <Button className='button' variant="outline-warning" onClick={() => {handleLogOut()}}>Logout</Button>
         </div>
         ) : (
         <>
@@ -92,32 +280,133 @@ function NavTabs({ customerName, setCustomerName }) {
             Login
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            <Dropdown.Item onClick={() => {setUserRole("customer"); setShowModal(true)}}> Customer Login </Dropdown.Item>
-            <Dropdown.Item onClick={() => setUserRole("Bertha's staff")}> Staff Login</Dropdown.Item>
+            <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item>
+            <Dropdown.Item onClick={() => setUserRole("staff")}> Staff Login</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
         </>
       )}
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Customer Login</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className='loginModal'>
-          <Dropdown>
+      {modalVisible && (
+        <div className='modal'>
+          <div className='modalContent'>
+            <button className='closeButton' onClick={() => {handleLogOut()}}>×</button>
+            <h3>Customer Login</h3>
+            <Dropdown>
             <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
               Select Customer
             </Dropdown.Toggle>
             <Dropdown.Menu>
-              {customers.map((customer, index) => (
-                <Dropdown.Item key={index} onClick={() => handleUserSelection(customer)}>
-                  {customer}
+              {customersData.length >0? ( customersData.map((customer, index) => (
+                <Dropdown.Item key={index} onClick={() => {setCustomerName(customer.customer); setAccountID(customer.account_ID); setModalVisible(false)}}>
+                  {customer.customer}
                 </Dropdown.Item>
-              ))}
+              ))) :(
+                <Dropdown.Item onClick={() => {setCustomerName(`customer`); setModalVisible(false)}}>
+                Customer List Loading...
+                </Dropdown.Item>
+              )}
+                <button className='button' onClick={() => {setAddCustomer(true); setModalVisible(false)}}>Add customer</button>
             </Dropdown.Menu>
           </Dropdown>
-        </Modal.Body>
-      </Modal>
+          </div>
+        </div>
+      )}
+
+      {addCustomer && (
+        <div className='modal'>
+        <div className='modalContent'>
+        <button className='closeButton' onClick={() => {setModalVisible(true); setAddCustomer(false)}}>×</button>
+        <Form.Group>
+          <Form.Label>
+            <h6>Name:</h6>
+          </Form.Label>
+          <Form.Control
+            type="text"
+            placeholder=""
+            name="name"
+            onChange={handleChange}
+          />
+
+          <Form.Label>
+            <h6>Address:</h6>
+          </Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Name/Number"
+            name="nameNumber"
+            onChange={handleChange}
+          />
+          <Form.Control
+            type="text"
+            placeholder="Street"
+            name="street"
+            onChange={handleChange}
+          />
+          <Form.Control
+            type="text"
+            placeholder="Town/City"
+            name="city"
+            onChange={handleChange}
+          />
+          <Form.Control
+            type="text"
+            placeholder="postcode"
+            name="postcode"
+            onChange={handleChange}
+          />
+        </Form.Group>
+        <Dropdown>
+            <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
+              {currentRegion?  currentRegion : "Select Region"}
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+              {deliveryRegions.length >0? ( deliveryRegions.map((region, index) => (
+                <Dropdown.Item key={index} onClick={() => {setCurrentRegion(region)}}>
+                  {region}
+                </Dropdown.Item>
+              ))) :(
+                <Dropdown.Item>
+                Region List Loading...
+                </Dropdown.Item>
+              )}
+              {addRegion ? (
+                <Form.Control
+                    type="text"
+                    placeholder="Name of Region"
+                    name="deliveryRegion"
+                    onChange={handleChange}
+                    onBlur={toggleAddRegion}
+                />
+                ) : (
+                <button type="button" className='button' onClick={toggleAddRegion}>
+                    Add Region
+                </button>
+                )}
+            </Dropdown.Menu>
+          </Dropdown>
+          <Form.Label>
+            <h6>Phone Number:</h6>
+          </Form.Label>
+          <Form.Control
+            type="text"
+            placeholder=""
+            name="phoneNumber"
+            onChange={handleChange}
+          />
+          <Form.Label>
+            <h6>Email:</h6>
+          </Form.Label>
+          <Form.Control
+            type="text"
+            placeholder=""
+            name="email"
+            onChange={handleChange}
+          />
+        <Button type="submit" className='button' onClick={() => {setAddCustomer(false); handleAddNewCustomer()}}>Submit</Button>
+        </div>
+        </div>
+      )}
 
   </div>
   );

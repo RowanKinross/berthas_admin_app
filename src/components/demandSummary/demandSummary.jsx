@@ -5,7 +5,7 @@ function DemandSummary() {
   return (
     <div className='demandSummary'>
       {/* <img src={berthasLogo} className="logo berthasLogo" alt="Bertha's Logo" /> */}
-      <h2>Demand Summary</h2>
+      <h2>DEMAND SUMMARY</h2>
     </div>
   )
 }

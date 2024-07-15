@@ -1,63 +1,135 @@
 import './newOrder.css'
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import dayjs from 'dayjs';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { app, db } from '../firebase/firebase';
+import { addDoc, getDocs, collection, serverTimestamp } from '@firebase/firestore';
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  databaseURL: import.meta.env.VITE_FIREBASE_DB_URL,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+
+
+function  NewOrder({customerName, accountID}) {
+
+const [pizzaQuantities, setPizzaQuantities] = useState({});
+const [totalPizzas, setTotalPizzas] = useState(0)
+const [additionalNotes, setAdditionalNotes] = useState("...");
+const [pizzaData, setPizzaData] = useState([]);
+const [filterCriteria, setFilterCriteria] = useState("withSleeve");
+const [customDeliveryWeek, setCustomDeliveryWeek] = useState("");
+const [customerData, setCustomerData] = useState("");
+const [customerAddress, setCustomerAddress] = useState("")
+
+const capitalizeWords = (str) => {
+  return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+};
+const handleFilterChange = (event) => {
+  setFilterCriteria(event.target.value);
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-// Initialize Cloud Firestore and get a reference to the service
-const db = getFirestore(app);
+// function to get the customer data from firebase
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "customers"));
+        const fetchedCustomerData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setCustomerData(fetchedCustomerData);
+     } catch (error) {
+       console.error("Error fetching customer data:", error);
+     }
+   };
+   fetchCustomers();
+  }, []);
 
 
+  useEffect(() => {
+    if (customerData) {
+      const customer = customerData.find(cust => cust.account_ID === accountID);
+      if (customer) {
+        setCustomerAddress(`${customer.name_number} ${customer.street}, ${customer.city}, ${customer.postcode}`);
+      } else {
+        setCustomerAddress("");
+      }
+    } else {
+      setCustomerAddress("");
+    }
+  }, [accountID, customerData]);
 
 
+// function to get the pizza data from firebase
+  useEffect(() => {
+   const fetchPizzas = async () => {
+     try {
+       const querySnapshot = await getDocs(collection(db, "pizzas"));
+       const fetchedPizzaData = querySnapshot.docs.map(doc => ({
+         id: doc.id,
+         ...doc.data()
+       }));
+       fetchedPizzaData.sort((a, b) => {
+        if (a.sleeve === b.sleeve) {
+          return a.id.localeCompare(b.id);
+        }
+        return a.sleeve ? -1 : 1;
+      });
+       setPizzaData(fetchedPizzaData);
+     } catch (error) {
+       console.error("Error fetching pizzas:", error);
+     }
+   };
+   fetchPizzas();
+  }, []);
 
-function  NewOrder({customerName}) {
-  const [pizzaQuantities, setPizzaQuantities] = useState({
-    Ham: 0,
-    MH: 0,
-    Marg: 0,
-    Nap: 0
-  });
-  
+  useEffect(() => {
+    // Initialize pizzaQuantities based on pizzaData
+    const initialQuantities = pizzaData.reduce((acc, pizza) => {
+      acc[pizza.id] = 0;
+      return acc;
+    }, {});
+    setPizzaQuantities(initialQuantities);
+  }, [pizzaData]);
+
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     if (name === "additionalNotes") {
       setAdditionalNotes(value);
     } else {
-    setPizzaQuantities(prevState => ({
-      ...prevState,
-      [name]: parseInt(value)
-    }));
+      setPizzaQuantities(prevState => {
+        const updatedQuantities = {
+          ...prevState,
+          [name]: parseInt(value, 10)
+        };
+        const total = Object.values(updatedQuantities).reduce((acc, curr) => acc + curr, 0);
+        setTotalPizzas(total);
+        return updatedQuantities;
+      });
+    }
   }
-  };
   
+  const filteredPizzaData = pizzaData.filter(pizza => {
+    if (filterCriteria === "withSleeve") {
+      return pizza.sleeve;
+    } else if (filterCriteria === "withoutSleeve") {
+      return !pizza.sleeve;
+    } else {
+      return true;
+    }
+  });
   
   // delivery dates
-  const today = dayjs().format('DD-MMM-YYYY');
+  const today = dayjs().format('DD-MM-YYYY');
     function getNextWeekMonday() {
     const nextMonday = dayjs().subtract(1, 'day').add(1, 'week').startOf('week');
-    return nextMonday.format('DD-MMM-YYYY');
+    return nextMonday.format('DD-MM-YYYY');
   }
   const nextWeek = getNextWeekMonday();
   function getNextNextWeekMonday() {
     const nextNextMonday = dayjs().subtract(1, 'day').add(2, 'week').startOf('week');
-    return nextNextMonday.format('DD-MMM-YYYY');
+    return nextNextMonday.format('DD-MM-YYYY');
   }
   const weekAfterNext = getNextNextWeekMonday();
   const [validated, setValidated] = useState(false);
@@ -74,8 +146,23 @@ function  NewOrder({customerName}) {
     }
   };
 
-   // State to store the selected delivery option
-  const [additionalNotes, setAdditionalNotes] = useState("...");
+
+const getWeekCommencingMonday = (date) => {
+  let resultDate = dayjs(date);
+  while (resultDate.day() !== 1) { // 1 is monday on day.js
+    resultDate = resultDate.subtract(1, 'day');
+  }
+  return resultDate;
+};
+const handleDateChange = (e) => {
+  const customDate = e.target.value;
+  const weekCommencingMonday = getWeekCommencingMonday(customDate);
+  const formattedDate = weekCommencingMonday.format('DD-MM-YYYY');
+  
+  setCustomDeliveryDate(customDate);
+  setCustomDeliveryWeek(formattedDate);
+  setError('');
+};
 
 
 
@@ -95,31 +182,24 @@ const handleSubmit = async (event) => {
   setValidated(true);
 //send to database
   try {
+    const pizzas = filteredPizzaData.reduce((acc, pizza) => {
+      acc[pizza.id] = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+      return acc;
+    }, {});
+
     const docRef = await addDoc(collection(db, "orders"), {
       timestamp: serverTimestamp(),
-      delivery_date: deliveryOption === 'other' ? ("custom:" + customDeliveryDate) : deliveryOption,
-      account_ID: "#BERTHAS001",
+      order_placed_timestamp: dayjs().format('YYYY-MM-DD, HH:mm'),
+      delivery_week: deliveryOption === 'other' ? (`${customDeliveryWeek}`) : deliveryOption,
+      delivery_day: "tbc",
+      account_ID: accountID,
       customer_name: customerName,
-      pizza_ham: pizzaQuantities.Ham >= 0 ? pizzaQuantities.Ham : 0,
-      pizza_MH: pizzaQuantities.MH >= 0 ? pizzaQuantities.MH : 0,
-      pizza_marg: pizzaQuantities.Marg >= 0 ? pizzaQuantities.Marg : 0,
-      pizza_nap: pizzaQuantities.Nap >= 0 ? pizzaQuantities.Nap : 0,
-      additional_notes: document.getElementById('additonalNotes').value
+      pizzas,
+      pizzaTotal: totalPizzas,
+      additional_notes: document.getElementById('additonalNotes').value,
+      order_status: "order placed",
+      complete: false
     });
-  
-
-  
-  //   // Clear the form fields after successful submission
-  //   setDeliveryOption("asap");
-  //   setCustomDeliveryDate("");
-  //   setPizzaQuantities({
-  //     ham: 0,
-  //     MH: 0,
-  //     marg: 0,
-  //     nap: 0
-  //   });
-  //   setValidated(false)
-  //   setAdditionalNotes("...");
     
     console.log("Document written with ID: ", docRef.id);
   } catch (e) {
@@ -141,20 +221,20 @@ return (
 
       <h4 className='orderFormFor'>Customer Name: {customerName} </h4> 
       <p className='today'>{today}</p>
-      <p>Account ID: #BERTHA001 </p>
-      <p>Address: Bertha's Pizza, The Old Gaol Stables, Cumberland Rd, Bristol BS1 6WW </p>
+      <p>Account ID: {accountID} </p>
+      <p>Address: {customerAddress} </p>
 
       <fieldset>
       <Form.Group as={Row} className="mb-3">
         <Form.Label as="legend" column sm={2}>
-          <h5> Delivery date:</h5>
+          <h5> Delivery Week:</h5>
         </Form.Label>
         <Col sm={10}>
           <Form.Check
             type="radio"
             label="asap"
             value="asap"
-            name="deliveryDate"
+            name="deliveryOption"
             id="asap"
             checked={deliveryOption === 'asap'}
             onChange={handleOptionChange}
@@ -162,106 +242,97 @@ return (
           <Form.Check
             type="radio"
             label={`next week (W/C ${nextWeek})`}
-            value="nextWeek"
-            name="deliveryDate"
+            value={nextWeek}
+            name="deliveryOption"
             id="nextWeek"
-            checked={deliveryOption === 'nextWeek'}
+            checked={deliveryOption === `${nextWeek}`}
             onChange={handleOptionChange}
           />
           <Form.Check
             type="radio"
             label={`week after next (W/C ${weekAfterNext})`}
-            value="weekAfterNext"
-            name="deliveryDate"
+            value={weekAfterNext}
+            name="deliveryOption"
             id="weekAfterNext"
-            checked={deliveryOption === 'weekAfterNext'}
+            checked={deliveryOption === `${weekAfterNext}`}
             onChange={handleOptionChange}
           />
             <Form.Check
             type="radio"
             label="other"
             value="other"
-            name="deliveryDate"
+            name="deliveryOption"
             id="other"
             checked={deliveryOption === 'other'}
             onChange={handleOptionChange}
           />
             {deliveryOption === 'other' && (
-          <Form.Control
-            type="text"
-            placeholder="Specify a date"
-            value={customDeliveryDate}
-            onChange={(e) => setCustomDeliveryDate(e.target.value)}
-          />
+            <Form.Group controlId="formDate">
+            <Form.Label>Specify a week:</Form.Label>
+              <Form.Control
+                type="date"
+                placeholder=''
+                value={customDeliveryDate}
+                onChange={handleDateChange}
+              />
+          </Form.Group>
         )}
         </Col>
       </Form.Group>
     </fieldset>
       <Form.Label><h5> Pizzas: </h5></Form.Label>
     <fieldset>
+    <Form.Group as={Row} className="mb-3">
 
-    <Form.Group as={Row} className="mb-3" id='MH'>
-      <Form.Label column sm={3}>
-        Meat and Heat
-      </Form.Label>
-      <Col sm={9}>
-        <Form.Control
-          type="number"
-          placeholder="0"
-          value={pizzaQuantities.MH}
-          name="MH"
-          onChange={handleChange}
-        />
-      </Col>
-    </Form.Group>
-    
-    <Form.Group as={Row} className="mb-3" id='Ham'>
-      <Form.Label column sm={3}>
-        Ham
-      </Form.Label>
-      <Col sm={9}>
-        <Form.Control
-          type="number"
-          placeholder="0"
-          value={pizzaQuantities.Ham}
-          name="Ham"
-          onChange={handleChange}
-        />
-      </Col>
-    </Form.Group>
-
-    <Form.Group as={Row} className="mb-3" id='Marg'>
-      <Form.Label column sm={3}>
-        Margherita
-      </Form.Label>
-      <Col sm={9}>
-        <Form.Control
-          type="number"
-          placeholder="0"
-          value={pizzaQuantities.Marg}
-          name="Marg"
-          onChange={handleChange}
-        />
-      </Col>
+        <Col sm={9}>
+          <Form.Check 
+            type="radio" 
+            label="With Sleeve" 
+            value="withSleeve" 
+            checked={filterCriteria === "withSleeve"} 
+            onChange={handleFilterChange} 
+            inline 
+          />
+          <Form.Check 
+            type="radio" 
+            label="Without Sleeve" 
+            value="withoutSleeve" 
+            checked={filterCriteria === "withoutSleeve"} 
+            onChange={handleFilterChange} 
+            inline 
+          />
+          <Form.Check 
+            type="radio" 
+            label="All Pizzas" 
+            value="all" 
+            checked={filterCriteria === "all"} 
+            onChange={handleFilterChange} 
+            inline 
+          />
+        </Col>
       </Form.Group>
 
-    <Form.Group as={Row} className="mb-3" id='Nap'>
-      <Form.Label column sm={3}>
-        Napoli
-      </Form.Label>
-      <Col sm={9}>
-        <Form.Control
-          type="number"
-          placeholder="0"
-          value={pizzaQuantities.Nap}
-          name="Nap"
-          onChange={handleChange}
-        />
-      </Col>
-    </Form.Group>
-    
+
+      {filteredPizzaData.map(pizza => (
+        <Form.Group as={Row} className="mb-3" key={pizza.id} id={pizza.id}>
+          <Form.Label column sm={3}>
+            {capitalizeWords(pizza.pizza_title)}  {/* Capitalizing each word in the pizza title */}
+          </Form.Label>
+          <Col sm={9}>
+            <Form.Control
+              type="number"
+              value={pizzaQuantities[pizza.id] !== undefined ? pizzaQuantities[pizza.id] : ""}
+              name={pizza.id}
+              onChange={handleChange}
+            />
+          </Col>
+        </Form.Group>
+      ))}
+      Total Pizzas: {totalPizzas}
       </fieldset>
-    
+
+
+      <fieldset>
       <Form.Group as={Row} className="mb-3" controlId="additonalNotes">
       <Form.Label column sm={3}>
       <h5> Additional Notes:</h5>
@@ -274,9 +345,10 @@ return (
         value={additionalNotes}
         name="additionalNotes"
         onChange={handleChange}
-      />
+        />
       </Col>
     </Form.Group>
+    </fieldset>
     
     <Form.Group className="mb-3">
       <Form.Check

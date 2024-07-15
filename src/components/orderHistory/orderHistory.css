@@ -1,0 +1,17 @@
+.orderHeaders {
+  padding: 20px;
+}
+.orderEntries {
+  width: 130px;
+  text-align: start;
+  padding: 2px;
+}
+
+.orderButton {
+  margin: 0;
+  padding: 0;
+}
+
+.orderHistoryModal {
+  text-align: left;
+}

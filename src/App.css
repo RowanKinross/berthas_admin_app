@@ -36,6 +36,7 @@
   color: var(--dark);
   text-decoration: solid;
   font-weight: 500;
+  border-radius: inherit;
 }
 .button.active {
   background-color: var(--bertha);
