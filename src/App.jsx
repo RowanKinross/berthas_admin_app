@@ -34,8 +34,7 @@ function App() {
 
   const handleAuth = (code) => {
     const correctCode = import.meta.env.VITE_REACT_APP_CORRECT_CODE;
-    
-    console.log(code)
+
     if (code === correctCode) {
       localStorage.setItem('isAuthenticated', 'true');
       setIsAuthenticated(true);

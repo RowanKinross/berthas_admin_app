@@ -18,7 +18,6 @@ function Auth({ showModal, handleAuth }) {
   };
 
   const handleSubmit = () => {
-    // e.preventDefault()
     const enteredCode = code.join('');
     handleAuth(enteredCode);
   };
