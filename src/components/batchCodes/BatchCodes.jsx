@@ -22,6 +22,9 @@ function BatchCodes() {
   const [showBatch, setShowBatch] = useState(false);
   const [currentBatch, setCurrentBatch] = useState(null);
   const [totalPizzas, setTotalPizzas] = useState(0);
+  const [selectedPizzas, setSelectedPizzas] = useState([]);
+  const [consolidatedIngredients, setConsolidatedIngredients] = useState([]);
+
 
 
   // display all batches
@@ -117,6 +120,100 @@ function BatchCodes() {
     const newTotal = updatedPizzas.reduce((sum, pizza) => sum + (parseInt(pizza.quantity) || 0), 0);
     setTotalPizzas(newTotal);
 
+  };
+
+  const handleQuantityChange = (e, pizzaId) => {
+    const { value } = e.target;
+    const updatedPizzas = pizzas.map(pizza => {
+      if (pizza.id === pizzaId) {
+        return { ...pizza, quantity: parseInt(value) || 0 };
+      }
+      return pizza;
+    });
+  
+    setPizzas(updatedPizzas);
+  
+    const newSelectedPizzas = updatedPizzas
+      .filter(pizza => pizza.quantity > 0)
+      .map(pizza => ({
+        ...pizza,
+        ingredientBatchCodes: pizza.ingredients.reduce((acc, ingredient) => {
+          if (!acc[ingredient]) {
+            acc[ingredient] = ""; // Initialize batch code if not set
+          }
+          return acc;
+        }, {})
+      }));
+  
+    setSelectedPizzas(newSelectedPizzas);
+    consolidateIngredients(newSelectedPizzas); // Consolidate ingredients
+  
+    // Update the total pizzas count
+    const newTotal = updatedPizzas.reduce((sum, pizza) => sum + (pizza.quantity || 0), 0);
+    setTotalPizzas(newTotal);
+  };
+
+  const calculateIngredientQuantities = (selectedPizzas) => {
+    const ingredientQuantities = {};
+  
+    selectedPizzas.forEach(pizza => {
+      pizza.ingredients.forEach(ingredient => {
+        const { quantity, unit, name } = parseIngredient(ingredient);
+        if (!ingredientQuantities[name]) {
+          ingredientQuantities[name] = { quantity: 0, unit };
+        }
+        ingredientQuantities[name].quantity += quantity * pizza.quantity;
+      });
+    });
+  
+    return ingredientQuantities;
+  };
+  
+
+  const consolidateIngredients = (pizzas) => {
+    const ingredientsMap = new Map();
+  
+    pizzas.forEach(pizza => {
+      pizza.ingredients.forEach(ingredient => {
+        if (!ingredientsMap.has(ingredient)) {
+          ingredientsMap.set(ingredient, "");
+        }
+      });
+    });
+  
+    setConsolidatedIngredients(Object.fromEntries(ingredientsMap));
+  };
+
+  const parseIngredient = (ingredient) => {
+    const match = ingredient.match(/^(\d+(?:\.\d+)?)(g|kg|ml|l|oz|lb)\s+x\s+(.*)$/);
+    if (match) {
+      const [, quantity, unit, name] = match;
+      const nameParts = name.split(','); // Split by comma
+      let secondaryUnits = "";
+  
+      if (nameParts.length > 1) {
+        secondaryUnits = nameParts[1].trim(); // Extract and trim the part after the comma
+      }
+      console.log("secondaryUnits: " + secondaryUnits)
+      return { quantity: parseFloat(quantity), unit, name: `${quantity} ${unit} x ${name}`, secondaryUnits };
+    }
+    return { quantity: 0, unit: '', name: ingredient, secondaryUnits: '' };
+  };
+  
+  
+  
+  
+  const handleIngredientBatchCodeChange = (e, ingredient) => {
+    const { value } = e.target;
+    const updatedSelectedPizzas = selectedPizzas.map(pizza => ({
+      ...pizza,
+      ingredientBatchCodes: {
+        ...pizza.ingredientBatchCodes,
+        [ingredient]: value
+      }
+    }));
+  
+    setSelectedPizzas(updatedSelectedPizzas);
   };
 
   const handleBatchClick = (batch) => {
@@ -277,7 +374,7 @@ function BatchCodes() {
                   name="quantity"
                   value={pizza.quantity || ""}
                   placeholder='0'
-                  onChange={(e) => handleInputChange(e, pizza.id)}
+                  onChange={(e) => handleQuantityChange(e, pizza.id)}
                 />
               </div>
             ))}
@@ -289,26 +386,20 @@ function BatchCodes() {
           <Form.Label column sm={3}>
             Ingredients:
           </Form.Label>
-          <Col sm={9}>
-            <textarea
-              name="ingredients"
-              value={ingredients}
-              onChange={handleInputChange}
-              required
-            />
-          </Col>
-          <Form.Label column sm={3}>
-            Batch Code:
-          </Form.Label>
-          <Col sm={9}>
-            <input
-              type="text"
-              name="batch_code"
-              value={batchCode}
-              onChange={handleInputChange}
-              required
-            />
-          </Col>
+          {Object.entries(calculateIngredientQuantities(selectedPizzas)).map(([ingredient, {quantity}]) => (
+            <div key={ingredient} className='ingredient container'>
+              <h5>{quantity/1000}kg of</h5>
+              <p> {ingredient}</p>
+              <input
+                type="text"
+                placeholder="Batch Code"
+                value={selectedPizzas[0]?.ingredientBatchCodes[ingredient] || ""}
+                onChange={(e) => handleIngredientBatchCodeChange(e, ingredient)}
+              />
+            </div>
+          ))}
+
+
           <Form.Label column sm={3}>
             Ingredients Ordered?
             <input
