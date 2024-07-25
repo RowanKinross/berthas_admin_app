@@ -73,6 +73,7 @@
   .inputBox {
     font-size: small;
     margin-bottom: 3px !important;
+    width: 100%;
   }
   .addIngredient {
     margin-bottom: 13px;
@@ -122,4 +123,12 @@
 .ingredientDropdown {
   max-height: 300px; 
   overflow-y: auto; 
+}
+.ingredientInput {
+  padding: 0;
+  margin: 0;
+  justify-content: space-between;
+}
+.units {
+  width: 80px;
 }

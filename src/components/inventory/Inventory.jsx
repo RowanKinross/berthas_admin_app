@@ -18,6 +18,7 @@ function Inventory() {
   const [ingredientName, setIngredientName] = useState('');
   const [currentIngredientQuantity, setCurrentIngredientQuantity] = useState('');
   const [ingredientUnits, setIngredientUnits] = useState('');
+  const [ingredientUnitQuantity, setIngredientUnitQuantity] = useState('')
   const [addIngredientForm, setAddIngredientForm] = useState(false) // set ingredients form to not show
   const [currentIngredient, setCurrentIngredient] = useState('')
   const [currentPizzaIngredients, setCurrentPizzaIngredients] = useState(["160g x Flour (Caputo Red), 15kg Bag", "4.8g x Salt, 1kg"])
@@ -135,7 +136,7 @@ const handleCancel = () => {
 // function to handle new ingredient inputs
 const handleAddIngredient = () => {
   setAddIngredientForm(false); // hide add ingredient form
-  const newIngredient = `${currentIngredientQuantity}g x ${ingredientName}, ${ingredientUnits}`;
+  const newIngredient = `#${currentIngredientQuantity}:${ingredientUnitQuantity}# ${currentIngredientQuantity}g x ${ingredientName} (${ingredientUnitQuantity}kg ${ingredientUnits})`;
   setCurrentIngredient(newIngredient);
   setTimeout(async () => {
     await updateIngredientsArr(newIngredient);
@@ -308,11 +309,25 @@ return (
             <div className='inputBox'>
               Ingredient Name: <input type='text' placeholder='e.g Kalamata Olives' onChange={(e) => setIngredientName(e.target.value)} />
             </div>
-            <div className='inputBox'>
-              Units: <input type='text' placeholder='e.g 1.8kg Jar' onChange={(e) => setIngredientUnits(e.target.value)} />
-            </div>
-            <div className='inputBox'>
-              Quantity per Pizza (in grams): <input type='number' placeholder='e.g 32' onChange={(e) => setCurrentIngredientQuantity(e.target.value)} />
+            <div className='container ingredientInput'>
+              <div className='container ingredientInput units'>
+              <div className='inputBox'>
+                Units: <input type='text' placeholder='e.g Jar' onChange={(e) => setIngredientUnits(e.target.value)} />
+              </div>
+              <p></p>
+              </div>
+              <div className='container ingredientInput units'>
+                <div className='inputBox'>
+                  Unit quantity: <input type='number' placeholder='e.g 1.2' onChange={(e) => setIngredientUnitQuantity(e.target.value)}/>
+                </div>
+                <p>kg</p>
+              </div>
+              <div className='container ingredientInput units'>
+                <div className='inputBox'>
+                  Quantity per Pizza: <input type='number' placeholder='e.g 32' onChange={(e) => setCurrentIngredientQuantity(e.target.value)} />
+                </div>
+                <p>g</p>
+              </div>
             </div>
       </Form.Group>
       <Button type="submit" className='button' onClick={() => { handleAddIngredient(); setAddIngredientForm(false)}}>Submit</Button>
