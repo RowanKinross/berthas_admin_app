@@ -51,6 +51,7 @@ function Inventory() {
       const querySnapshot = await getDocs(collection(db, 'batches'));
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setStock(data);
+      console.log(data)
     } catch (error) {
       console.error("Error fetching stock data:", error);
     }
@@ -175,48 +176,49 @@ function Inventory() {
           {pizzaData.map((pizza, pizzaIndex) => {
             let totalStock = 0;
             let totalOnOrder = 0;
-            let totalAvailable = totalStock - totalOnOrder;
-            stock.forEach((batch) => {
-              if (batch[pizza.id] !== undefined) {
-                totalStock += batch[pizza.id];
-                totalAvailable += batch[pizza.id];
-              }
-            });
-            
-            return (
-              // pizzas display 
-              <div 
-                className='pizzas' 
-                id={`pizzas${pizza.id}`} 
-                key={pizzaIndex} 
-                style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent', border: pizza.sleeve ? 'transparent' : `2px dotted ${pizza.hex_colour}` }}
-              >
-                <div className='pizzaContent' style={{ backgroundColor: pizza.sleeve ? `${pizza.hex_colour}f2` : 'transparent'}}>
-                  <div className='pizzaHeader'>
-                    <h4 className='pizzaH4' style={{ color: pizza.sleeve ? `#fdfdfd` : `${pizza.hex_colour}` }}>{pizza.pizza_title}</h4>
-                  </div>
+            let totalAvailable = 0;
 
-                  {/* Render inventory details for this pizza */}
-                  {stock.map((batch, index) => (
-                    batch[pizza.id] !== undefined ? (
-                      <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
-                        <p>Batch Date: {batch.batch_date}</p>
-                        <p>Total: {batch[pizza.id]}</p>
-                        <p>On order: 0</p>
-                        <p>Available: {batch[pizza.id]}</p>
-                      </div>
-                    ) : null
-                  ))}
-                  {/* Render pizza totals */}
-                  <div className='inventoryBox' id='totals'>
-                    <p>Total Stock: {totalStock}</p>
-                    <p>Total On Order: {totalOnOrder}</p>
-                    <p>Total Available: {totalAvailable}</p>
-                  </div>
+
+                     return (
+            <div 
+              className='pizzas' 
+              id={`pizzas${pizza.id}`} 
+              key={pizzaIndex} 
+              style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent', border: pizza.sleeve ? 'transparent' : `2px dotted ${pizza.hex_colour}` }}
+            >
+              <div className='pizzaContent' style={{ backgroundColor: pizza.sleeve ? `${pizza.hex_colour}f2` : 'transparent'}}>
+                <div className='pizzaHeader'>
+                  <h4 className='pizzaH4' style={{ color: pizza.sleeve ? `#fdfdfd` : `${pizza.hex_colour}` }}>{pizza.pizza_title}</h4>
+                </div>
+
+                {/* Render inventory details for this pizza */}
+                {stock.map((batch, index) => (
+                  batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0) ? (
+                    <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
+                      <p>Batch Number: {batch.batch_code}</p>
+                      {batch.pizzas.map((p, idx) => (
+                        p.id === pizza.id && p.quantity > 0 ? (
+                          <div key={idx} className='container'>
+                            <p>Total: {p.quantity}</p>
+                            <p>On order: 0</p>
+                            <p>Available: {p.quantity}</p>
+                            <p className='hide'>{totalStock += p.quantity}{totalOnOrder == 0 ? totalAvailable = totalStock - totalOnOrder : 0}</p>
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  ) : null
+                ))}
+                {/* Render pizza totals */}
+                <div className='inventoryBox' id='totals'>
+                  <p>Total Stock: {totalStock}</p>
+                  <p>Total On Order: {totalOnOrder}</p>
+                  <p>Total Available: {totalAvailable}</p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
           {/* Button to add a new pizza */}
           <button className='addPizza button pizzas' onClick={() => setModalVisible(true)}>+</button>
         </div>

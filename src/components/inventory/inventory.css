@@ -132,3 +132,6 @@
 .units {
   width: 80px;
 }
+.hide {
+  display: none;
+}

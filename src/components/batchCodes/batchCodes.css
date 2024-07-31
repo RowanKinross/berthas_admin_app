@@ -36,3 +36,9 @@
 .fadedText {
   font-weight: lighter;
 }
+.alignRight {
+  text-align: right;
+}
+/* .batchDetails {
+  border: ;
+} */
