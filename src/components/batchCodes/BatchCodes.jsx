@@ -630,6 +630,7 @@ function BatchCodes() {
                 placeholder="Batch Code"
                 value={ingredientBatchCodes[ingredient] || ""}
                 onChange={(e) => handleIngredientBatchCodeChange(e, ingredient)}
+                className='ingredientBatchCode'
               />
             </div>
           );

@@ -39,6 +39,16 @@
 .alignRight {
   text-align: right;
 }
-/* .batchDetails {
-  border: ;
-} */
+.ingredientBatchCode {
+  width: 250px;
+}
+
+@media (max-width: 530px) {
+  .ingredient {
+    flex-direction: column;
+    align-items: start;
+  }
+  .ingredientBatchCode {
+    width: 100%;
+  }
+}
