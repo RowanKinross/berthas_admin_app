@@ -703,7 +703,7 @@ function BatchCodes() {
       <div>
         <div className='batchText batchHeader container'>
           <p>Batch Date:</p>
-          <p>Number of pizzas:</p>
+          <p>Pizzas:</p>
           <p>Ingredients Ordered?</p>
         </div>
       </div>

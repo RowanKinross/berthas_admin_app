@@ -51,4 +51,7 @@
   .ingredientBatchCode {
     width: 100%;
   }
+  .batchHeader {
+    display: none;
+  }
 }
