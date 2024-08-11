@@ -193,7 +193,7 @@ function Inventory() {
 
                 {/* Render inventory details for this pizza */}
                 {stock.map((batch, index) => (
-                  batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0) ? (
+                  batch.completed === true && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0) ? (
                     <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
                       <p>Batch Number: {batch.batch_code}</p>
                       {batch.pizzas.map((p, idx) => (
