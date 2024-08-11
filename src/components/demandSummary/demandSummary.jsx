@@ -1,11 +1,17 @@
-// import berthasLogo from '../bertha_logo'
+import { useState, useEffect} from 'react';
 import './demandSummary.css'
+
+const demandSummary = []
 
 function DemandSummary() {
   return (
     <div className='demandSummary'>
-      {/* <img src={berthasLogo} className="logo berthasLogo" alt="Bertha's Logo" /> */}
       <h2>DEMAND SUMMARY</h2>
+      {demandSummary.length > 0 ? (
+        <p>{demandSummary}</p>
+      ):(
+        <p className='py-3'>Loading demand summary...</p>
+      )}
     </div>
   )
 }

@@ -76,21 +76,26 @@ function Orders() {
   <div className='orders'>
     <h2>ORDERS</h2>
     <div className='ordersList'>
-      <div className='orderButton'>
-        <div>Account ID</div>
-        <div>no. of pizzas</div>
-        <div>Delivery Date</div>
+      <div className='orderButton' id='totals'>
+        <div>Account ID:</div>
+        <div>no. of pizzas:</div>
+        <div>Delivery Date:</div>
       </div>
-      {orders.map(order => (
-        <button 
-        key={order.id} 
-        className={`orderButton button ${order.complete ? 'complete' : ''}`} 
-        onClick={() => handleOrderClick(order)}>
-          <div>{order.account_ID}</div>
-          <div>{order.pizzaTotal}</div>
-          <div>{order.delivery_date}</div>
-        </button>
-      ))}
+
+      {orders.length > 0 ? (
+        orders.map(order => (
+          <button 
+          key={order.id} 
+          className={`orderButton button ${order.complete ? 'complete' : ''}`} 
+          onClick={() => handleOrderClick(order)}>
+            <div>{order.account_ID}</div>
+            <div>{order.pizzaTotal}</div>
+            <div>{order.delivery_date}</div>
+          </button>
+        ))
+      ):(
+        <p className='py-3'>Loading orders...</p>
+      )}
     </div>
     {selectedOrder && (
         <div className='modal'>

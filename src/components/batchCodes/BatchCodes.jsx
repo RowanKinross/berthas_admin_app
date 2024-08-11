@@ -504,6 +504,7 @@ function BatchCodes() {
   return (
     <div className='batchCodes'>
       <h2>BATCH CODES</h2>
+
       <button className='button' onClick={handleAddClick}>+</button>
 
       {viewingBatch && (
@@ -705,19 +706,25 @@ function BatchCodes() {
           <p>Ingredients Ordered?</p>
         </div>
       </div>
+      {batches.length > 0 ? (
+      batches
+      .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+      .map(batch => (
+        <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
+          <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
+            <p>{batch.batch_date}</p>
+            <p>{batch.num_pizzas}</p>
+            {batch.ingredients_ordered ? <p>✓</p> : <p>✘</p>}
+          </button>
+          <button className='button' onClick={() => handleEditClick(batch)}>edit</button>
+        </div>
+      ))
+      ):(
+        <p className='py-3'>Loading batches...</p>
+      )}
 
-      {batches
-        .sort((a, b) => new Date(a.batch_date) - new Date(b.batch_date))
-        .map(batch => (
-          <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-            <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
-              <p>{batch.batch_date}</p>
-              <p>{batch.num_pizzas}</p>
-              {batch.ingredients_ordered ? <p>✓</p> : <p>✘</p>}
-            </button>
-            <button className='button' onClick={() => handleEditClick(batch)}>edit</button>
-          </div>
-        ))}
+
+
     </div>
   );
 }

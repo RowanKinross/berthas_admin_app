@@ -41,3 +41,8 @@
 .button.active {
   background-color: var(--bertha);
 }
+
+#totals {
+  border: none;
+  font-weight: bold
+}

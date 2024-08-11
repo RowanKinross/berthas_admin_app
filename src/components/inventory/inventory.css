@@ -106,10 +106,6 @@
     color: var(--dark);
     border: dashed 1px var(--dark);
   }
-  #totals {
-    border: none;
-    font-weight: bold
-  }
 
 
 /* ingredients list */
