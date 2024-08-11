@@ -131,3 +131,9 @@
 .hide {
   display: none;
 }
+
+@media (max-width: 530px) {
+  .inventoryBox {
+    font-size: 8px;
+  }
+}
