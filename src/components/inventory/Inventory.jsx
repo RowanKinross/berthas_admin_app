@@ -164,12 +164,12 @@ function Inventory() {
   return (
     <div className='inventory'>
       <h2>INVENTORY</h2>
-      <div>
         <div className='inventoryBox' id='totals'>
           <p>Total Stock:</p>
           <p>Total On Order:</p>
           <p>Total Available:</p>
         </div>
+      <div>
       </div>
       {pizzaData.length > 0 ? (
         <div className='inventoryContainer'>
@@ -186,10 +186,10 @@ function Inventory() {
               key={pizzaIndex} 
               style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent', border: pizza.sleeve ? 'transparent' : `2px dotted ${pizza.hex_colour}` }}
             >
-              <div className='pizzaContent' style={{ backgroundColor: pizza.sleeve ? `${pizza.hex_colour}f2` : 'transparent'}}>
                 <div className='pizzaHeader'>
                   <h4 className='pizzaH4' style={{ color: pizza.sleeve ? `#fdfdfd` : `${pizza.hex_colour}` }}>{pizza.pizza_title}</h4>
                 </div>
+              <div className='pizzaContent' style={{ backgroundColor: pizza.sleeve ? `${pizza.hex_colour}f2` : 'transparent'}}>
 
                 {/* Render inventory details for this pizza */}
                 {stock.map((batch, index) => (
@@ -209,13 +209,13 @@ function Inventory() {
                     </div>
                   ) : null
                 ))}
+              </div>
                 {/* Render pizza totals */}
                 <div className='inventoryBox' id='totals'>
                   <p>Total Stock: {totalStock}</p>
                   <p>Total On Order: {totalOnOrder}</p>
                   <p>Total Available: {totalAvailable}</p>
                 </div>
-              </div>
             </div>
           );
         })}

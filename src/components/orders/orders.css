@@ -40,9 +40,9 @@
   display: flex;
   justify-content: space-between;
   padding: 10px 20px;
-  background-color: var(--pale);
+  background-color: var(--paleLight);
   font-weight: bold;
-  border-bottom: 2px solid var(--Marg);
+  border-bottom: 2px solid var(--darkLight);
   cursor: auto;
 }
 
