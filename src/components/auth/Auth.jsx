@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './auth.css';
 
 function Auth({ showModal, handleAuth }) {
@@ -10,14 +10,29 @@ function Auth({ showModal, handleAuth }) {
       const newCode = [...code];
       newCode[index] = value;
       setCode(newCode);
-      // Move focus to the next input
+
+      // Move focus to the next input if not on the last one
       if (index < 3 && value !== '') {
         inputRefs[index + 1].current.focus();
       }
     }
   };
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    // Automatically submit if all 4 digits are filled
+    if (code.every(digit => digit !== '')) {
+      handleSubmit();
+    }
+  }, [code]); // This effect will run every time `code` changes
+
+  useEffect(() => {
+    if (showModal) {
+      inputRefs[0].current.focus(); // This line focuses on the first input box
+    }
+  }, [showModal]);
+
+  const handleSubmit = (e) => {
+    if (e) e.preventDefault();
     const enteredCode = code.join('');
     handleAuth(enteredCode);
   };

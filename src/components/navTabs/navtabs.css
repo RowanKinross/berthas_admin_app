@@ -20,7 +20,6 @@
   border: solid 2px var(--pale);
   color: var(--dark);
   background-color: var(--pale);
-  border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
 
