@@ -1,3 +1,13 @@
+.orders {
+  padding: 20px;
+}
+
+.orders h2 {
+  font-size: 2em;
+  color: var(--dark);
+  margin-bottom: 20px;
+}
+
 .ordersList {
   display: flex;
   flex-direction: column;
@@ -6,8 +16,121 @@
 .orderButton {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: var(--pale);
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s, transform 0.3s;
+  cursor: pointer;
 }
+
 .orderButton.complete {
   background-color: var(--Marg);
   color: white;
+  text-decoration: line-through;
+}
+
+.orderButton:not(#totals):hover {
+  background-color: var(--light);
+  transform: scale(1.02);
+}
+
+#totals {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: var(--pale);
+  font-weight: bold;
+  border-bottom: 2px solid var(--Marg);
+  cursor: auto;
+}
+
+#totals div {
+  flex: 1;
+  text-align: center; /* Center text in each header column */
+}
+
+#totals div:first-child {
+  text-align: left;
+}
+
+#totals div:last-child {
+  text-align: right;
+}
+
+.orderButton div {
+  flex: 1;
+  text-align: center; /* Align text in each order column */
+}
+
+.orderButton div:first-child {
+  text-align: left;
+}
+
+.orderButton div:last-child {
+  text-align: right;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 80%;
+  max-width: 500px;
+}
+
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modalContent div {
+  margin-bottom: 15px;
+}
+
+.modalContent p {
+  margin: 0;
+  font-size: 1.1em;
+  color: var(--dark);
+}
+
+.modalContent .button {
+  margin-top: 20px;
+}
+
+.button {
+  background-color: var(--bertha);
+  border: solid 1px var(--dark);
+  color: var(--dark);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.button:hover {
+  background-color: var(--Marg);
+  color: white;
+}
+
+@media (max-width: 530px) {
+  .orderButton {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .modal {
+    width: 95%;
+  }
 }
