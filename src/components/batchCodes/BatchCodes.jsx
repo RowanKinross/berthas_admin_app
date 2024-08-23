@@ -504,52 +504,39 @@ function BatchCodes() {
   return (
     <div className='batchCodes'>
       <h2>BATCH CODES</h2>
-
+      
       <button className='button' onClick={handleAddClick}>+</button>
-
-      {viewingBatch && (
-      <div className="batchDetails border" ref={batchDetailsRef}>
-        <h2>Batch Details</h2>
-        <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
-        <div className='container'>
-        <p><strong>Batch Date:</strong> {viewingBatch.batch_date}</p>
-        <p><strong>Completed:</strong> {viewingBatch.completed ? 'Yes' : 'No'}</p>
-        <p><strong>Ingredients Ordered:</strong> {viewingBatch.ingredients_ordered ? 'Yes' : 'No'}</p>
-        </div>
-
-        <h4>Pizzas:</h4>
-        {viewingBatch.pizzas
-          .filter(pizza => pizza.quantity > 0)
-          .map(pizza => (
-            <div key={pizza.id}>
-              <div className='container'>
+      
+      {viewingBatch && !showForm && (
+        <div className="batchDetails border" ref={batchDetailsRef}>
+          <h2>Batch Details</h2>
+          <button className='button' onClick={() => handleEditClick(viewingBatch)}>Edit</button>
+          <div className="detailRow">
+            <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
+          </div>
+          <div className="detailRow">
+            <p><strong>Batch Date:</strong> {viewingBatch.batch_date}</p>
+            <p><strong>Completed:</strong> {viewingBatch.completed ? 'Yes' : 'No'}</p>
+            <p><strong>Ingredients Ordered:</strong> {viewingBatch.ingredients_ordered ? 'Yes' : 'No'}</p>
+          </div>
+          <h4>Pizzas:</h4>
+          {viewingBatch.pizzas.filter(pizza => pizza.quantity > 0).map(pizza => (
+            <div key={pizza.id} className='pizzaDetails'>
               <p><strong>{pizza.pizza_title}</strong> </p>
               <p> {pizza.quantity}</p>
-              </div>
             </div>
           ))}
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
-        <h4>Batch Codes:</h4>
+          <h4>Batch Codes:</h4>
           {ingredients
-            .filter(ingredient => {
-              // Check if the ingredient is used in any pizza with a quantity > 0
-              return viewingBatch.pizzas
-                .some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name));
-            })
+            .filter(ingredient => viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name)))
             .map(ingredient => {
-              // Find the batch code for this ingredient
               const batchCode = viewingBatch.pizzas
                 .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
-                .find(code => code); 
-
-
-                // Calculate the quantity of this ingredient
+                .find(code => code);
               const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
-
-              // Calculate number of units
               const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
-                
-
+  
               return (
                 <div key={ingredient.id} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
                   <p>
@@ -559,175 +546,156 @@ function BatchCodes() {
                 </div>
               );
             })}
-      <p><strong>Notes:</strong> {viewingBatch.notes}</p>
-      </div>
-    )}
-
-
-
-
-      {showForm && (
-  <form
-    ref={formRef}
-    onSubmit={saveNewMode ? handleAddFormSubmit : handleEditFormSubmit}
-    className='editForm'
-    as={Row}
-  >
-    <Form.Label column sm={3}>
-      Batch Date:
-    </Form.Label>
-    <Col sm={9}>
-      <input
-        type="date"
-        name="batch_date"
-        value={batchDate}
-        onChange={handleInputChange}
-        required
-      />
-    </Col>
-    <Form.Label column sm={3}>
-      Batch Code:
-    </Form.Label>
-    <Col sm={9}>
-      <div># {batchCode}</div>
-    </Col>
-    <Form.Label column sm={3}>
-      Number of Pizzas:
-    </Form.Label>
-    <Col sm={9}>
-      {pizzas.map((pizza) => (
-        <div key={pizza.id} className='container'>
-          {pizza.pizza_title}
-          <input
-            className='inputNumber'
-            type="number"
-            name="quantity"
-            value={pizza.quantity || ""}
-            placeholder='0'
-            onChange={(e) => handleQuantityChange(e, pizza.id)}
-          />
+          <p><strong>Notes:</strong> {viewingBatch.notes}</p>
         </div>
-      ))}
-      <div className='total'>
-        <h6>Total: {totalPizzas}</h6>
-      </div>
-    </Col>
-
-    {loading ? (
-      <div>Loading...</div>
-    ) : (
-      <div>
-        <Form.Label column sm={3}>
-          Ingredients:
-        </Form.Label>
-        {Object.entries(calculateIngredientQuantities(selectedPizzas)).map(([ingredient, { quantity, unitWeight, unit }]) => {
-          const numberOfUnits = quantity / unitWeight;
-          return (
-            <div key={ingredient} className='ingredient container'>
-              <h5><span className='fadedText'>{formatQuantity(numberOfUnits)} {unit} </span>{ingredient}</h5>
-              <input
-                type="text"
-                placeholder="Batch Code"
-                value={ingredientBatchCodes[ingredient] || ""}
-                onChange={(e) => handleIngredientBatchCodeChange(e, ingredient)}
-                className='ingredientBatchCode'
-              />
-            </div>
-          );
-        })}
-      </div>
-    )}
-
-    <Form.Label column sm={3}>
-      Ingredients Ordered?
-      <input
-        className='m-2'
-        type="checkbox"
-        name='ingredients_ordered'
-        checked={ingredientsOrdered}
-        onChange={handleInputChange}
-      />
-    </Form.Label>
-
-    <div>
-        <Form.Label>Notes</Form.Label>
-        <Form.Control
-          as="textarea"
-          rows={3}
-          name="notes"
-          value={notes}
-          placeholder="Enter your notes here..."
-          onChange={handleInputChange}
-        />
-    </div>
-
-    <div className='container'>
-      {saveNewMode ? (
-        <button
-          type="button"
-          className='button draft'
-          onClick={handleAddFormSubmit}
-        >
-          Save as draft
-        </button>
-      ) : (
-        <>
-          <button
-            type="button"
-            className='button draft'
-            onClick={handleEditFormSubmit}
-          >
-            Save draft
-          </button>
-          <button
-            type="submit"
-            className='button'
-            onClick={() => setCompleted(true)}
-          >
-            Submit
-          </button>
-          <button
-            type="button"
-            className='button draft'
-            onClick={handleDeleteForm}
-          >
-            Delete
-          </button>
-        </>
       )}
-    </div>
-  </form>
-)}
-
-
-      <div>
-        <div className='batchText batchHeader container'>
-          <p>Batch Date:</p>
-          <p>Pizzas:</p>
-          <p>Ingredients Ordered?</p>
-        </div>
+  
+      {showForm && (
+        <form
+          ref={formRef}
+          onSubmit={saveNewMode ? handleAddFormSubmit : handleEditFormSubmit}
+          className='editForm'
+          as={Row}
+        >
+          <Form.Label column sm={3}><strong>Batch Code:</strong></Form.Label>
+          <Col sm={9}>
+            <div># {batchCode}</div>
+          </Col>
+          <div>
+          <Form.Label column sm={3}><strong>Batch Date:</strong></Form.Label>
+          <Col sm={9}>
+            <input
+              type="date"
+              name="batch_date"
+              value={batchDate}
+              onChange={handleInputChange}
+              required
+            />
+          </Col>
+          <Form.Label column sm={3}>
+            <strong>Ingredients Ordered?</strong>
+            <input
+              className='m-2'
+              type="checkbox"
+              name='ingredients_ordered'
+              checked={ingredientsOrdered}
+              onChange={handleInputChange}
+            />
+          </Form.Label>
+          </div>
+          <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
+          <Col sm={9}>
+            {pizzas.map((pizza) => (
+              <div key={pizza.id} className='pizzaDetails'>
+                {pizza.pizza_title}
+                <input
+                  className='inputNumber'
+                  type="number"
+                  name="quantity"
+                  value={pizza.quantity || ""}
+                  placeholder='0'
+                  onChange={(e) => handleQuantityChange(e, pizza.id)}
+                />
+              </div>
+            ))}
+            <div className='total'>
+              <h6><strong>Total: </strong>{totalPizzas}</h6>
+            </div>
+          </Col>
+          {loading ? (
+            <div>Loading...</div>
+          ) : (
+            <div>
+              <Form.Label column sm={3}><strong>Ingredients:</strong></Form.Label>
+              {Object.entries(calculateIngredientQuantities(selectedPizzas)).map(([ingredient, { quantity, unitWeight, unit }]) => {
+                const numberOfUnits = quantity / unitWeight;
+                return (
+                  <div key={ingredient} className='ingredient container'>
+                    <h5><span className='fadedText'>{formatQuantity(numberOfUnits)} {unit} </span>{ingredient}</h5>
+                    <input
+                      type="text"
+                      placeholder="Batch Code"
+                      value={ingredientBatchCodes[ingredient] || ""}
+                      onChange={(e) => handleIngredientBatchCodeChange(e, ingredient)}
+                      className='ingredientBatchCode'
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div>
+            <Form.Label>Notes</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              name="notes"
+              value={notes}
+              placeholder="Enter your notes here..."
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className='container'>
+            {saveNewMode ? (
+              <button
+                type="button"
+                className='button draft'
+                onClick={handleAddFormSubmit}
+              >
+                Save as draft
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className='button draft'
+                  onClick={handleEditFormSubmit}
+                >
+                  Save draft
+                </button>
+                <button
+                  type="submit"
+                  className='button'
+                  onClick={() => setCompleted(true)}
+                >
+                  Submit
+                </button>
+                <button
+                  type="button"
+                  className='button draft'
+                  onClick={handleDeleteForm}
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </form>
+      )}
+  
+      <div className='batchHeader container'>
+        <p>Batch Date:</p>
+        <p>Pizzas:</p>
+        <p>Ingredients Ordered?</p>
       </div>
       {batches.length > 0 ? (
-      batches
-      .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-      .map(batch => (
-        <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-          <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
-            <p>{batch.batch_date}</p>
-            <p>{batch.num_pizzas}</p>
-            {batch.ingredients_ordered ? <p>✓</p> : <p>✘</p>}
-          </button>
-          <button className='button' onClick={() => handleEditClick(batch)}>edit</button>
-        </div>
-      ))
-      ):(
+        batches
+        .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+        .map(batch => (
+          <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
+            <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
+              <p>{batch.batch_date}</p>
+              <p>{batch.num_pizzas}</p>
+              {batch.ingredients_ordered ? <p>✓</p> : <p>✘</p>}
+            </button>
+          </div>
+        ))
+      ) : (
         <p className='py-3'>Loading batches...</p>
       )}
-
-
-
     </div>
   );
+  
 }
 
 export default BatchCodes;

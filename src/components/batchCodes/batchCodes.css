@@ -10,11 +10,20 @@
   width: 100%;
   border: 0;
 }
-.editForm {
+.editForm, .batchDetails {
   border: 1px solid var(--dark);
   margin: 5px;
   padding: 5px;
   text-align: start;
+}
+.detailRow, .pizzaDetails {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+}
+.editForm .pizzaDetails {
+  display: flex;
+  justify-content: space-between;
 }
 .input {
   width: 100%;
@@ -55,3 +64,5 @@
     display: none;
   }
 }
+
+
