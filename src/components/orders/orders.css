@@ -20,7 +20,7 @@
   padding: 10px 20px;
   background-color: var(--pale);
   border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--boxShadow);
   transition: background-color 0.3s, transform 0.3s;
   cursor: pointer;
 }
@@ -34,16 +34,6 @@
 .orderButton:not(#totals):hover {
   background-color: var(--light);
   transform: scale(1.02);
-}
-
-#totals {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background-color: var(--paleLight);
-  font-weight: bold;
-  border-bottom: 2px solid var(--darkLight);
-  cursor: auto;
 }
 
 #totals div {

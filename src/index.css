@@ -24,6 +24,7 @@
   --NapLight: rgb(252, 231, 68, 0.9);
   --MargLight: rgb(136, 198, 154, 0.9);
 
+  --boxShadow: rgba(0, 0, 0, 0.2);
   
 
   background-color: var(--dark);

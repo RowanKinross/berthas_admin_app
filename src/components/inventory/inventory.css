@@ -23,6 +23,8 @@
     box-sizing: border-box;
     overflow: hidden;
     position: relative;
+    
+    box-shadow: 0 2px 4px var(--boxShadow);
   }
   .pizzaContent {
     display: flex;
@@ -123,14 +125,6 @@
 
 
 /* inventory display */
-  .totals {
-    display: flex;
-    flex-direction: column;
-    align-items: end;
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
-  }
   .inventoryBox {
     border-radius: 10px;
     display: flex;
@@ -138,7 +132,6 @@
     color: var(--dark);
     border: dashed 1px var(--dark);
   }
-
 
 /* ingredients list */
 .listContainer {
