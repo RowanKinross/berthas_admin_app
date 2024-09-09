@@ -25,6 +25,10 @@ function Inventory() {
 
   // stock
   const [stock, setStock] = useState([]);
+  const [totalStockOverall, setTotalStockOverall] = useState(0);
+  const [totalOnOrderOverall, setTotalOnOrderOverall] = useState(0);
+  const [totalAvailableOverall, setTotalAvailableOverall] = useState(0);
+
 
 
   // FETCHES
@@ -51,7 +55,7 @@ function Inventory() {
       const querySnapshot = await getDocs(collection(db, 'batches'));
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setStock(data);
-      console.log(data)
+ 
     } catch (error) {
       console.error("Error fetching stock data:", error);
     }
@@ -71,10 +75,33 @@ function Inventory() {
 
   // render pizza data, stock data and ingredients data dynamically
   useEffect(() => {
+    let totalStock = 0;
+    let totalOnOrder = 0;
+    let totalAvailable = 0;
+  
+    pizzaData.forEach((pizza) => {
+      stock.forEach((batch) => {
+        if (batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0)) {
+          batch.pizzas.forEach((p) => {
+            if (p.id === pizza.id) {
+              totalStock += p.quantity;
+              totalOnOrder += 0; // Assuming "On Order" is not yet tracked in your batches
+              totalAvailable += p.quantity; // Assuming "Available" = "Stock" - "On Order"
+            }
+          });
+        }
+      });
+    });
+  
+    setTotalStockOverall(totalStock);
+    setTotalOnOrderOverall(totalOnOrder);
+    setTotalAvailableOverall(totalAvailable);
+
     fetchPizzaData();
     fetchStock();
-    fetchIngredientsArr();
-  }, []); 
+    fetchIngredientsArr(); 
+  }, [pizzaData, stock]);
+
 
   // UPDATE STORE
   // add a new ingredient to ingredients array 
@@ -94,7 +121,7 @@ function Inventory() {
     const IDletters = (`${pizzaTitle.charAt(0)}${pizzaTitle.charAt(1)}${pizzaTitle.charAt(2)}`).toUpperCase();
 
     const ID = `${IDletters}_${vegan}${withSleeve}`;
-    console.log(ID);
+   
     try {
       await addDoc(collection(db, 'pizzas'), {
         id: ID,
@@ -165,9 +192,9 @@ function Inventory() {
     <div className='inventory'>
       <h2>INVENTORY</h2>
         <div className='inventoryBox' id='totals'>
-          <p>Total Stock:</p>
-          <p>Total On Order:</p>
-          <p>Total Available:</p>
+        <p>Total Stock: {totalStockOverall}</p>
+        <p>Total On Order: {totalOnOrderOverall}</p>
+        <p>Total Available: {totalAvailableOverall}</p>
         </div>
       <div>
       </div>
@@ -179,7 +206,7 @@ function Inventory() {
             let totalAvailable = 0;
 
 
-                     return (
+return (
             <div 
               className='pizzas' 
               id={`pizzas${pizza.id}`} 
@@ -192,8 +219,10 @@ function Inventory() {
               <div className='pizzaContent' style={{ backgroundColor: pizza.sleeve ? `${pizza.hex_colour}f2` : 'transparent'}}>
 
                 {/* Render inventory details for this pizza */}
-                {stock.map((batch, index) => (
-                  batch.completed === true && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0) ? (
+                {stock
+                  .filter(batch => batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0))
+                  .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
+                  .map((batch, index) => (
                     <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
                       <p>Batch Number: {batch.batch_code}</p>
                       {batch.pizzas.map((p, idx) => (
@@ -207,7 +236,6 @@ function Inventory() {
                         ) : null
                       ))}
                     </div>
-                  ) : null
                 ))}
               </div>
                 {/* Render pizza totals */}

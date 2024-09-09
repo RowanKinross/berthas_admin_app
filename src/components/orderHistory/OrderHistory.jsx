@@ -57,10 +57,12 @@ const OrderHistory = ({ accountID }) => {
         const pizzaNameSnapshot = await getDocs(collection(db, 'pizzas'));
         const nameMap = {};
         pizzaNameSnapshot.forEach(doc => {
-          nameMap[doc.id] = doc.data().pizza_title;
+          const pizzaData = doc.data(); // Get the document data
+          const pizzaID = pizzaData.id; // Extract pizza.id from the document data
+          const pizzaTitle = pizzaData.pizza_title; // Extract pizza_title from the document data
+          nameMap[pizzaID] = pizzaTitle; // Map pizza.id to pizza_title
         });
-        setPizzaNameMap(nameMap);
-        console.log(nameMap);
+        setPizzaNameMap(nameMap); // Save the map to state
       } catch (error) {
         console.error('Error fetching pizza name mappings:', error);
       }
@@ -167,7 +169,7 @@ const OrderHistory = ({ accountID }) => {
                     <ul>
                       {transformPizzasObjectToArray(selectedOrder.pizzas).map((pizza, index) => (
                         <li key={index}>
-                          {pizza.name.toLowerCase()} x {pizza.quantity} (batch: placeholder batchcode)
+                          {pizza.name} x {pizza.quantity} (batch: placeholder batchcode)
                         </li>
                       ))}
                     </ul>

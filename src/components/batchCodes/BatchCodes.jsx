@@ -353,7 +353,7 @@ function BatchCodes() {
         batch_code: batchCode,
         completed: completed,
         ingredients_ordered: ingredientsOrdered,
-        pizzas: pizzas.map(pizza => ({
+        pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
           pizza_title: pizza.pizza_title,
@@ -397,7 +397,7 @@ function BatchCodes() {
         batch_code: batchCode,
         completed: completed,
         ingredients_ordered: ingredientsOrdered,
-        pizzas: pizzas.map(pizza => ({
+        pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
           pizza_title: pizza.pizza_title,
@@ -430,11 +430,6 @@ function BatchCodes() {
     }
   };
 
-  const handleSubmitClick = (e) => {
-    e.preventDefault(); // Prevent default form submission behavior
-    setCompleted(true); // Update state
-    handleEditFormSubmit(); // Call your form submission function
-  };
 
   const handleDeleteForm = async () => {
     try {

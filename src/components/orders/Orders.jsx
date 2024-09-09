@@ -62,7 +62,6 @@ function Orders() {
 
   const handleOrderClick = useCallback((order) => {
     setSelectedOrder(order);
-    console.log(order)
     setViewModal(true)
   }, [])
 

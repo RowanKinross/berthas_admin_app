@@ -31,7 +31,7 @@
   text-decoration: line-through;
 }
 
-.orderButton:not(#totals):hover {
+.orderButton:not(#totals):not(.orderHeaders):hover {
   background-color: var(--light);
   transform: scale(1.02);
 }

@@ -1,5 +1,6 @@
 .orderHeaders {
   padding: 20px;
+  cursor: default !important;
 }
 .orderEntries {
   width: 130px;
