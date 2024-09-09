@@ -356,6 +356,7 @@ function BatchCodes() {
         pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
+          quantity_available: pizza.quantity,
           pizza_title: pizza.pizza_title,
           sleeve: pizza.sleeve,
           ingredients: pizza.ingredients,
@@ -400,6 +401,7 @@ function BatchCodes() {
         pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
+          quantity_available: pizza.quantity,
           pizza_title: pizza.pizza_title,
           sleeve: pizza.sleeve,
           ingredients: pizza.ingredients,
