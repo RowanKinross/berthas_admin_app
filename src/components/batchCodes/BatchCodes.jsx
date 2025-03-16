@@ -20,9 +20,7 @@ function BatchCodes() {
   const [completed, setCompleted] = useState(false);
   const [ingredientsOrdered, setIngredientsOrdered] = useState(false);
   const [notes, setNotes] = useState("");
-  const formRef = useRef(null);
-  // const [showBatch, setShowBatch] = useState(false);
-  // const [currentBatch, setCurrentBatch] = useState(null);
+  const formRef = useRef(null)
   const [totalPizzas, setTotalPizzas] = useState(0);
   const [selectedPizzas, setSelectedPizzas] = useState([]);
   const [consolidatedIngredients, setConsolidatedIngredients] = useState([]);
@@ -30,6 +28,8 @@ function BatchCodes() {
   const [loading, setLoading] = useState(true);
   const [viewingBatch, setViewingBatch] = useState(null); // Track viewing mode
   const batchDetailsRef = useRef(null);
+
+
 
   // display all batches
   useEffect(() => {
@@ -301,8 +301,7 @@ function BatchCodes() {
   
     return ingredientQuantities;
   };
-  
-  
+
   
   const formatQuantity = (quantity) => {
     return parseFloat(quantity).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -522,6 +521,15 @@ function BatchCodes() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showForm, viewingBatch]);
+
+  const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
+const requiredIngredients = Object.keys(ingredientQuantities);
+const allBatchCodesFilled = requiredIngredients.every(
+  ingredient =>
+    ingredientBatchCodes[ingredient] &&
+    ingredientBatchCodes[ingredient].trim() !== ""
+);
+
   
   return (
     <div className='batchCodes'>
@@ -731,13 +739,15 @@ function BatchCodes() {
                 >
                   Save draft
                 </button>
-                <button
-                  type="submit"
-                  className='button'
-                  onClick={() => setCompleted(true)}
-                >
-                  Submit
-                </button>
+                {allBatchCodesFilled && (
+                  <button
+                    type="submit"
+                    className='button'
+                    onClick={() => setCompleted(true)}
+                  >
+                    Submit
+                  </button>
+                )}
                 <button
                   type="button"
                   className='button draft'
@@ -748,6 +758,7 @@ function BatchCodes() {
               </>
             )}
           </div>
+
         </form>
       )}
   
