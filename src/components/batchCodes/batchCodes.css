@@ -10,6 +10,7 @@
   width: 100%;
   border: 0;
 }
+
 .editForm, .batchDetails {
   border: 1px solid var(--dark);
   margin: 5px;
@@ -35,8 +36,14 @@
   background-color: var(--grey);
 }
 .batchHeader {
-  padding: 30px 85px 0 10px;
   background-color: var(--pale);
+  display: flex;
+  justify-content: space-between;
+  margin: 2px;
+}
+.batchTextBoxEnd{
+  width: 150px;
+  text-align: end;
 }
 .total {
   padding: 10px 0 0 10px;
@@ -74,6 +81,9 @@
   }
   .batchHeader {
     display: none;
+  }
+  .batchTextBoxEnd{
+    width:fit-content;
   }
 }
 

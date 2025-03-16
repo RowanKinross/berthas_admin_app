@@ -759,9 +759,9 @@ function BatchCodes() {
         .map(batch => (
           <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
             <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
-              <p>{batch.batch_date}</p>
-              <p>{batch.num_pizzas}</p>
-              {batch.ingredients_ordered ? <p>✓</p> : <p>✘</p>}
+              <p className='batchTextBoxes'>{batch.batch_date}</p>
+              <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
+              {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
             </button>
           </div>
         ))
