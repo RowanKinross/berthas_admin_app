@@ -543,7 +543,7 @@ function BatchCodes() {
           </div>
           <div className='pizzaDisplayTitles'> 
             <h4 className='pizzaWeightsOuter'>Pizzas:</h4>
-            <h6 className='pizzaWeightsOuter'>Pizza Weights:</h6>
+            <h6 className='pizzaWeightsOuter pizzaWeights'>Pizza Weights:</h6>
           </div>
           {viewingBatch.pizzas.filter(pizza => pizza.quantity > 0).map(pizza => (
             <div key={pizza.id} className='pizzaDetails'>
@@ -598,12 +598,12 @@ function BatchCodes() {
           as={Row}
         >
           <Form.Label column sm={3}><strong>Batch Code:</strong></Form.Label>
-          <Col sm={9}>
+          <Col>
             <div># {batchCode}</div>
           </Col>
           <div>
           <Form.Label column sm={3}><strong>Batch Date:</strong></Form.Label>
-          <Col sm={9}>
+          <Col>
             <input
               type="date"
               name="batch_date"
@@ -624,54 +624,57 @@ function BatchCodes() {
           </Form.Label>
           </div>
           <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
-          <Col sm={9}>
+          <Col>
           {pizzas.map((pizza) => (
-            <div key={pizza.id} className='pizzaDetails'>
-              <div className="pizza-info">
-                <strong>{pizza.pizza_title}</strong>
-                 {/* - {pizza.quantity || 0} */}
-                <input
-                  className='inputNumber'
-                  type="number"
-                  name="quantity"
-                  value={pizza.quantity || ""}
-                  placeholder='0'
-                  onChange={(e) => handleQuantityChange(e, pizza.id)}
-                />
-              </div>
-              {Number(pizza.quantity) > 0 && (
+          <div key={pizza.id} className='pizzaDetails'>
+            <div className="pizza-info">
+              <strong>{pizza.pizza_title}</strong>
+              <input
+                className='inputNumber'
+                type="number"
+                name="quantity"
+                value={pizza.quantity || ""}
+                placeholder='0'
+                onChange={(e) => handleQuantityChange(e, pizza.id)}
+              />
+            </div>
+            {Number(pizza.quantity) > 0 && (
               <div className="pizza-weights">
                 <div>
-                  <label>First pizza weight                   
-                    <input
+                  <label>First</label>
+                  <input
                     type="number"
+                    className="inputNumber"                    
                     value={pizza.firstPizzaWeight || ""}
                     placeholder="0"
                     onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'first')}
-                  />g</label>
+                  />g
                 </div>
                 <div>
-                  <label>Middle pizza weight
+                  <label>Middle</label>
                   <input
                     type="number"
+                    className="inputNumber"                    
                     value={pizza.middlePizzaWeight || ""}
                     placeholder="0"
                     onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'middle')}
-                  />g</label>
+                  />g
                 </div>
                 <div>
-                  <label>Last pizza weight                  
-                    <input
+                  <label>Last</label>
+                  <input
                     type="number"
+                    className="inputNumber"
                     value={pizza.lastPizzaWeight || ""}
                     placeholder="0"
                     onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'last')}
-                  />g</label>
+                  />g
                 </div>
               </div>
-              )}
-            </div>
-          ))}
+            )}
+          </div>
+        ))}
+
 
             <div className='total'>
               <h6><strong>Total: </strong>{totalPizzas}</h6>

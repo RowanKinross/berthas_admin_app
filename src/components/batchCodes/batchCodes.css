@@ -85,6 +85,10 @@
   .batchTextBoxEnd{
     width:fit-content;
   }
+  .pizzaWeights {
+    flex-direction: column;
+    text-align: right;
+  }
 }
 
 
