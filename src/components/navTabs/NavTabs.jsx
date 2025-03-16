@@ -189,14 +189,14 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
       return (
         <>
           <NavLink to="/" />
-          {/* <NavLink to="/newOrder" className={({ isActive }) =>
+         <NavLink to="/newOrder" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">NEW ORDER</h3>
           </NavLink>
-          <NavLink to="/orderHistory" className={({ isActive }) =>
+           <NavLink to="/orderHistory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDER HISTORY</h3>
-          </NavLink> */}
+          </NavLink>
           <NavLink to="/account" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ACCOUNT INFO</h3>

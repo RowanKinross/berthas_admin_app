@@ -29,75 +29,74 @@ const handleFilterChange = (event) => {
   setFilterCriteria(event.target.value);
 };
 
-useEffect(() => {
-  // function to get the inventory from firebase
-  const fetchStock = async (pizzaId) => {
-  // Step 1: Fetch all batches from Firebase
-  const batchesSnapshot = await getDocs(collection(db, "batches"));
-  const relevantBatches = [];
-  
-  // Step 2: Iterate through each batch and find pizzas with the required ID
-  batchesSnapshot.forEach(doc => {
-    const batchData = doc.data();
-    const pizzas = batchData.pizzas;  // Access the pizzas array in each batch
-
-    pizzas.forEach(pizza => {
-     if (pizza.quantity >0 ){ console.log(`${pizza.id}: ${pizza.quantity}, ${batchData.batch_code}`)}
-      if (pizza.quantity > 0) { 
-        relevantBatches.push({
-          batch_code: batchData.batch_code,
-          quantity: pizza.quantity,
-          id: pizza.id
-        });
-      }
+// fetch stock data e.g what pizzas are in stock & their batches
+const fetchStock = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'batches'));
+    const data = querySnapshot.docs.map(doc => {
+      const batchData = doc.data();
+      const pizzasInBatch = batchData.pizzas.map((pizza) => ({
+        batch_id: doc.id,
+        batch_number: batchData.batch_code,
+        pizza_id: pizza.id,
+        quantity_available: pizza.quantity_available,
+      }));
+      return pizzasInBatch;
     });
-  });
-  console.log(relevantBatches)
-  // Step 3: Sort relevant batches by batch code (or any other criteria)
-  relevantBatches.sort((a, b) => a.batch_code.localeCompare(b.batch_code));
 
-  // Step 4: Log the relevant batches for debugging
-   console.log(`Relevant batches for pizza ID ${pizzaId}:`, relevantBatches);
+    // Flatten the array of arrays (each batch's pizzas) into a single array
+    const flattenedStock = data.flat();
 
-  return relevantBatches;
+    // Sort by batch_number
+    flattenedStock.sort((a, b) => a.batch_number - b.batch_number);
+
+    setStock(flattenedStock);
+  } catch (error) {
+    console.error("Error fetching stock data:", error);
+  }
 };
-  // function to get the customer data from firebase
-   const fetchCustomers = async () => {
-     try {
-       const querySnapshot = await getDocs(collection(db, "customers"));
-       const fetchedCustomerData = querySnapshot.docs.map(doc => ({
-         id: doc.id,
-         ...doc.data()
-        }));
-        setCustomerData(fetchedCustomerData);
-      } catch (error) {
-        console.error("Error fetching customer data:", error);
-      }
-    };
-    
-  // function to get the pizza data from firebase
-    const fetchPizzas = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "pizzas"));
-        const fetchedPizzaData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        fetchedPizzaData.sort((a, b) => {
-         if (a.sleeve === b.sleeve) {
-           return a.id.localeCompare(b.id);
-         }
-         return a.sleeve ? -1 : 1;
-       });
-        setPizzaData(fetchedPizzaData);
-      } catch (error) {
-        console.error("Error fetching pizzas:", error);
-      }
-    };
+
+// function to get the customer data from firebase
+const fetchCustomers = async () => {
+   try {
+     const querySnapshot = await getDocs(collection(db, "customers"));
+     const fetchedCustomerData = querySnapshot.docs.map(doc => ({
+       id: doc.id,
+       ...doc.data()
+      }));
+      setCustomerData(fetchedCustomerData);
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+    }
+  };
+ 
+
+// function to get the pizza data from firebase
+const fetchPizzas = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "pizzas"));
+      const fetchedPizzaData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      fetchedPizzaData.sort((a, b) => {
+       if (a.sleeve === b.sleeve) {
+         return a.id.localeCompare(b.id);
+       }
+       return a.sleeve ? -1 : 1;
+     });
+      setPizzaData(fetchedPizzaData);
+    } catch (error) {
+      console.error("Error fetching pizzas:", error);
+    }
+  };
+
+
+
+useEffect(() => {
   fetchStock();
   fetchCustomers();
   fetchPizzas();
-
   }, []);
 
 
@@ -144,6 +143,30 @@ useEffect(() => {
     }
   }
   
+
+
+
+  const findEarliestBatchWithEnoughPizza = (pizzaID, quantityRequired) => {
+  // Filter stock for batches of the given pizzaID and sort them by batch_number
+  const relevantBatches = stock
+  .filter(batch => batch.pizza_id === pizzaID)
+  .sort((a, b) => a.batch_number - b.batch_number);
+
+  // Look for the first batch that can fulfill the entire quantity
+  const batchWithEnoughStock = relevantBatches.find(batch => batch.quantity_available >= quantityRequired);
+
+  // If a suitable batch is found, return it with the requested quantity
+  if (batchWithEnoughStock) {
+  return [{ batch_number: batchWithEnoughStock.batch_number, quantity: quantityRequired }];
+  }
+
+  // If no single batch can fulfill the order, return null (indicating not enough stock in any single batch)
+  return null;
+  };
+
+
+
+
   const filteredPizzaData = pizzaData.filter(pizza => {
     if (filterCriteria === "withSleeve") {
       return pizza.sleeve;
@@ -209,65 +232,47 @@ const handleSubmit = async (event) => {
   if (form.checkValidity() === false) {
     event.preventDefault();
     event.stopPropagation();
-    console.log('not submitted')
   } else {
-  
-  // console.log('form submitted')
-  setValidated(true);
-//send to database
-  try {
-    const pizzas = filteredPizzaData.reduce((acc, pizza) => {
-      acc[pizza.id] = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+    setValidated(true);
+
+     // Check stock availability for each pizza
+     const pizzas = filteredPizzaData.reduce((acc, pizza) => {
+      const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+
+      if (quantityRequired > 0) {
+        // Check for a single batch with enough stock
+        const batchesUsed = findEarliestBatchWithEnoughPizza(pizza.id, quantityRequired);
+
+        if (!batchesUsed) {
+          alert(`Not enough stock for pizza: ${pizza.pizza_title} from one batch.`);
+          return null;  // Stop the submission if there's insufficient stock
+        }
+
+        acc[pizza.id] = { quantity: quantityRequired, batchesUsed };  // Save batch info
+      }
+
       return acc;
     }, {});
+    
+    if (!pizzas) return;  // Exit if stock is insufficient
 
-       // Store assigned batch codes for the order
-       const assignedBatchCodes = {};
-
-       // Deduct pizzas from stock and assign batch codes
-       Object.keys(pizzas).forEach((pizzaId) => {
-         let quantityNeeded = pizzas[pizzaId];
-         assignedBatchCodes[pizzaId] = [];
-         
-         // Filter stock to get batches related to the current pizza ID, sorted by earliest batch code
-         const relevantBatches = stock
-         .filter(batch => batch.pizza_id === pizzaId)
-         .sort((a, b) => a.batch_code.localeCompare(b.batch_code));
-
-          // **LOG the stock data for debugging purposes**
-        // console.log(`Stock for pizza ID ${pizzaId}:`, relevantBatches);
-        // console.log(`Required quantity for pizza ID ${pizzaId}:`, pizzas[pizzaId]);
-
-         for (const batch of relevantBatches) {
-
-           if (quantityNeeded > 0) {
-             const availableInBatch = batch.quantity;
-             const takeFromBatch = Math.min(availableInBatch, quantityNeeded);
-             assignedBatchCodes[pizzaId].push({ batch_code: batch.batch_code, quantity: takeFromBatch });
-             quantityNeeded -= takeFromBatch;
-           }
-         }
-         if (quantityNeeded > 0) {
-          //  console.log(`Not enough inventory for pizza ID ${pizzaId}`);
-         }
-       });
-
+//send to database
+  try {
     const docRef = await addDoc(collection(db, "orders"), {
       timestamp: serverTimestamp(),
       order_placed_timestamp: dayjs().format('YYYY-MM-DD, HH:mm'),
-      delivery_week: deliveryOption === 'other' ? (`${customDeliveryWeek}`) : deliveryOption,
+      delivery_week: deliveryOption === 'other' ? customDeliveryWeek : deliveryOption,
       delivery_day: "tbc",
       account_ID: accountID,
       customer_name: customerName,
-      pizzas,
+      pizzas: pizzas,  // Store pizzas with their respective batch details
       pizzaTotal: totalPizzas,
       additional_notes: document.getElementById('additonalNotes').value,
       order_status: "order placed",
       complete: false,
-      batch_codes: assignedBatchCodes // Store the assigned batch codes here
     });
-    
-    // console.log("Document written with ID: ", docRef.id);
+
+    console.log("Document written with ID: ", docRef.id);
   } catch (e) {
     console.error("Error adding document: ", e);
   }

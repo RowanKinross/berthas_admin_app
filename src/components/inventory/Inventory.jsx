@@ -81,12 +81,12 @@ function Inventory() {
   
     pizzaData.forEach((pizza) => {
       stock.forEach((batch) => {
-        if (batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0)) {
+        if (batch.completed && batch.pizzas.some(p => p.id === pizza.id)) {
           batch.pizzas.forEach((p) => {
             if (p.id === pizza.id) {
               totalStock += p.quantity;
-              totalOnOrder += 0; // Assuming "On Order" is not yet tracked in your batches
-              totalAvailable += p.quantity; // Assuming "Available" = "Stock" - "On Order"
+              totalOnOrder += 0; // "On Order" is not yet tracked in your batches
+              totalAvailable += p.quantity_available;
             }
           });
         }
@@ -229,8 +229,8 @@ return (
                         p.id === pizza.id && p.quantity > 0 ? (
                           <div key={idx} className='container'>
                             <p>Total: {p.quantity}</p>
-                            <p>On order: 0</p>
-                            <p>Available: {p.quantity}</p>
+                            <p>On order: {p.quantity_on_order}</p>
+                            <p>Available: {p.quantity - p.quantity_on_order}</p>
                             <p className='hide'>{totalStock += p.quantity}{totalOnOrder == 0 ? totalAvailable = totalStock - totalOnOrder : 0}</p>
                           </div>
                         ) : null

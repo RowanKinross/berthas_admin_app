@@ -83,13 +83,23 @@ const OrderHistory = ({ accountID }) => {
     setEditMode(false);
   };
 
-  const transformPizzasObjectToArray = (pizzasObject) => {
-    return Object.keys(pizzasObject)
-      .filter(pizzaId => pizzasObject[pizzaId] > 0)
-      .map(pizzaId => ({
-        name: pizzaNameMap[pizzaId] || pizzaId,
-        quantity: pizzasObject[pizzaId],
-      }));
+  const transformPizzasObjectToArray = (pizzas) => {
+    console.log('Pizzas object:', pizzas);
+    return Object.keys(pizzas).map(pizzaID => {
+      const pizza = pizzas[pizzaID];
+
+          // Use the pizzaNameMap to get the name, fallback to pizzaID if not found
+    const pizzaName = pizzaNameMap[pizzaID] || pizzaID;
+      
+      // Combine batch info into a string
+      const batchDetails = pizza.batchesUsed.map(batch => `${batch.batch_number} (qty: ${batch.quantity})`).join(', ');
+  
+      return {
+        name: pizzaName,
+        quantity: pizza.quantity,
+        batchDetails: batchDetails
+      };
+    });
   };
 
   return (
@@ -163,17 +173,19 @@ const OrderHistory = ({ accountID }) => {
                 <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
                 <p><strong>Delivery Day:</strong> {selectedOrder.delivery_day}</p>
                 <p><strong>Order Status:</strong> {selectedOrder.order_status}</p>
-                {selectedOrder.pizzas && (
+                {selectedOrder.pizzas ? (
                   <div>
                     <h4>Pizzas Ordered:</h4>
                     <ul>
                       {transformPizzasObjectToArray(selectedOrder.pizzas).map((pizza, index) => (
                         <li key={index}>
-                          {pizza.name} x {pizza.quantity} (batch: placeholder batchcode)
+                          {pizza.name} x {pizza.quantity} (batch: {pizza.batchDetails})
                         </li>
                       ))}
                     </ul>
                   </div>
+                  ) : (
+                    <p>No pizzas ordered.</p>
                 )}
                 <p><strong>Total no. of Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
                 <button className='editButton' onClick={handleEditClick}>
