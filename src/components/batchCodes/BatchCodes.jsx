@@ -639,6 +639,7 @@ function BatchCodes() {
                   onChange={(e) => handleQuantityChange(e, pizza.id)}
                 />
               </div>
+              {Number(pizza.quantity) > 0 && (
               <div className="pizza-weights">
                 <div>
                   <label>First pizza weight                   
@@ -668,6 +669,7 @@ function BatchCodes() {
                   />g</label>
                 </div>
               </div>
+              )}
             </div>
           ))}
 
