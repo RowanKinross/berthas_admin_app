@@ -117,6 +117,12 @@ function BatchCodes() {
     }
   }, [batchDate]);
 
+  useEffect(() => {
+    // When viewing batch state changes scroll it into view
+    if (viewingBatch && batchDetailsRef.current) {
+      batchDetailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [viewingBatch]);
 
   // if user clicks the add button
   const handleAddClick = () => {
