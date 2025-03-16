@@ -109,6 +109,16 @@ function BatchCodes() {
     return `${year}${month}${day}`;
   }
 
+  // Pizza weight const for form fields
+  const handlePizzaWeightChange = (e, pizzaId, weightType) => {
+    const { value } = e.target;
+    setPizzas(prevPizzas =>
+      prevPizzas.map(pizza =>
+        pizza.id === pizzaId ? { ...pizza, [`${weightType}PizzaWeight`]: value } : pizza
+      )
+    );
+  };
+
   useEffect(() => {
     // When batchDate changes, update the batchCode
     if (batchDate) {
@@ -158,7 +168,10 @@ function BatchCodes() {
       return {
         ...pizza,
         quantity: matchingPizza ? matchingPizza.quantity : 0,
-        ingredientBatchCodes: matchingPizza ? matchingPizza.ingredientBatchCodes : {}
+        ingredientBatchCodes: matchingPizza ? matchingPizza.ingredientBatchCodes : {},
+        firstPizzaWeight: matchingPizza ? matchingPizza.firstPizzaWeight : "",
+        middlePizzaWeight: matchingPizza ? matchingPizza.middlePizzaWeight : "",
+        lastPizzaWeight: matchingPizza ? matchingPizza.lastPizzaWeight : "",
       };
     });
     
@@ -369,7 +382,10 @@ function BatchCodes() {
           ingredientBatchCodes: pizza.ingredients.reduce((acc, ingredient) => {
             acc[ingredient] = ingredientBatchCodes[ingredient] || "";
             return acc;
-          }, {})
+          }, {}),
+          firstPizzaWeight: pizza.firstPizzaWeight || null,
+          middlePizzaWeight: pizza.middlePizzaWeight || null,
+          lastPizzaWeight: pizza.lastPizzaWeight || null,
         })),
         notes: notes,
       });
@@ -414,7 +430,10 @@ function BatchCodes() {
           ingredientBatchCodes: pizza.ingredients.reduce((acc, ingredient) => {
             acc[ingredient] = ingredientBatchCodes[ingredient] || "";
             return acc;
-          }, {})
+          }, {}),
+          firstPizzaWeight: pizza.firstPizzaWeight || null,
+          middlePizzaWeight: pizza.middlePizzaWeight || null,
+          lastPizzaWeight: pizza.lastPizzaWeight || null,
         })),
         notes: notes,
       });
@@ -522,11 +541,29 @@ function BatchCodes() {
             <p><strong>Completed:</strong> {viewingBatch.completed ? 'Yes' : 'No'}</p>
             <p><strong>Ingredients Ordered:</strong> {viewingBatch.ingredients_ordered ? 'Yes' : 'No'}</p>
           </div>
-          <h4>Pizzas:</h4>
+          <div className='pizzaDisplayTitles'> 
+            <h4 className='pizzaWeightsOuter'>Pizzas:</h4>
+            <h6 className='pizzaWeightsOuter'>Pizza Weights:</h6>
+          </div>
           {viewingBatch.pizzas.filter(pizza => pizza.quantity > 0).map(pizza => (
             <div key={pizza.id} className='pizzaDetails'>
-              <p><strong>{pizza.pizza_title}</strong> </p>
-              <p> {pizza.quantity}</p>
+              <p><strong>{pizza.pizza_title}</strong>: {pizza.quantity} </p>
+              <div className='pizzaWeightsOuter'>
+                <div className='pizzaWeights'>
+                  <p>
+                    <strong>First:{" "}</strong>
+                    {Number(pizza.firstPizzaWeight) > 0 ? `${pizza.firstPizzaWeight}g`: <span style={{ color: 'red' }}>-</span>}
+                  </p>
+                  <p>
+                    <strong>Middle:{" "}</strong>
+                    {Number(pizza.middlePizzaWeight) > 0 ? `${pizza.middlePizzaWeight} g` : <span style={{ color: 'red' }}>-</span>}
+                  </p>
+                  <p>
+                    <strong>Last:{" "}</strong>
+                    {Number(pizza.lastPizzaWeight) > 0 ? `${pizza.lastPizzaWeight} g` : <span style={{ color: 'red' }}>-</span>}
+                  </p>
+                </div> 
+              </div>
             </div>
           ))}
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
@@ -588,9 +625,11 @@ function BatchCodes() {
           </div>
           <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
           <Col sm={9}>
-            {pizzas.map((pizza) => (
-              <div key={pizza.id} className='pizzaDetails'>
-                {pizza.pizza_title}
+          {pizzas.map((pizza) => (
+            <div key={pizza.id} className='pizzaDetails'>
+              <div className="pizza-info">
+                <strong>{pizza.pizza_title}</strong>
+                 {/* - {pizza.quantity || 0} */}
                 <input
                   className='inputNumber'
                   type="number"
@@ -600,7 +639,38 @@ function BatchCodes() {
                   onChange={(e) => handleQuantityChange(e, pizza.id)}
                 />
               </div>
-            ))}
+              <div className="pizza-weights">
+                <div>
+                  <label>First pizza weight                   
+                    <input
+                    type="number"
+                    value={pizza.firstPizzaWeight || ""}
+                    placeholder="0"
+                    onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'first')}
+                  />g</label>
+                </div>
+                <div>
+                  <label>Middle pizza weight
+                  <input
+                    type="number"
+                    value={pizza.middlePizzaWeight || ""}
+                    placeholder="0"
+                    onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'middle')}
+                  />g</label>
+                </div>
+                <div>
+                  <label>Last pizza weight                  
+                    <input
+                    type="number"
+                    value={pizza.lastPizzaWeight || ""}
+                    placeholder="0"
+                    onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'last')}
+                  />g</label>
+                </div>
+              </div>
+            </div>
+          ))}
+
             <div className='total'>
               <h6><strong>Total: </strong>{totalPizzas}</h6>
             </div>
