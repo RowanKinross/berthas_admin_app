@@ -542,8 +542,14 @@ function BatchCodes() {
           }
           return pizza;
         });
-      
-        await updateDoc(batchRef, { pizzas: updatedPizzas });
+        const totalPizzas = updatedPizzas.reduce(
+          (sum, pizza) => sum + (parseInt(pizza.quantity) || 0),
+          0
+        );
+        await updateDoc(batchRef, { 
+        pizzas: updatedPizzas,
+        num_pizzas: totalPizzas,
+      });
       }
   
       const freshSnap = await getDoc(batchRef);
