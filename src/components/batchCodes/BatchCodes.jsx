@@ -733,7 +733,7 @@ const allBatchCodesFilled = requiredIngredients.every(
             ) : (
               <>
                 <button
-                  type="button"
+                  type="submit"
                   className='button draft'
                   onClick={handleEditFormSubmit}
                 >
@@ -741,7 +741,7 @@ const allBatchCodesFilled = requiredIngredients.every(
                 </button>
                 {allBatchCodesFilled && (
                   <button
-                    type="submit"
+                    type="button"
                     className='button'
                     onClick={() => setCompleted(true)}
                   >
