@@ -94,4 +94,15 @@
 .center {
   justify-content: center;
 }
-
+.fullWidth {
+  display: block;
+  width: 100% !important;
+}
+.minHeight {
+  min-height: 80px;
+}
+.paragraph {
+  white-space: pre-wrap;
+  display: block;
+  margin-top: 0.5rem;
+}

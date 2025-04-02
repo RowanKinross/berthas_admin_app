@@ -815,7 +815,7 @@ setAllBatchCodesFilled(allFilled);
     style={{ fontStyle: 'italic', cursor: 'pointer' }}
     onClick={() => setShowPizzaPicker(true)}
   >
-    + Add a pizza type
+    + add a pizza type
   </span>
 ) : (
   <select
@@ -882,7 +882,7 @@ setAllBatchCodesFilled(allFilled);
                 </div>
               );
             })}
-          <p>
+          <p className='fullWidth'>
           <strong>Notes:</strong>{" "}
           {editingField === "notes" ? (
             <textarea
@@ -896,13 +896,16 @@ setAllBatchCodesFilled(allFilled);
                   handleInlineSave("batch", null, "notes", editingValue);
                 }
               }}
+              className='fullWidth minHeight'
             />
           ) : (
-            <span onClick={() => {
+            <span 
+            className="paragraph"
+            onClick={() => {
               setEditingField("notes");
               setEditingValue(viewingBatch.notes || "");
             }}>
-              {viewingBatch.notes || <i>Click to add notes</i>}
+              {viewingBatch.notes || <i>+ add notes</i>}
             </span>
           )}
         </p>
