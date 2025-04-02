@@ -130,12 +130,6 @@ function BatchCodes() {
     }
   }, [batchDate]);
 
-  useEffect(() => {
-    // When viewing batch state changes scroll it into view
-    if (viewingBatch && batchDetailsRef.current && !hasScrolled) {
-      batchDetailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [viewingBatch]);
 
   // if user clicks the add button
   const handleAddClick = () => {
@@ -362,6 +356,10 @@ function BatchCodes() {
         return acc;
       }, {})
     });
+
+    setTimeout(() => {
+      batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   };
 
   const handleAddFormSubmit = async (e) => {
