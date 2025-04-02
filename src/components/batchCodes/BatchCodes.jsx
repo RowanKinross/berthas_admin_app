@@ -872,8 +872,8 @@ setAllBatchCodesFilled(allFilled);
       })()}
 
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
-          <div className='ingredientBatchcodeBox'>
           <h4>Batch Codes:</h4>
+          <div className='ingredientBatchcodeBox'>
           {ingredients
             .filter(ingredient => viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name)))
             .map(ingredient => {

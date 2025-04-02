@@ -12,7 +12,7 @@
 }
 .ingredientBatchcodeBox{
   border: 1px solid var(--grey);
-  padding: 5px;
+  padding-top: 5px;
   background-color: var(--pale);
 }
 .editForm, .batchDetails {

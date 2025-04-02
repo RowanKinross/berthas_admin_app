@@ -9,7 +9,8 @@
   -moz-osx-font-smoothing: grayscale;
 
   --pale: #fdfdfd;
-  --paleLight: rgb(253, 253, 253, 0.7);
+  --paleLight: #fdfdfdb3;
+  --paleGrey: #eaeaea;
   --dark: #1a1a1a;
   --grey: #e2e2e2;
   --darkLight: rgb(26, 26, 26, 0.5);
