@@ -34,6 +34,15 @@ function BatchCodes() {
   const [allBatchCodesFilled, setAllBatchCodesFilled] = useState(false);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
 
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+  };
 
 
   // display all batches
@@ -660,7 +669,7 @@ setAllBatchCodesFilled(allFilled);
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
           <div >
-            <p><strong>Batch Date:</strong> {viewingBatch.batch_date}</p>
+            <p><strong>Batch Date:</strong> {formatDateDisplay(viewingBatch.batch_date)}</p>
             <p>
               <strong>Ingredients Ordered:</strong>{" "}
               {editingField === "ingredients_ordered" ? (
@@ -1050,7 +1059,7 @@ setAllBatchCodesFilled(allFilled);
         .map(batch => (
           <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
             <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
-              <p className='batchTextBoxes'>{batch.batch_date}</p>
+              <p className='batchTextBoxes'>{formatDateDisplay(batch.batch_date)}</p>
               <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
               {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
             </button>
