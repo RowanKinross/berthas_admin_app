@@ -872,6 +872,7 @@ setAllBatchCodesFilled(allFilled);
       })()}
 
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
+          <div className='ingredientBatchcodeBox'>
           <h4>Batch Codes:</h4>
           {ingredients
             .filter(ingredient => viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name)))
@@ -917,6 +918,7 @@ setAllBatchCodesFilled(allFilled);
                 </div>
               );
             })}
+            </div>
           <p className='fullWidth'>
           <strong>Notes:</strong>{" "}
           {editingField === "notes" ? (

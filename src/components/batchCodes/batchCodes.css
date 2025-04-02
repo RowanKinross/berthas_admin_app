@@ -10,7 +10,11 @@
   width: 100%;
   border: 0;
 }
-
+.ingredientBatchcodeBox{
+  border: 1px solid var(--grey);
+  padding: 5px;
+  background-color: var(--pale);
+}
 .editForm, .batchDetails {
   border: 1px solid var(--dark);
   margin: 5px;
