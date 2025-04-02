@@ -656,10 +656,10 @@ setAllBatchCodesFilled(allFilled);
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
           <h2>Batch Details</h2>
-          <div className="detailRow">
+          <div >
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
-          <div className="detailRow">
+          <div >
             <p><strong>Batch Date:</strong> {viewingBatch.batch_date}</p>
             <p>
               <strong>Ingredients Ordered:</strong>{" "}
