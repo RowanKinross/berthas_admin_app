@@ -32,6 +32,7 @@ function BatchCodes() {
   const batchDetailsRef = useRef(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [allBatchCodesFilled, setAllBatchCodesFilled] = useState(false);
+  const [showPizzaPicker, setShowPizzaPicker] = useState(false);
 
 
 
@@ -809,29 +810,35 @@ setAllBatchCodesFilled(allFilled);
 
         return hiddenPizzas.length > 0 && (
 <div >
-    <div className="addPizzaDropdown">
-      <select
-        autoFocus
-        value=""
-        onChange={(e) => {
-          const selectedId = e.target.value;
-          if (!selectedId) return;
-
-          handleInlineSave("pizza", selectedId, "quantity", 1);
-          e.target.selectedIndex = 0;
-          setShowPizzaPicker(false);
-        }}
-      >
-        <option value="">Add a pizza type</option>
-        {pizzas
-          .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id))
-          .map(pizza => (
-            <option key={pizza.id} value={pizza.id}>
-              {pizza.pizza_title}
-            </option>
-          ))}
-      </select>
-    </div>
+{!showPizzaPicker ? (
+  <span
+    style={{ fontStyle: 'italic', cursor: 'pointer' }}
+    onClick={() => setShowPizzaPicker(true)}
+  >
+    + Add a pizza type
+  </span>
+) : (
+  <select
+    autoFocus
+    value=""
+    onChange={(e) => {
+      const selectedId = e.target.value;
+      if (!selectedId) return;
+      handleInlineSave("pizza", selectedId, "quantity", 1);
+      setShowPizzaPicker(false);
+    }}
+    onBlur={() => setShowPizzaPicker(false)} // hide dropdown if user clicks away
+  >
+    <option value="">Select pizza...</option>
+    {pizzas
+      .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id))
+      .map(pizza => (
+        <option key={pizza.id} value={pizza.id}>
+          {pizza.pizza_title}
+        </option>
+      ))}
+  </select>
+)}
 </div>
 
         );
