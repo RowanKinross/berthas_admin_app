@@ -503,25 +503,32 @@ function BatchCodes() {
     }
   };
 
-  const handleInlineSave = async (type, pizzaId, field, value) => {
+  const handleInlineSave = async (type, id, field, value) => {
     setEditingField(null);
+  
     try {
       const batchRef = doc(db, "batches", viewingBatch.id);
       const currentSnap = await getDoc(batchRef);
       const currentData = currentSnap.data();
   
-      if (type === "pizza") {
+      if (type === "ingredient") {
         const updatedPizzas = currentData.pizzas.map(pizza => {
-          if (pizza.id === pizzaId) {
-            return {
-              ...pizza,
-              [field]: value === "" ? null : Number(value)
-            };
-          }
-          return pizza;
+          return {
+            ...pizza,
+            ingredientBatchCodes: {
+              ...pizza.ingredientBatchCodes,
+              [id]: value // `id` here is the ingredient name
+            }
+          };
         });
   
         await updateDoc(batchRef, { pizzas: updatedPizzas });
+      }
+  
+      if (type === "batch") {
+        await updateDoc(batchRef, {
+          [field]: value
+        });
       }
   
       const freshSnap = await getDoc(batchRef);
@@ -531,6 +538,7 @@ function BatchCodes() {
       console.error("Error saving inline field:", error);
     }
   };
+  
 
 
   // Handle clicks outside the form
@@ -687,11 +695,53 @@ const allBatchCodesFilled = requiredIngredients.every(
                   <p>
                     <strong>{ingredient.name}:</strong>  {formatQuantity(numberOfUnits)} {ingredientQuantity.unit} 
                   </p>
-                  <p>{batchCode ? `# ${batchCode}` : "!"}</p>
+                  {editingField === `ingredient-${ingredient.name}` ? (
+                    <input
+                      type="text"
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("ingredient", ingredient.name, null, editingValue)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleInlineSave("ingredient", ingredient.name, null, editingValue);
+                      }}
+                    />
+                  ) : (
+                    <p onClick={() => {
+                      setEditingField(`ingredient-${ingredient.name}`);
+                      setEditingValue(batchCode || "");
+                    }}>
+                      {batchCode ? `# ${batchCode}` : <span style={{ color: 'red' }}>-</span>}
+                    </p>
+                  )}
                 </div>
               );
             })}
-          <p><strong>Notes:</strong> {viewingBatch.notes}</p>
+          <p>
+          <strong>Notes:</strong>{" "}
+          {editingField === "notes" ? (
+            <textarea
+              value={editingValue}
+              autoFocus
+              onChange={(e) => setEditingValue(e.target.value)}
+              onBlur={() => handleInlineSave("batch", null, "notes", editingValue)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleInlineSave("batch", null, "notes", editingValue);
+                }
+              }}
+            />
+          ) : (
+            <span onClick={() => {
+              setEditingField("notes");
+              setEditingValue(viewingBatch.notes || "");
+            }}>
+              {viewingBatch.notes || <i>Click to add notes</i>}
+            </span>
+          )}
+        </p>
+
         </div>
       )}
   
