@@ -30,7 +30,7 @@ function BatchCodes() {
   const [loading, setLoading] = useState(true);
   const [viewingBatch, setViewingBatch] = useState(null); // Track viewing mode
   const batchDetailsRef = useRef(null);
-
+  const [hasScrolled, setHasScrolled] = useState(false);
 
 
   // display all batches
@@ -131,7 +131,7 @@ function BatchCodes() {
 
   useEffect(() => {
     // When viewing batch state changes scroll it into view
-    if (viewingBatch && batchDetailsRef.current) {
+    if (viewingBatch && batchDetailsRef.current && !hasScrolled) {
       batchDetailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [viewingBatch]);
@@ -461,10 +461,11 @@ function BatchCodes() {
 
   const handleDeleteForm = async () => {
     try {
-      const batchRef = doc(db, "batches", editBatch.id);
+      const batchRef = doc(db, "batches", viewingBatch.id);
       await deleteDoc(batchRef);
-      setShowForm(false);
-      setEditBatch(null);
+      
+      setViewingBatch(null)
+
       const querySnapshot = await getDocs(collection(db, "batches"));
       const batchesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -527,8 +528,22 @@ function BatchCodes() {
   
       if (type === "batch") {
         await updateDoc(batchRef, {
-          [field]: value
+          [field]: field === "ingredients_ordered" ? !!value : value
         });
+      }
+
+      if (type === "pizza") {
+        const updatedPizzas = currentData.pizzas.map(pizza => {
+          if (pizza.id === id) {
+            return {
+              ...pizza,
+              [field]: value === "" ? null : Number(value)
+            };
+          }
+          return pizza;
+        });
+      
+        await updateDoc(batchRef, { pizzas: updatedPizzas });
       }
   
       const freshSnap = await getDoc(batchRef);
@@ -550,6 +565,7 @@ function BatchCodes() {
       ) {
         setShowForm(false);
         setViewingBatch(null);
+        setHasScrolled(false)
       }
     };
   
@@ -580,14 +596,34 @@ const allBatchCodesFilled = requiredIngredients.every(
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
           <h2>Batch Details</h2>
-          <button className='button' onClick={() => handleEditClick(viewingBatch)}>Edit</button>
           <div className="detailRow">
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
           <div className="detailRow">
             <p><strong>Batch Date:</strong> {viewingBatch.batch_date}</p>
-            <p><strong>Completed:</strong> {viewingBatch.completed ? 'Yes' : 'No'}</p>
-            <p><strong>Ingredients Ordered:</strong> {viewingBatch.ingredients_ordered ? 'Yes' : 'No'}</p>
+            <p>
+              <strong>Ingredients Ordered:</strong>{" "}
+              {editingField === "ingredients_ordered" ? (
+                <input
+                  type="checkbox"
+                  checked={editingValue}
+                  autoFocus
+                  onChange={(e) => setEditingValue(e.target.checked)}
+                  onBlur={() => handleInlineSave("batch", null, "ingredients_ordered", editingValue)}
+                />
+              ) : (
+                <span
+                  onClick={() => {
+                    setEditingField("ingredients_ordered");
+                    setEditingValue(viewingBatch.ingredients_ordered || false);
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
+                  {viewingBatch.ingredients_ordered ? "✓" : "✘"}
+                </span>
+              )}
+            </p>
+
           </div>
           <div className='pizzaDisplayTitles'> 
             <h4 className='pizzaWeightsOuter'>Pizzas:</h4>
@@ -595,7 +631,36 @@ const allBatchCodesFilled = requiredIngredients.every(
           </div>
           {viewingBatch.pizzas.filter(pizza => pizza.quantity > 0).map(pizza => (
   <div key={pizza.id} className='pizzaDetails'>
-    <p><strong>{pizza.pizza_title}</strong>: {pizza.quantity}</p>
+  <p>
+    <strong>{pizza.pizza_title}</strong>:{" "}
+    {editingField === `pizza-${pizza.id}-quantity` ? (
+      <input
+        type="number"
+        className='inputNumber'
+        value={editingValue}
+        autoFocus
+        onChange={(e) => setEditingValue(e.target.value)}
+        onBlur={() =>
+          handleInlineSave("pizza", pizza.id, "quantity", editingValue)
+        }
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            handleInlineSave("pizza", pizza.id, "quantity", editingValue);
+          }
+        }}
+      />
+    ) : (
+      <span
+        onClick={() => {
+          setEditingField(`pizza-${pizza.id}-quantity`);
+          setEditingValue(pizza.quantity || "");
+        }}
+      >
+        {pizza.quantity}
+      </span>
+    )}
+  </p>
+
     <div className='pizzaWeightsOuter'>
       <div className='pizzaWeights'>
 
@@ -741,7 +806,27 @@ const allBatchCodesFilled = requiredIngredients.every(
             </span>
           )}
         </p>
-
+        <div className="batchActionButtons container">
+  {allBatchCodesFilled && (
+    <button
+      className="button"
+      onClick={async () => {
+        await updateDoc(doc(db, "batches", viewingBatch.id), { completed: true });
+        const freshSnap = await getDoc(doc(db, "batches", viewingBatch.id));
+        setViewingBatch({ id: freshSnap.id, ...freshSnap.data() });
+      }}
+    >
+      Submit
+    </button>
+  )}
+  <button
+    type="button"
+    className='button draft'
+    onClick={handleDeleteForm}
+  >
+    Delete
+  </button>
+</div>
         </div>
       )}
   
@@ -868,15 +953,14 @@ const allBatchCodesFilled = requiredIngredients.every(
               onChange={handleInputChange}
             />
           </div>
-          <div className='container'>
+          <div className='container center'>
             {saveNewMode ? (
               <button
                 type="button"
                 className='button draft'
                 onClick={handleAddFormSubmit}
               >
-                Save as draft
-              </button>
+                Save new batch</button>
             ) : (
               <>
                 <button
