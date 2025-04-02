@@ -980,40 +980,6 @@ setAllBatchCodesFilled(allFilled);
                 onChange={(e) => handleQuantityChange(e, pizza.id)}
               />
             </div>
-            {Number(pizza.quantity) > 0 && (
-              <div className="pizza-weights">
-                <div>
-                  <label>First</label>
-                  <input
-                    type="number"
-                    className="inputNumber"                    
-                    value={pizza.firstPizzaWeight || ""}
-                    placeholder="0"
-                    onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'first')}
-                  />g
-                </div>
-                <div>
-                  <label>Middle</label>
-                  <input
-                    type="number"
-                    className="inputNumber"                    
-                    value={pizza.middlePizzaWeight || ""}
-                    placeholder="0"
-                    onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'middle')}
-                  />g
-                </div>
-                <div>
-                  <label>Last</label>
-                  <input
-                    type="number"
-                    className="inputNumber"
-                    value={pizza.lastPizzaWeight || ""}
-                    placeholder="0"
-                    onChange={(e) => handlePizzaWeightChange(e, pizza.id, 'last')}
-                  />g
-                </div>
-              </div>
-            )}
           </div>
         ))}
 
@@ -1022,28 +988,6 @@ setAllBatchCodesFilled(allFilled);
               <h6><strong>Total: </strong>{totalPizzas}</h6>
             </div>
           </Col>
-          {loading ? (
-            <div>Loading...</div>
-          ) : (
-            <div>
-              <Form.Label column sm={3}><strong>Ingredients:</strong></Form.Label>
-              {Object.entries(calculateIngredientQuantities(selectedPizzas)).map(([ingredient, { quantity, unitWeight, unit }]) => {
-                const numberOfUnits = quantity / unitWeight;
-                return (
-                  <div key={ingredient} className='ingredient container'>
-                    <h5><span className='fadedText'>{formatQuantity(numberOfUnits)} {unit} </span>{ingredient}</h5>
-                    <input
-                      type="text"
-                      placeholder="Batch Code"
-                      value={ingredientBatchCodes[ingredient] || ""}
-                      onChange={(e) => handleIngredientBatchCodeChange(e, ingredient)}
-                      className='ingredientBatchCode'
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
           <div>
             <Form.Label>Notes</Form.Label>
             <Form.Control
