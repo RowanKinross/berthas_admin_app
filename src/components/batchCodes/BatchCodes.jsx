@@ -33,6 +33,7 @@ function BatchCodes() {
   const [hasScrolled, setHasScrolled] = useState(false);
 
 
+
   // display all batches
   useEffect(() => {
     const fetchBatches = async () => {
@@ -533,15 +534,42 @@ function BatchCodes() {
       }
 
       if (type === "pizza") {
-        const updatedPizzas = currentData.pizzas.map(pizza => {
-          if (pizza.id === id) {
-            return {
-              ...pizza,
-              [field]: value === "" ? null : Number(value)
-            };
+        const updatedPizzas = (() => {
+          const exists = currentData.pizzas.some(p => p.id === id);
+          if (exists) {
+            return currentData.pizzas.map(pizza => {
+              if (pizza.id === id) {
+                return {
+                  ...pizza,
+                  [field]: value === "" ? null : Number(value)
+                };
+              }
+              return pizza;
+            });
+          } else {
+            const newPizza = pizzas.find(p => p.id === id);
+            return [
+              ...currentData.pizzas,
+              {
+                id: newPizza.id,
+                quantity: Number(value),
+                quantity_on_order: 0,
+                pizza_title: newPizza.pizza_title,
+                sleeve: newPizza.sleeve,
+                ingredients: newPizza.ingredients,
+                ingredientBatchCodes: newPizza.ingredients.reduce((acc, ingredient) => {
+                  acc[ingredient] = "";
+                  return acc;
+                }, {}),
+                firstPizzaWeight: null,
+                middlePizzaWeight: null,
+                lastPizzaWeight: null
+              }
+            ];
           }
-          return pizza;
-        });
+        })();
+
+        
         const totalPizzas = updatedPizzas.reduce(
           (sum, pizza) => sum + (parseInt(pizza.quantity) || 0),
           0
@@ -750,6 +778,40 @@ const allBatchCodesFilled = requiredIngredients.every(
           </div>
           </div>
         ))}
+        {(() => {
+        const visiblePizzaIds = viewingBatch.pizzas.map(p => p.id);
+        const hiddenPizzas = pizzas.filter(p => !visiblePizzaIds.includes(p.id));
+
+        return hiddenPizzas.length > 0 && (
+<div >
+    <div className="addPizzaDropdown">
+      <select
+        autoFocus
+        value=""
+        onChange={(e) => {
+          const selectedId = e.target.value;
+          if (!selectedId) return;
+
+          handleInlineSave("pizza", selectedId, "quantity", 1);
+          e.target.selectedIndex = 0;
+          setShowPizzaPicker(false);
+        }}
+      >
+        <option value="">Add a pizza type</option>
+        {pizzas
+          .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id))
+          .map(pizza => (
+            <option key={pizza.id} value={pizza.id}>
+              {pizza.pizza_title}
+            </option>
+          ))}
+      </select>
+    </div>
+</div>
+
+        );
+      })()}
+
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
           <h4>Batch Codes:</h4>
           {ingredients
