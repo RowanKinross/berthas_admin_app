@@ -33,6 +33,9 @@ function BatchCodes() {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [allBatchCodesFilled, setAllBatchCodesFilled] = useState(false);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
+  const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
+
+
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return "";
@@ -57,6 +60,20 @@ function BatchCodes() {
 
         setBatches(batchesData);
         
+        const seenCodes = new Set();
+
+        batchesData.forEach(batch => {
+          batch.pizzas?.forEach(pizza => {
+            Object.values(pizza.ingredientBatchCodes || {}).forEach(code => {
+              if (code?.trim()) {
+                seenCodes.add(code.trim());
+              }
+            });
+          });
+        });
+
+        setBatchCodeSuggestions(Array.from(seenCodes));
+
       } catch (error) {
         console.error("Error fetching batches:", error);
       }
@@ -870,8 +887,10 @@ setAllBatchCodesFilled(allFilled);
                     <strong>{ingredient.name}:</strong>  {formatQuantity(numberOfUnits)} {ingredientQuantity.unit} 
                   </p>
                   {editingField === `ingredient-${ingredient.name}` ? (
+                    <div>
                     <input
                       type="text"
+                      list='batch-code-suggestions'
                       value={editingValue}
                       autoFocus
                       onChange={(e) => setEditingValue(e.target.value)}
@@ -880,6 +899,12 @@ setAllBatchCodesFilled(allFilled);
                         if (e.key === "Enter") handleInlineSave("ingredient", ingredient.name, null, editingValue);
                       }}
                     />
+                    <datalist id="batch-code-suggestions">
+                    {batchCodeSuggestions.map((code) => (
+                      <option key={code} value={code} />
+                    ))}
+                  </datalist>
+                  </div>
                   ) : (
                     <p onClick={() => {
                       setEditingField(`ingredient-${ingredient.name}`);
@@ -918,7 +943,7 @@ setAllBatchCodesFilled(allFilled);
             </span>
           )}
         </p>
-        <div className="batchActionButtons container">
+        <div className="batchActionButtons container center">
   
         {allBatchCodesFilled && (
           <button
@@ -933,9 +958,14 @@ setAllBatchCodesFilled(allFilled);
             <button
               type="button"
               className='button draft'
-              onClick={handleDeleteForm}
+              onClick={() => {
+                const confirmed = window.confirm("Are you sure you want to delete this batch?");
+                if (confirmed) {
+                  handleDeleteForm();
+              }
+            }}
             >
-              Delete
+              Delete batch
             </button>
           </div>
         </div>
