@@ -617,6 +617,7 @@ function BatchCodes() {
       setViewingBatch(freshData);
     } catch (error) {
       console.error("Error saving inline field:", error);
+      alert("Couldn't save your change. Please check your connection.");
     }
   };
   
