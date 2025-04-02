@@ -31,6 +31,7 @@ function BatchCodes() {
   const [viewingBatch, setViewingBatch] = useState(null); // Track viewing mode
   const batchDetailsRef = useRef(null);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [allBatchCodesFilled, setAllBatchCodesFilled] = useState(false);
 
 
 
@@ -43,7 +44,9 @@ function BatchCodes() {
           id: doc.id,
           ...doc.data()
         }));
+
         setBatches(batchesData);
+        
       } catch (error) {
         console.error("Error fetching batches:", error);
       }
@@ -364,6 +367,10 @@ function BatchCodes() {
 
   const handleAddFormSubmit = async (e) => {
     e.preventDefault();
+    if (!batchDate) {
+      alert("Please select a batch date before saving.");
+      return;
+    }
     try {
       // Add new batch
       await addDoc(collection(db, "batches"), {
@@ -610,13 +617,33 @@ function BatchCodes() {
     };
   }, [showForm, viewingBatch]);
 
-  const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
+useEffect(() =>{
+if(!viewingBatch) return;
+
+const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
+
+const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
 const requiredIngredients = Object.keys(ingredientQuantities);
-const allBatchCodesFilled = requiredIngredients.every(
+//merged ingredientBatchCodes object from all pizzas
+const mergedIngredientCodes = {};
+selectedPizzas.forEach(pizza => {
+  Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+    if (code?.trim()) {
+      mergedIngredientCodes[ingredient] = code.trim();
+    }
+  });
+});
+
+const allFilled =
+requiredIngredients.length > 0 &&
+requiredIngredients.every(
   ingredient =>
-    ingredientBatchCodes[ingredient] &&
-    ingredientBatchCodes[ingredient].trim() !== ""
+    mergedIngredientCodes[ingredient] &&
+    mergedIngredientCodes[ingredient].trim() !== ""
 );
+
+setAllBatchCodesFilled(allFilled);
+},  [viewingBatch]);
 
   
   return (
@@ -873,26 +900,25 @@ const allBatchCodesFilled = requiredIngredients.every(
           )}
         </p>
         <div className="batchActionButtons container">
-  {allBatchCodesFilled && (
-    <button
-      className="button"
-      onClick={async () => {
-        await updateDoc(doc(db, "batches", viewingBatch.id), { completed: true });
-        const freshSnap = await getDoc(doc(db, "batches", viewingBatch.id));
-        setViewingBatch({ id: freshSnap.id, ...freshSnap.data() });
-      }}
-    >
-      Submit
-    </button>
-  )}
-  <button
-    type="button"
-    className='button draft'
-    onClick={handleDeleteForm}
-  >
-    Delete
-  </button>
-</div>
+  
+        {allBatchCodesFilled && (
+          <button
+            className="button"
+            onClick={async () => {
+              await updateDoc(doc(db, "batches", viewingBatch.id), { completed: true });
+              const freshSnap = await getDoc(doc(db, "batches", viewingBatch.id));
+              setViewingBatch({ id: freshSnap.id, ...freshSnap.data() });
+            }}>Submit
+            </button>
+            )}
+            <button
+              type="button"
+              className='button draft'
+              onClick={handleDeleteForm}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       )}
   
