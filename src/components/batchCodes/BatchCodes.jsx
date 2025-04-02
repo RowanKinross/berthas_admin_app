@@ -1,6 +1,6 @@
 import './batchCodes.css'
 import { app, db } from '../firebase/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from '@firebase/firestore';
+import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
@@ -11,6 +11,8 @@ function BatchCodes() {
   const [batches, setBatches] = useState([]);
   const [pizzas, setPizzas] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [editingValue, setEditingValue] = useState("");
   const [editBatch, setEditBatch] = useState(null);
   const [saveNewMode, setSaveNewMode] = useState(true);
   const [batchDate, setBatchDate] = useState("");
@@ -501,6 +503,36 @@ function BatchCodes() {
     }
   };
 
+  const handleInlineSave = async (type, pizzaId, field, value) => {
+    setEditingField(null);
+    try {
+      const batchRef = doc(db, "batches", viewingBatch.id);
+      const currentSnap = await getDoc(batchRef);
+      const currentData = currentSnap.data();
+  
+      if (type === "pizza") {
+        const updatedPizzas = currentData.pizzas.map(pizza => {
+          if (pizza.id === pizzaId) {
+            return {
+              ...pizza,
+              [field]: value === "" ? null : Number(value)
+            };
+          }
+          return pizza;
+        });
+  
+        await updateDoc(batchRef, { pizzas: updatedPizzas });
+      }
+  
+      const freshSnap = await getDoc(batchRef);
+      const freshData = { id: freshSnap.id, ...freshSnap.data() };
+      setViewingBatch(freshData);
+    } catch (error) {
+      console.error("Error saving inline field:", error);
+    }
+  };
+
+
   // Handle clicks outside the form
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -554,26 +586,91 @@ const allBatchCodesFilled = requiredIngredients.every(
             <h6 className='pizzaWeightsOuter pizzaWeights'>Pizza Weights:</h6>
           </div>
           {viewingBatch.pizzas.filter(pizza => pizza.quantity > 0).map(pizza => (
-            <div key={pizza.id} className='pizzaDetails'>
-              <p><strong>{pizza.pizza_title}</strong>: {pizza.quantity} </p>
-              <div className='pizzaWeightsOuter'>
-                <div className='pizzaWeights'>
-                  <p>
-                    <strong>First:{" "}</strong>
-                    {Number(pizza.firstPizzaWeight) > 0 ? `${pizza.firstPizzaWeight}g`: <span style={{ color: 'red' }}>-</span>}
-                  </p>
-                  <p>
-                    <strong>Middle:{" "}</strong>
-                    {Number(pizza.middlePizzaWeight) > 0 ? `${pizza.middlePizzaWeight} g` : <span style={{ color: 'red' }}>-</span>}
-                  </p>
-                  <p>
-                    <strong>Last:{" "}</strong>
-                    {Number(pizza.lastPizzaWeight) > 0 ? `${pizza.lastPizzaWeight} g` : <span style={{ color: 'red' }}>-</span>}
-                  </p>
-                </div> 
-              </div>
-            </div>
-          ))}
+  <div key={pizza.id} className='pizzaDetails'>
+    <p><strong>{pizza.pizza_title}</strong>: {pizza.quantity}</p>
+    <div className='pizzaWeightsOuter'>
+      <div className='pizzaWeights'>
+
+        {/* First Weight */}
+        {editingField === `pizza-${pizza.id}-first` ? (
+          <div>
+          <strong>First:</strong>
+          <input
+            type="number"
+            className='inputNumber'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() => handleInlineSave("pizza", pizza.id, "firstPizzaWeight", editingValue)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleInlineSave("pizza", pizza.id, "firstPizzaWeight", editingValue);
+            }}
+          />
+          g
+          </div>
+        ) : (
+          <p onClick={() => {
+            setEditingField(`pizza-${pizza.id}-first`);
+            setEditingValue(pizza.firstPizzaWeight || "");
+          }}>
+            <strong>First:</strong> {pizza.firstPizzaWeight || <span style={{ color: 'red' }}>-</span>}g
+          </p>
+        )}
+
+        {/* Middle Weight */}
+        {editingField === `pizza-${pizza.id}-middle` ? (
+          <div>
+          <strong>Middle:</strong>
+          <input
+            type="number"
+            className='inputNumber'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() => handleInlineSave("pizza", pizza.id, "middlePizzaWeight", editingValue)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleInlineSave("pizza", pizza.id, "middlePizzaWeight", editingValue);
+            }}
+          />
+          g</div>
+        ) : (
+          <p onClick={() => {
+            setEditingField(`pizza-${pizza.id}-middle`);
+            setEditingValue(pizza.middlePizzaWeight || "");
+          }}>
+            <strong>Middle:</strong> {pizza.middlePizzaWeight || <span style={{ color: 'red' }}>-</span>}g
+          </p>
+        )}
+
+        {/* Last Weight */}
+        {editingField === `pizza-${pizza.id}-last` ? (
+          <div>
+          <strong>Last:</strong>
+          <input
+            type="number"
+            className='inputNumber'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() => handleInlineSave("pizza", pizza.id, "lastPizzaWeight", editingValue)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleInlineSave("pizza", pizza.id, "lastPizzaWeight", editingValue);
+            }}
+          />
+          g</div>
+        ) : (
+          <p onClick={() => {
+            setEditingField(`pizza-${pizza.id}-last`);
+            setEditingValue(pizza.lastPizzaWeight || "");
+          }}>
+            <strong>Last:</strong> {pizza.lastPizzaWeight || <span style={{ color: 'red' }}>-</span>}g
+          </p>
+        )}
+
+          </div>
+          </div>
+          </div>
+        ))}
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
           <h4>Batch Codes:</h4>
           {ingredients
