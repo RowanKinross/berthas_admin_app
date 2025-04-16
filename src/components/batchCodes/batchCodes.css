@@ -110,3 +110,6 @@
   display: block;
   margin-top: 0.5rem;
 }
+.pizzaNumbers {
+  text-align: right;
+}

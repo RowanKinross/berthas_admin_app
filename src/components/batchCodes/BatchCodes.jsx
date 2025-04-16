@@ -1,11 +1,10 @@
 import './batchCodes.css'
-import { app, db } from '../firebase/firebase';
+import { db } from '../firebase/firebase';
 import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
-import { FormLabel } from 'react-bootstrap';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -13,14 +12,12 @@ function BatchCodes() {
   const [showForm, setShowForm] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
-  const [editBatch, setEditBatch] = useState(null);
-  const [saveNewMode, setSaveNewMode] = useState(true);
   const [batchDate, setBatchDate] = useState("");
-  const [numPizzas, setNumPizzas] = useState(0);
   const [ingredients, setIngredients] = useState([]);
   const [batchCode, setBatchCode] = useState("");
   const [completed, setCompleted] = useState(false);
   const [ingredientsOrdered, setIngredientsOrdered] = useState(false);
+  const [pizzaNumbersComplete, setPizzaNumbersComplete] = useState(false);
   const [notes, setNotes] = useState("");
   const formRef = useRef(null)
   const [totalPizzas, setTotalPizzas] = useState(0);
@@ -30,8 +27,6 @@ function BatchCodes() {
   const [loading, setLoading] = useState(true);
   const [viewingBatch, setViewingBatch] = useState(null); // Track viewing mode
   const batchDetailsRef = useRef(null);
-  const [hasScrolled, setHasScrolled] = useState(false);
-  const [allBatchCodesFilled, setAllBatchCodesFilled] = useState(false);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
 
@@ -142,16 +137,6 @@ function BatchCodes() {
     return `${year}${month}${day}`;
   }
 
-  // Pizza weight const for form fields
-  const handlePizzaWeightChange = (e, pizzaId, weightType) => {
-    const { value } = e.target;
-    setPizzas(prevPizzas =>
-      prevPizzas.map(pizza =>
-        pizza.id === pizzaId ? { ...pizza, [`${weightType}PizzaWeight`]: value } : pizza
-      )
-    );
-  };
-
   useEffect(() => {
     // When batchDate changes, update the batchCode
     if (batchDate) {
@@ -164,97 +149,14 @@ function BatchCodes() {
   // if user clicks the add button
   const handleAddClick = () => {
     setShowForm(true); // Show the form
-    setSaveNewMode(true); // Set mode to save a new batch
-    setEditBatch(null); // Clear edit batch data
     setBatchDate(""); // Clear batch date
-    setNumPizzas(0); // Clear number of pizzas
-    setBatchCode(""); // Clear batch code
     setTotalPizzas(0) // Clear pizza total
     setIngredientsOrdered(false); // Clear ingredients ordered checkbox
     setSelectedPizzas([]);
     setPizzas(pizzas.map(pizza => ({ ...pizza, quantity: 0 })));
     setIngredientBatchCodes({});
     setNotes("")
-  };
-
-  // if user clicks edit
-  const handleEditClick = (batch) => {
-    setEditBatch(batch);
-    setShowForm(true); // Show the form
-    setViewingBatch(null)
-    setSaveNewMode(false); // Set mode to edit
-    setBatchDate(batch.batch_date); // Set batch date for edit
-    setNumPizzas(batch.num_pizzas); // Set number of pizzas for edit
-    setBatchCode(batch.batch_code); // Set batch code for edit
-    setCompleted(batch.completed);
-    setIngredientsOrdered(batch.ingredients_ordered || false); // Set ingredients ordered checkbox
-    setNotes(batch.notes)
-    // Update pizzas state with batch data
-    const updatedPizzas = pizzas.map(pizza => {
-      const matchingPizza = batch.pizzas.find(p => p.id === pizza.id);
-      return {
-        ...pizza,
-        quantity: matchingPizza ? matchingPizza.quantity : 0,
-        ingredientBatchCodes: matchingPizza ? matchingPizza.ingredientBatchCodes : {},
-        firstPizzaWeight: matchingPizza ? matchingPizza.firstPizzaWeight : "",
-        middlePizzaWeight: matchingPizza ? matchingPizza.middlePizzaWeight : "",
-        lastPizzaWeight: matchingPizza ? matchingPizza.lastPizzaWeight : "",
-      };
-    });
-    
-    setPizzas(updatedPizzas);
-  
-    // Extract and consolidate ingredients from batch.pizzas
-    const allIngredients = batch.pizzas.flatMap(pizza => pizza.ingredients);
-  
-    // Count the occurrences of each ingredient
-    const ingredientCounts = allIngredients.reduce((acc, ingredient) => {
-      acc[ingredient] = (acc[ingredient] || 0) + 1;
-      return acc;
-    }, {});
-  
-    // Use the ingredient counts to update state or further processing
-    const consolidatedIngredients = Object.keys(ingredientCounts).map(ingredientName => {
-      const ingredientData = ingredients.find(ing => ing.name === ingredientName);
-      if (ingredientData) {
-        const { gramsPerPizza, unitWeight } = parseIngredientRatio(ingredientData.ratio);
-        return {
-          name: ingredientName,
-          quantity: ingredientCounts[ingredientName] * gramsPerPizza, // Total grams needed
-          unit: ingredientData.packaging,
-          unitWeight: unitWeight
-        };
-      }
-      return null;
-    }).filter(Boolean);
-  
-    setConsolidatedIngredients(consolidatedIngredients);
-  
-    // Update selectedPizzas
-    const newSelectedPizzas = updatedPizzas
-      .filter(pizza => pizza.quantity > 0)
-      .map(pizza => ({
-        ...pizza,
-        ingredientBatchCodes: pizza.ingredientBatchCodes
-      }));
-    setSelectedPizzas(newSelectedPizzas);
-  
-    // Update ingredient batch codes
-    const newBatchCodes = {};
-    batch.pizzas.forEach(pizza => {
-      pizza.ingredients.forEach(ingredient => {
-        if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
-          newBatchCodes[ingredient] = pizza.ingredientBatchCodes[ingredient];
-        }
-      });
-    });
-    setIngredientBatchCodes(newBatchCodes);
-  
-    // Calculate totalPizzas
-    const newTotal = updatedPizzas.reduce((sum, pizza) => sum + (parseInt(pizza.quantity) || 0), 0);
-    setTotalPizzas(newTotal);
-  };
-  
+  }; 
 
 
   const handleQuantityChange = (e, pizzaId) => {
@@ -349,29 +251,6 @@ function BatchCodes() {
 
     setConsolidatedIngredients(consolidated);
   };
-
-  
-  
-  
-  
-  const handleIngredientBatchCodeChange = (e, ingredient) => {
-    const { value } = e.target;
-    setIngredientBatchCodes(prevBatchCodes => ({
-      ...prevBatchCodes,
-      [ingredient]: value
-    }));
-  
-    // Update selected pizzas with the new ingredient batch code
-    setSelectedPizzas(prevSelectedPizzas =>
-      prevSelectedPizzas.map(pizza => ({
-        ...pizza,
-        ingredientBatchCodes: {
-          ...pizza.ingredientBatchCodes,
-          [ingredient]: value
-        }
-      }))
-    );
-  };
   
 
   const handleBatchClick = (batch) => {
@@ -406,6 +285,7 @@ function BatchCodes() {
         batch_code: batchCode,
         completed: completed,
         ingredients_ordered: ingredientsOrdered,
+        pizza_numbers_complete: pizzaNumbersComplete,
         pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
@@ -424,13 +304,10 @@ function BatchCodes() {
         notes: notes,
       });
       setShowForm(false);
-      setEditBatch(null);
       setBatchDate("");
-      setNumPizzas(0);
       setBatchCode("");
       setCompleted(false);
       setIngredientsOrdered(false);
-      setSaveNewMode(false);
       setNotes("")
       const querySnapshot = await getDocs(collection(db, "batches"));
       const batchesData = querySnapshot.docs.map(doc => ({
@@ -443,53 +320,7 @@ function BatchCodes() {
     }
   };
 
-  const handleEditFormSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      // Update existing batch
-      const batchRef = doc(db, "batches", editBatch.id);
-      await updateDoc(batchRef, {
-        batch_date: batchDate,
-        num_pizzas: totalPizzas,
-        batch_code: batchCode,
-        completed: completed,
-        ingredients_ordered: ingredientsOrdered,
-        pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
-          id: pizza.id,
-          quantity: pizza.quantity,
-          quantity_on_order: 0,
-          pizza_title: pizza.pizza_title,
-          sleeve: pizza.sleeve,
-          ingredients: pizza.ingredients,
-          ingredientBatchCodes: pizza.ingredients.reduce((acc, ingredient) => {
-            acc[ingredient] = ingredientBatchCodes[ingredient] || "";
-            return acc;
-          }, {}),
-          firstPizzaWeight: pizza.firstPizzaWeight || null,
-          middlePizzaWeight: pizza.middlePizzaWeight || null,
-          lastPizzaWeight: pizza.lastPizzaWeight || null,
-        })),
-        notes: notes,
-      });
-      setShowForm(false);
-      setEditBatch(null);
-      setBatchDate("");
-      setNumPizzas(0);
-      setBatchCode("");
-      setCompleted(false);
-      setIngredientsOrdered(false);
-      setSaveNewMode(false);
-      setNotes("")
-      const querySnapshot = await getDocs(collection(db, "batches"));
-      const batchesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setBatches(batchesData);
-    } catch (error) {
-      console.error("Error updating batch:", error);
-    }
-  };
+  
 
 
   const handleDeleteForm = async () => {
@@ -517,9 +348,6 @@ function BatchCodes() {
       case "batch_date":
         setBatchDate(value);
         break;
-      case "num_pizzas":
-        setNumPizzas(value);
-        break;
       case "ingredients":
         setIngredients(value);
         break;
@@ -529,6 +357,9 @@ function BatchCodes() {
       case "ingredients_ordered":
         setIngredientsOrdered(checked);
         break;
+      case "pizza_numbers_complete":
+        setPizzaNumbersComplete(checked);
+      break;
       case "notes":
         setNotes(value);  // Update state for notes
         break;
@@ -632,7 +463,6 @@ function BatchCodes() {
       ) {
         setShowForm(false);
         setViewingBatch(null);
-        setHasScrolled(false)
       }
     };
   
@@ -645,33 +475,51 @@ function BatchCodes() {
     };
   }, [showForm, viewingBatch]);
 
-useEffect(() =>{
-if(!viewingBatch) return;
+  useEffect(() => {
+    if (!viewingBatch) return;
+  
+    const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
+  
+    const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
+    const requiredIngredients = Object.keys(ingredientQuantities);
+  
+    const mergedIngredientCodes = {};
+    selectedPizzas.forEach(pizza => {
+      Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+        if (code?.trim()) {
+          mergedIngredientCodes[ingredient] = code.trim();
+        }
+      });
+    });
+  
+    const allFilled =
+      requiredIngredients.length > 0 &&
+      requiredIngredients.every(
+        ingredient =>
+          mergedIngredientCodes[ingredient] &&
+          mergedIngredientCodes[ingredient].trim() !== ""
+      );
+  
+  
+    const shouldBeCompleted = allFilled && !!viewingBatch.pizza_numbers_complete;
 
-const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
-
-const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
-const requiredIngredients = Object.keys(ingredientQuantities);
-//merged ingredientBatchCodes object from all pizzas
-const mergedIngredientCodes = {};
-selectedPizzas.forEach(pizza => {
-  Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
-    if (code?.trim()) {
-      mergedIngredientCodes[ingredient] = code.trim();
+    if (viewingBatch.completed !== shouldBeCompleted) {
+      const batchRef = doc(db, "batches", viewingBatch.id);
+      updateDoc(batchRef, { completed: shouldBeCompleted }).then(async () => {
+      const freshSnap = await getDoc(batchRef);
+      const freshData = { id: freshSnap.id, ...freshSnap.data() };
+      setViewingBatch(freshData);
+    
+      const querySnapshot = await getDocs(collection(db, "batches"));
+      const batchesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBatches(batchesData);
+      });
     }
-  });
-});
-
-const allFilled =
-requiredIngredients.length > 0 &&
-requiredIngredients.every(
-  ingredient =>
-    mergedIngredientCodes[ingredient] &&
-    mergedIngredientCodes[ingredient].trim() !== ""
-);
-
-setAllBatchCodesFilled(allFilled);
-},  [viewingBatch]);
+  }, [viewingBatch]);
+  
 
   
   return (
@@ -870,7 +718,30 @@ setAllBatchCodesFilled(allFilled);
 
         );
       })()}
-
+          <p className='pizzaNumbers'>
+            <strong>Pizza numbers complete:</strong>{" "}
+            {editingField === "pizzaNumbersComplete" ? (
+              <input
+                type="checkbox"
+                checked={editingValue}
+                autoFocus
+                onChange={(e) => setEditingValue(e.target.checked)}
+                onBlur={() =>
+                  handleInlineSave("batch", null, "pizza_numbers_complete", editingValue)
+                }
+              />
+            ) : (
+              <span
+                onClick={() => {
+                  setEditingField("pizzaNumbersComplete");
+                  setEditingValue(viewingBatch.pizza_numbers_complete || false);
+                }}
+                style={{ cursor: "pointer" }}
+              >
+                {viewingBatch.pizza_numbers_complete ? "✓" : "✘"}
+              </span>
+            )}
+          </p>
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
           <h4>Batch Codes:</h4>
           <div className='ingredientBatchcodeBox'>
@@ -948,16 +819,6 @@ setAllBatchCodesFilled(allFilled);
         </p>
         <div className="batchActionButtons container center">
   
-        {allBatchCodesFilled && (
-          <button
-            className="button"
-            onClick={async () => {
-              await updateDoc(doc(db, "batches", viewingBatch.id), { completed: true });
-              const freshSnap = await getDoc(doc(db, "batches", viewingBatch.id));
-              setViewingBatch({ id: freshSnap.id, ...freshSnap.data() });
-            }}>Submit
-            </button>
-            )}
             <button
               type="button"
               className='button draft'
@@ -977,7 +838,7 @@ setAllBatchCodesFilled(allFilled);
       {showForm && (
         <form
           ref={formRef}
-          onSubmit={saveNewMode ? handleAddFormSubmit : handleEditFormSubmit}
+          onSubmit={handleAddFormSubmit}
           className='editForm'
           as={Row}
         >
@@ -1042,40 +903,12 @@ setAllBatchCodesFilled(allFilled);
             />
           </div>
           <div className='container center'>
-            {saveNewMode ? (
               <button
                 type="button"
                 className='button draft'
                 onClick={handleAddFormSubmit}
               >
                 Save new batch</button>
-            ) : (
-              <>
-                <button
-                  type="submit"
-                  className='button draft'
-                  onClick={handleEditFormSubmit}
-                >
-                  Save draft
-                </button>
-                {allBatchCodesFilled && (
-                  <button
-                    type="button"
-                    className='button'
-                    onClick={() => setCompleted(true)}
-                  >
-                    Submit
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className='button draft'
-                  onClick={handleDeleteForm}
-                >
-                  Delete
-                </button>
-              </>
-            )}
           </div>
 
         </form>
