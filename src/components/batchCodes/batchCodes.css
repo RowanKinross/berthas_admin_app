@@ -49,8 +49,11 @@
   width: 150px;
   text-align: end;
 }
-.total {
+.total, .pizzaNumbers {
   padding: 10px 0 0 10px;
+}
+.pizzaNumbers {
+  text-align: right;
 }
 
 .fadedText {
@@ -75,6 +78,23 @@
   justify-content: space-between;
 }
 
+
+.center {
+  justify-content: center;
+}
+.fullWidth {
+  display: block;
+  width: 100% !important;
+}
+.minHeight {
+  min-height: 80px;
+}
+.paragraph {
+  white-space: pre-wrap;
+  display: block;
+  margin-top: 0.5rem;
+}
+
 @media (max-width: 530px) {
   .ingredient {
     flex-direction: column;
@@ -93,23 +113,4 @@
     flex-direction: column;
     text-align: right;
   }
-}
-
-.center {
-  justify-content: center;
-}
-.fullWidth {
-  display: block;
-  width: 100% !important;
-}
-.minHeight {
-  min-height: 80px;
-}
-.paragraph {
-  white-space: pre-wrap;
-  display: block;
-  margin-top: 0.5rem;
-}
-.pizzaNumbers {
-  text-align: right;
 }
