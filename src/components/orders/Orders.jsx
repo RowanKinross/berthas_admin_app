@@ -8,12 +8,12 @@ import Modal from 'react-bootstrap/Modal';
 
 
 
-
 function Orders() {
   //make an orders array
   const [orders, setOrders] = useState ([])
   const [viewModal, setViewModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [pizzaTitles, setPizzaTitles] = useState({});
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -28,9 +28,27 @@ function Orders() {
         console.error("Error fetching orders:", error);
       }
     };
-
+  
+    const fetchPizzaTitles = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "pizzas"));
+        const titlesMap = {};
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.id && data.pizza_title) {
+            titlesMap[data.id] = data.pizza_title;
+          }          
+        });
+        setPizzaTitles(titlesMap);
+      } catch (error) {
+        console.error("Error fetching pizza titles:", error);
+      }
+    };
+  
     fetchOrders();
+    fetchPizzaTitles();
   }, []);
+  
 
   const fetchOrdersAgain = async () => {
     try {
@@ -104,8 +122,22 @@ function Orders() {
           </div>
           <div>
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
-            <p><strong>No. of Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
-            <p><strong>Delivery Date:</strong> {selectedOrder.delivery_date}</p>
+            <p><strong>Order Placed: </strong> {selectedOrder.order_placed_timestamp}</p>
+            <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
+            <p><strong>Delivery Day:</strong> {selectedOrder.delivery_day}</p>
+            <strong>Pizzas Ordered:</strong>
+            {Object.entries(selectedOrder.pizzas).map(([pizzaName, pizzaData], index) => (
+              <div key={index}>
+                <div className='container pizzasOrdered'>
+                <p>{pizzaTitles[pizzaName] || pizzaName}:</p>
+                  {pizzaData.batchesUsed.map((batch, i) => (
+                    <p key={i}>{batch.quantity}</p>
+                  ))}
+                </div>
+              </div>
+            ))}
+            <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
+            <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
           <div>
             <button className='button' onClick={handleComplete}>
