@@ -14,6 +14,16 @@ function Orders() {
   const [viewModal, setViewModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pizzaTitles, setPizzaTitles] = useState({});
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate();
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
+    const yyyy = date.getFullYear();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${dd}-${mm}-${yyyy}, ${hh}:${min}`;
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -122,7 +132,7 @@ function Orders() {
           </div>
           <div>
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
-            <p><strong>Order Placed: </strong> {selectedOrder.order_placed_timestamp}</p>
+            <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <p><strong>Delivery Day:</strong> {selectedOrder.delivery_day}</p>
             <strong>Pizzas Ordered:</strong>
