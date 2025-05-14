@@ -66,11 +66,8 @@
 .modalContent {
   display: flex;
   flex-direction: column;
+  text-align: start;
   gap: 10px;
-}
-
-.modalContent div {
-  margin-bottom: 15px;
 }
 
 .modalContent p {
@@ -101,7 +98,12 @@
 }
 
 .pizzasOrdered {
-  padding: 0 25% 0 25%;
+  padding: 0 2%;
+}
+
+.flexRow {
+  display: flex;
+  padding: 0 10px;
 }
 
 @media (max-width: 530px) {

@@ -280,7 +280,7 @@ useEffect(() => {
             Login
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item>
+            {/* <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item> */}
             <Dropdown.Item onClick={() => setUserRole("staff")}> Staff Login</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
