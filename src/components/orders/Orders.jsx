@@ -14,6 +14,8 @@ function Orders() {
   const [viewModal, setViewModal] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pizzaTitles, setPizzaTitles] = useState({});
+  const [batches, setBatches] = useState({});
+  const [dropdownBatches, setDropdownBatches] = useState({});
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
@@ -38,7 +40,20 @@ function Orders() {
         console.error("Error fetching orders:", error);
       }
     };
-  
+
+    const fetchBatches = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "batches"));
+        const batchesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setBatches(batchesData);
+      } catch (error) {
+        console.error("Error fetching batches:", error);
+      }
+    };
+
     const fetchPizzaTitles = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "pizzas"));
@@ -56,6 +71,7 @@ function Orders() {
     };
   
     fetchOrders();
+    fetchBatches();
     fetchPizzaTitles();
   }, []);
   
@@ -72,6 +88,8 @@ function Orders() {
       console.error("Error fetching orders:", error);
     }
   };
+
+
 
   const handleComplete =  useCallback(async () => {
     try { 
@@ -141,7 +159,33 @@ function Orders() {
                 <div className='container pizzasOrdered'>
                 <p>{pizzaTitles[pizzaName] || pizzaName}:</p>
                   {pizzaData.batchesUsed.map((batch, i) => (
-                    <p key={i}>{batch.quantity}</p>
+                    <div key={i} className='flexRow'>
+                    <p>{batch.quantity}</p>
+                    <div className='flexRow'>
+                    <select
+                      onChange={(e) => {
+                        const selected = JSON.parse(e.target.value);
+                        console.log("Selected batch:", selected);
+                      }}
+                    >
+                      <option value="">Select batch</option>
+                      {
+                      batches
+                      .filter(batch => batch.pizzas.some(p => p.id === pizzaName))
+                      .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
+                      .map((batch, i) => (
+                        <option key={batch.id || i} value={JSON.stringify(batch)}>
+                          <p>{batch.batch_code} </p>
+                          <p>{batch.pizzas
+                          .filter(p => p.id === pizzaName)
+                          .map(p => ` (${p.quantity - p.quantity_on_order} in stock)`)}
+                          </p>
+                      </option>
+                      ))}
+                    </select>
+
+                  </div>
+                  </div>
                   ))}
                 </div>
               </div>
