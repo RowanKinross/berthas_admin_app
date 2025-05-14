@@ -196,6 +196,9 @@ function Orders() {
       <p>batch code:</p>
 
       <select
+        value={JSON.stringify(
+          batches.find(b => b.batch_code === batch.batch_number) || ""
+        )}
         onChange={async (e) => {
           const selected = JSON.parse(e.target.value);
 
