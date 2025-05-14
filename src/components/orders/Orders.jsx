@@ -1,7 +1,7 @@
 // import berthasLogo from './bertha_logo'
 import './orders.css'
 import { app, db } from '../firebase/firebase';
-import { collection, getDocs, doc, updateDoc } from '@firebase/firestore';
+import { collection, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
@@ -89,6 +89,37 @@ function Orders() {
     }
   };
 
+  const handleBatchNumberUpdate = async ({ orderId, pizzaId, batchIndex, batchNumber }) => {
+    try {
+      const orderRef = doc(db, "orders", orderId);
+      const orderSnap = await getDoc(orderRef);
+  
+      if (!orderSnap.exists()) {
+        console.error("Order not found");
+        return;
+      }
+  
+      const orderData = orderSnap.data();
+      const batchesUsed = orderData.pizzas?.[pizzaId]?.batchesUsed || [];
+  
+      if (!batchesUsed[batchIndex]) {
+        console.error("Invalid batch index");
+        return;
+      }
+  
+      // Update just that one batch's batch_number
+      batchesUsed[batchIndex].batch_number = batchNumber;
+  
+      // Update only the nested field
+      await updateDoc(orderRef, {
+        [`pizzas.${pizzaId}.batchesUsed`]: batchesUsed,
+      });
+  
+      console.log("✅ Batch number updated successfully.");
+    } catch (error) {
+      console.error("Error updating batch number:", error);
+    }
+  };
 
 
   const handleComplete =  useCallback(async () => {
@@ -158,35 +189,40 @@ function Orders() {
               <div key={index}>
                 <div className='container pizzasOrdered'>
                 <p>{pizzaTitles[pizzaName] || pizzaName}:</p>
-                  {pizzaData.batchesUsed.map((batch, i) => (
-                    <div key={i} className='flexRow'>
-                    <p>{batch.quantity}</p>
-                    <div className='flexRow'>
-                    <select
-                      onChange={(e) => {
-                        const selected = JSON.parse(e.target.value);
-                        console.log("Selected batch:", selected);
-                      }}
-                    >
-                      <option value="">Select batch</option>
-                      {
-                      batches
-                      .filter(batch => batch.pizzas.some(p => p.id === pizzaName))
-                      .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
-                      .map((batch, i) => (
-                        <option key={batch.id || i} value={JSON.stringify(batch)}>
-                          <p>{batch.batch_code} </p>
-                          <p>{batch.pizzas
-                          .filter(p => p.id === pizzaName)
-                          .map(p => ` (${p.quantity - p.quantity_on_order} in stock)`)}
-                          </p>
-                      </option>
-                      ))}
-                    </select>
+                {pizzaData.batchesUsed.map((batch, i) => (
+  <div key={i} className='flexRow'>
+    <p>{batch.quantity}</p>
+    <div className='flexRow'>
+      <p>batch code:</p>
 
-                  </div>
-                  </div>
-                  ))}
+      <select
+        onChange={async (e) => {
+          const selected = JSON.parse(e.target.value);
+
+          await handleBatchNumberUpdate({
+            orderId: selectedOrder.id,
+            pizzaId: pizzaName,
+            batchIndex: i,
+            batchNumber: selected.batch_code, // or selected.id depending on your structure
+          });
+        }}
+      >
+        <option value="">Select batch</option>
+        {batches
+          .filter(batch => batch.pizzas.some(p => p.id === pizzaName))
+          .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
+          .map((batch, i) => (
+            <option key={batch.id || i} value={JSON.stringify(batch)}>
+              {batch.batch_code} — {batch.pizzas
+                .filter(p => p.id === pizzaName)
+                .map(p => `(${p.quantity - p.quantity_on_order} in stock)`)}
+            </option>
+          ))}
+      </select>
+    </div>
+  </div>
+))}
+
                 </div>
               </div>
             ))}
