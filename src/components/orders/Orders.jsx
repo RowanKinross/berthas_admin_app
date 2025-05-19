@@ -32,6 +32,58 @@ function Orders() {
     return `${dd}-${mm}-${yyyy}, ${hh}:${min}`;
   };
 
+  const formatDeliveryDay = (input) => {
+    if (!input) return '';
+    let date;
+  if (typeof input.toDate === 'function') {
+    date = input.toDate();
+  } else {
+    date = new Date(input);
+  }
+  if (isNaN(date.getTime())) return ''; // handle invalid date
+  const days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
+  const dayOfWeek = days[date.getDay()];
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dayOfWeek}, ${dd}-${mm}-${yyyy}`;
+  };
+
+  const sortOrders = (orders) => {
+  const now = new Date();
+  return [...orders].sort((a, b) => {
+    const getDateValue = (order) => {
+      if (order.delivery_day === 'tbc') return null;
+      const date = new Date(order.delivery_day);
+      return isNaN(date.getTime()) ? null : date;
+    };
+    const aDate = getDateValue(a);
+    const bDate = getDateValue(b);
+    // Case 1: Both TBC — sort by order timestamp descending (newest first)
+    if (!aDate && !bDate) {
+      return b.timestamp?.toDate() - a.timestamp?.toDate();
+    }
+    // Case 2: Only A is TBC
+    if (!aDate) return -1;
+    // Case 3: Only B is TBC
+    if (!bDate) return 1;
+    const nowTime = now.getTime();
+    const aTime = aDate.getTime();
+    const bTime = bDate.getTime();
+    const aIsPast = aTime < nowTime;
+    const bIsPast = bTime < nowTime;
+    // Case 4: A is future, B is past => A goes first
+    if (!aIsPast && bIsPast) return -1;
+    // Case 5: A is past, B is future => B goes first
+    if (aIsPast && !bIsPast) return 1;
+    // Case 6: Both in future — soonest first
+    if (!aIsPast && !bIsPast) return aTime - bTime;
+    // Case 7: Both in past — latest past goes lower
+    return aTime - bTime;
+  });
+};
+
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -81,20 +133,25 @@ function Orders() {
     fetchPizzaTitles();
   }, []);
   
-  const updateDeliveryDate = async (orderId, newDate) => {
-    try {
-      const orderRef = doc(db, "orders", orderId);
-      await updateDoc(orderRef, { delivery_day: newDate });
+const updateDeliveryDate = async (orderId, newDate) => {
+  try {
+    const orderRef = doc(db, "orders", orderId);
+    await updateDoc(orderRef, { delivery_day: newDate });
 
-      const updatedOrder = { ...selectedOrder, delivery_day: newDate };
-      setSelectedOrder(updatedOrder);
-      setEditingDeliveryDate(false);
-      setDeliveryDateInput('');
-      fetchOrdersAgain();
-    } catch (error) {
-      console.error("Error updating delivery date:", error);
-    }
-  };
+    // ✅ Refresh full order and update local state
+    const updatedOrderSnap = await getDoc(orderRef);
+    const freshOrderData = updatedOrderSnap.data();
+    const fullyUpdatedOrder = { ...freshOrderData, id: orderId };
+
+    setSelectedOrder(fullyUpdatedOrder);
+    setEditingDeliveryDate(false);
+    setDeliveryDateInput('');
+    fetchOrdersAgain();
+  } catch (error) {
+    console.error("Error updating delivery date:", error);
+  }
+};
+
 
   const fetchOrdersAgain = async () => {
     try {
@@ -232,7 +289,7 @@ function Orders() {
       </div>
 
       {orders.length > 0 ? (
-        orders.map(order => (
+        sortOrders(orders).map(order => (
           <button 
           key={order.id} 
           className={`orderButton button 
@@ -244,7 +301,7 @@ function Orders() {
             <div>{order.pizzaTotal}</div>
             <div>{order.order_status}</div>
             <div className={`${order.delivery_day === 'tbc'? 'tbc' : ''}`}>
-              {order.delivery_day}
+              {order.delivery_day ==='tbc'? 'tbc' : formatDeliveryDay(order.delivery_day)}
             </div>
           </button>
         ))
@@ -289,7 +346,7 @@ function Orders() {
                   }}
                 >
                 <div className={`${selectedOrder.delivery_day === 'tbc'? 'tbc' : ''}`}>
-                  {selectedOrder.delivery_day ==='tbc'? 'select day' : '' }
+                  {selectedOrder.delivery_day ==='tbc'? 'select day' : formatDeliveryDay(selectedOrder.delivery_day)}
                 </div>
                 </span>
               )}

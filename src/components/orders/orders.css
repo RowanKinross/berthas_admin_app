@@ -13,34 +13,6 @@
   flex-direction: column;
 }
 
-.orderButton {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: var(--pale);
-  border-radius: 5px;
-  box-shadow: 0 2px 4px var(--boxShadow);
-  transition: background-color 0.3s, transform 0.3s;
-  cursor: pointer;
-}
-
-.orderButton.complete {
-  background-color: var(--Marg);
-  color: white;
-  text-decoration: line-through;
-}
-
-.orderButton.allocated {
-  background-color: var(--orange);
-  /* color: white; */
-}
-
-.tbc {
-  color: red;
-  font-style: italic;
-  font-size: 12pt;
-}
 .space {
   padding-right: 2%;
 }
@@ -51,7 +23,7 @@
 }
 
 .orderButton:not(#totals):not(.orderHeaders):hover {
-  background-color: var(--light);
+  background-color: var(--grey);
   transform: scale(1.02);
 }
 
@@ -109,6 +81,34 @@
   padding: 10px 15px;
   cursor: pointer;
   transition: background-color 0.3s, color 0.3s;
+}
+
+.orderButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: var(--paleGrey);
+  border-radius: 5px;
+  box-shadow: 0 2px 4px var(--boxShadow);
+  transition: background-color 0.3s, transform 0.3s;
+  cursor: pointer;
+  border: white;
+}
+
+.orderButton.complete {
+  background-color: var(--bertha);
+  border: white;
+}
+
+.orderButton.allocated {
+  background-color: var(--berthaLight);
+}
+
+.tbc {
+  color: red;
+  font-style: italic;
+  font-size: 12pt;
 }
 
 .button:hover {
