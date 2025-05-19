@@ -15,7 +15,8 @@ function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pizzaTitles, setPizzaTitles] = useState({});
   const [batches, setBatches] = useState({});
-  const [dropdownBatches, setDropdownBatches] = useState({});
+  const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
+  const [deliveryDateInput, setDeliveryDateInput] = useState('');
   const formatDate = (timestamp) => {
     if (!timestamp) return '';
     const date = timestamp.toDate();
@@ -54,6 +55,7 @@ function Orders() {
       }
     };
 
+    
     const fetchPizzaTitles = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "pizzas"));
@@ -69,12 +71,26 @@ function Orders() {
         console.error("Error fetching pizza titles:", error);
       }
     };
-  
+    
     fetchOrders();
     fetchBatches();
     fetchPizzaTitles();
   }, []);
   
+  const updateDeliveryDate = async (orderId, newDate) => {
+    try {
+      const orderRef = doc(db, "orders", orderId);
+      await updateDoc(orderRef, { delivery_day: newDate });
+
+      const updatedOrder = { ...selectedOrder, delivery_day: newDate };
+      setSelectedOrder(updatedOrder);
+      setEditingDeliveryDate(false);
+      setDeliveryDateInput('');
+      fetchOrdersAgain();
+    } catch (error) {
+      console.error("Error updating delivery date:", error);
+    }
+  };
 
   const fetchOrdersAgain = async () => {
     try {
@@ -242,7 +258,36 @@ function Orders() {
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
-            <p><strong>Delivery Day:</strong> {selectedOrder.delivery_day}</p>
+            <p>
+              <strong>Delivery Day:</strong>{" "}
+              {editingDeliveryDate ? (
+                <>
+                  <input
+                    type="date"
+                    value={deliveryDateInput}
+                    onChange={(e) => setDeliveryDateInput(e.target.value)}
+                    onBlur={() => {
+                      if (deliveryDateInput) {
+                        updateDeliveryDate(selectedOrder.id, deliveryDateInput);
+                      } else {
+                        setEditingDeliveryDate(false);
+                      }
+                    }}
+                    autoFocus
+                  />
+                </>
+              ) : (
+                <span
+                  className="clickable"
+                  onClick={() => {
+                    setEditingDeliveryDate(true);
+                    setDeliveryDateInput(selectedOrder.delivery_day || '');
+                  }}
+                >
+                  {selectedOrder.delivery_day || 'Click to set date'}
+                </span>
+              )}
+            </p>
             <strong>Pizzas Ordered:</strong>
             {Object.entries(selectedOrder.pizzas).map(([pizzaName, pizzaData], index) => (
               <div key={index}>
