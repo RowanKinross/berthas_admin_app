@@ -39,6 +39,9 @@
 .tbc {
   color: red;
 }
+.space {
+  padding-right: 2%;
+}
 
 .orderButton:not(#totals):not(.orderHeaders):hover {
   background-color: var(--light);

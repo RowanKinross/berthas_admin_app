@@ -246,14 +246,16 @@ function Orders() {
             <strong>Pizzas Ordered:</strong>
             {Object.entries(selectedOrder.pizzas).map(([pizzaName, pizzaData], index) => (
               <div key={index}>
-                <div className='container pizzasOrdered'>
-                <p>{pizzaTitles[pizzaName] || pizzaName}:</p>
+                <div className=' pizzasOrdered'>
+                
                 {pizzaData.batchesUsed.map((batch, i) => (
-                  <div key={i} className='flexRow'>
-                    <p>{batch.quantity}</p>
+                  <div key={i} className=''>
                     <div className='flexRow'>
-                      <p>batch code:</p>
-
+                    <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
+                    <p>{batch.quantity}</p>
+                    </div>
+                    <div className='flexRow'>
+                      <p className='flexRow'>batch code:</p>
                       <select
                         value={batch.batch_number || ""}
                         onChange={async (e) => {
