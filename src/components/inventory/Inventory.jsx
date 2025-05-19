@@ -73,8 +73,9 @@ function Inventory() {
     }
   };
 
-  // render pizza data, stock data and ingredients data dynamically
-  useEffect(() => {
+
+  // calculate totals
+  const calculateOverallTotals = (pizzas, batches) => {
     let totalStock = 0;
     let totalOnOrder = 0;
     let totalAvailable = 0;
@@ -96,10 +97,18 @@ function Inventory() {
     setTotalStockOverall(totalStock);
     setTotalOnOrderOverall(totalOnOrder);
     setTotalAvailableOverall(totalAvailable);
+  }
 
+
+  // render pizza data, stock data and ingredients data dynamically
+  useEffect(() => {
     fetchPizzaData();
     fetchStock();
     fetchIngredientsArr(); 
+  }, []);
+
+  useEffect(() => {
+    calculateOverallTotals(pizzaData, stock);
   }, [pizzaData, stock]);
 
 
@@ -228,10 +237,22 @@ return (
                       {batch.pizzas.map((p, idx) => (
                         p.id === pizza.id && p.quantity > 0 ? (
                           <div key={idx} className='container'>
-                            <p>Total: {p.quantity}</p>
-                            <p>On order: {p.quantity_on_order}</p>
-                            <p>Available: {p.quantity - p.quantity_on_order}</p>
-                            <p className='hide'>{totalStock += p.quantity}{totalOnOrder == 0 ? totalAvailable = totalStock - totalOnOrder : 0}</p>
+                            {(() => {
+                              const onOrder = (batch.pizza_allocations || [])
+                                .filter(a => a.pizzaId === p.id)
+                                .reduce((sum, a) => sum + a.quantity, 0);
+                              const available = p.quantity - onOrder;
+
+                              return (
+                                <>
+                                  <p>Total: {p.quantity}</p>
+                                  <p>On order: {onOrder}</p>
+                                  <p>Available: {available}</p>
+                                </>
+                              );
+                            })()}
+
+                            {/* <p className='hide'>{totalStock += p.quantity}{totalOnOrder == 0 ? totalAvailable = totalStock - totalOnOrder : 0}</p> */}
                           </div>
                         ) : null
                       ))}
@@ -240,9 +261,34 @@ return (
               </div>
                 {/* Render pizza totals */}
                 <div className='inventoryBox' id='totals'>
-                  <p>Total Stock: {totalStock}</p>
-                  <p>Total On Order: {totalOnOrder}</p>
-                  <p>Total Available: {totalAvailable}</p>
+                  {(() => {
+                    let pizzaStock = 0;
+                    let pizzaAllocated = 0;
+                    let pizzaAvailable = 0;
+
+                    stock.forEach((batch) => {
+                      if (batch.completed) {
+                        const match = batch.pizzas.find(p => p.id === pizza.id);
+                        if (match) {
+                          const onOrder = (batch.pizza_allocations || [])
+                            .filter(a => a.pizzaId === pizza.id)
+                            .reduce((sum, a) => sum + a.quantity, 0);
+                          pizzaStock += match.quantity;
+                          pizzaAllocated += onOrder;
+                          pizzaAvailable += match.quantity - onOrder;
+                        }
+                      }
+                    });
+
+
+                    return (
+                    <>
+                      <p>Total Stock: {pizzaStock}</p>
+                      <p>Total On Order: {pizzaAllocated}</p>
+                      <p>Total Available: {pizzaAvailable}</p>
+                    </>
+                    );
+                  })()}
                 </div>
             </div>
           );
