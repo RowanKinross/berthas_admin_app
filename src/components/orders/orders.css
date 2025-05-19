@@ -38,9 +38,16 @@
 
 .tbc {
   color: red;
+  font-style: italic;
+  font-size: 12pt;
 }
 .space {
   padding-right: 2%;
+}
+
+.clickable {
+  cursor: pointer;
+
 }
 
 .orderButton:not(#totals):not(.orderHeaders):hover {
