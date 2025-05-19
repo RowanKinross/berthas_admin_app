@@ -166,8 +166,8 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
     if (userRole === "staff") {
       return (
         <>
-          <NavLink to="/" />
-          {/* <NavLink to="/orders" className={({ isActive }) =>
+          {/* <NavLink to="/" />
+          <NavLink to="/orders" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDERS</h3>
           </NavLink> */}
@@ -280,7 +280,7 @@ useEffect(() => {
             Login
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            {/* <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item> */}
+            <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item>
             <Dropdown.Item onClick={() => setUserRole("staff")}> Staff Login</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>

@@ -239,22 +239,20 @@ const handleSubmit = async (event) => {
      const pizzas = filteredPizzaData.reduce((acc, pizza) => {
       const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
 
-      if (quantityRequired > 0) {
-        // Check for a single batch with enough stock
-        const batchesUsed = findEarliestBatchWithEnoughPizza(pizza.id, quantityRequired);
+  if (quantityRequired > 0) {
+      // Manually split quantity into individual units or chunks for future batch assignment
+      acc[pizza.id] = {
+        batchesUsed: [
+          {
+            quantity: quantityRequired,
+            batch_number: null  // Manual assignment to happen later
+          }
+        ]
+      };
+    }
 
-        if (!batchesUsed) {
-          alert(`Not enough stock for pizza: ${pizza.pizza_title} from one batch.`);
-          return null;  // Stop the submission if there's insufficient stock
-        }
-
-        acc[pizza.id] = { quantity: quantityRequired, batchesUsed };  // Save batch info
-      }
-
-      return acc;
-    }, {});
-    
-    if (!pizzas) return;  // Exit if stock is insufficient
+  return acc;
+}, {});
 
 //send to database
   try {
