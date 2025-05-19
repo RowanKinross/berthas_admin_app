@@ -31,6 +31,15 @@
   text-decoration: line-through;
 }
 
+.orderButton.allocated {
+  background-color: var(--orange);
+  /* color: white; */
+}
+
+.tbc {
+  color: red;
+}
+
 .orderButton:not(#totals):not(.orderHeaders):hover {
   background-color: var(--light);
   transform: scale(1.02);

@@ -166,11 +166,11 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
     if (userRole === "staff") {
       return (
         <>
-          {/* <NavLink to="/" />
+          <NavLink to="/" />
           <NavLink to="/orders" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDERS</h3>
-          </NavLink> */}
+          </NavLink>
           <NavLink to="/inventory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>

@@ -172,6 +172,7 @@ function Orders() {
         const orderRef = doc(db, "orders", selectedOrder.id);
         await updateDoc(orderRef, {
           complete: true,
+          order_status: "complete"
         });
         handleCloseModal();
         fetchOrdersAgain();
@@ -214,12 +215,17 @@ function Orders() {
         orders.map(order => (
           <button 
           key={order.id} 
-          className={`orderButton button ${order.complete ? 'complete' : ''}`} 
+          className={`orderButton button 
+            ${order.complete ? 'complete' : ''} 
+            ${order.order_status === 'pizzas allocated' ? 'allocated' : ''}`}
+ 
           onClick={() => handleOrderClick(order)}>
             <div>{order.account_ID}</div>
             <div>{order.pizzaTotal}</div>
             <div>{order.order_status}</div>
-            <div>{order.delivery_day}</div>
+            <div className={`${order.delivery_day === 'tbc'? 'tbc' : ''}`}>
+              {order.delivery_day}
+            </div>
           </button>
         ))
       ):(
