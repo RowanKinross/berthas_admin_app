@@ -1,6 +1,6 @@
 // import berthasLogo from './bertha_logo'
 import './archive.css';
-import React, {useState, useEffect} from 'react';
+import {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
 import { collection, addDoc, getDocs } from '@firebase/firestore'; 
 
