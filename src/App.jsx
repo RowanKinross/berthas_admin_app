@@ -9,7 +9,7 @@ import OrderHistory from './components/orderHistory/OrderHistory'
 import Account from './components/account/account'
 import Orders from './components/orders/Orders'
 import Inventory from './components/inventory/Inventory'
-import Archive from './components/archive/Archive'
+import Archive from './components/archive/archive';
 // import DemandSummary from './components/demandSummary/DemandSummary'
 import BatchCodes from './components/batchCodes/BatchCodes'
 import Auth from './components/auth/Auth';

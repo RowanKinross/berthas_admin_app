@@ -254,7 +254,6 @@ return (
                               );
                             })()}
 
-                            {/* <p className='hide'>{totalStock += p.quantity}{totalOnOrder == 0 ? totalAvailable = totalStock - totalOnOrder : 0}</p> */}
                           </div>
                         ) : null
                       ))}

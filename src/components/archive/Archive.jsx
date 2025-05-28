@@ -3,33 +3,16 @@ import './archive.css';
 import React, {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
 import { collection, addDoc, getDocs } from '@firebase/firestore'; 
-import { Dropdown, Button, Form } from 'react-bootstrap';
 
 function Archive() {
   // pizzas
-  const [modalVisible, setModalVisible] = useState(false); // modal for adding a new pizza
-  const [pizzaTitle, setPizzaTitle] = useState(''); //title of new pizza
-  const [hexColour, setHexColour] = useState(''); // colour of new pizza
   const [pizzaData, setPizzaData] = useState([]); // pizza data from storage
-  const [sleeve, setSleeve] = useState(false);
-
-  // ingredients
-  const [ingredientsArr, setIngredientsArr] = useState([]); // an array of saved ingredients for the dropdown
-  const [ingredientName, setIngredientName] = useState('');
-  const [currentIngredientQuantity, setCurrentIngredientQuantity] = useState('');
-  const [ingredientUnits, setIngredientUnits] = useState('');
-  const [ingredientUnitQuantity, setIngredientUnitQuantity] = useState('');
-  const [addIngredientForm, setAddIngredientForm] = useState(false); // set ingredients form to not show
-  const [currentIngredient, setCurrentIngredient] = useState([]);
-  const [currentPizzaIngredients, setCurrentPizzaIngredients] = useState(["Flour (Caputo Red)", "Salt"]);
-
+ 
   // stock
   const [stock, setStock] = useState([]);
   const [totalStockOverall, setTotalStockOverall] = useState(0);
   const [totalOnOrderOverall, setTotalOnOrderOverall] = useState(0);
   const [totalAvailableOverall, setTotalAvailableOverall] = useState(0);
-
-
 
   // FETCHES
   // fetch pizza data e.g what pizzas we offer & their hex codes
@@ -65,29 +48,21 @@ function Archive() {
 
   // calculate totals
   const calculateOverallTotals = (pizzas, batches) => {
-    let totalStock = 0;
-    let totalOnOrder = 0;
-    let totalAvailable = 0;
-  
-    pizzas.forEach((pizza) => {
-      batches.forEach((batch) => {
-        if (batch.completed) {
-          const match = batch.pizzas.find(p => p.id === pizza.id);
-          if (match) {
-            const onOrder = (batch.pizza_allocations || [])
-              .filter(a => a.pizzaId === pizza.id)
-              .reduce((sum, a) => sum + a.quantity, 0);
-            totalStock += match.quantity;
-            totalOnOrder += onOrder;
-            totalAvailable += match.quantity - onOrder;
-          }
-        }
-      });
+  let totalAllocated = 0;
+
+  pizzas.forEach((pizza) => {
+    batches.forEach((batch) => {
+      if (batch.completed) {
+        const completedAllocations = (batch.pizza_allocations || [])
+          .filter(a => a.pizzaId === pizza.id && a.status === "completed");
+
+        const allocationSum = completedAllocations.reduce((sum, a) => sum + a.quantity, 0);
+        totalAllocated += allocationSum;
+      }
     });
+  });
   
-    setTotalStockOverall(totalStock);
-    setTotalOnOrderOverall(totalOnOrder);
-    setTotalAvailableOverall(totalAvailable);
+    setTotalStockOverall(totalAllocated);
   }
 
 
@@ -130,7 +105,11 @@ return (
 
                 {/* Render inventory details for this pizza */}
                 {stock
-                  .filter(batch => batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0))
+                  .filter(batch =>
+                    batch.completed &&
+                    batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0) &&
+                    (batch.pizza_allocations || []).some(a => a.pizzaId === pizza.id && a.status === "completed")
+                  )
                   .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
                   .map((batch, index) => (
                     <div className='archiveBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
@@ -140,13 +119,14 @@ return (
                           <div key={idx} className='container right'>
                             {(() => {
                               const onOrder = (batch.pizza_allocations || [])
-                                .filter(a => a.pizzaId === p.id)
+                                .filter(a => a.pizzaId === p.id && a.status === "completed")
                                 .reduce((sum, a) => sum + a.quantity, 0);
-                              const available = p.quantity - onOrder;
 
                               return (
                                 <>
-                                  <p>Total: {p.quantity}</p>
+                                  {onOrder > 0 && (
+                                    <p>Total: {onOrder}</p>
+                                  )}
                                 </>
                               );
                             })()}
@@ -161,23 +141,15 @@ return (
                 <div className='archiveBox' id='totals'>
                   {(() => {
                     let pizzaStock = 0;
-                    let pizzaAllocated = 0;
-                    let pizzaAvailable = 0;
-
                     stock.forEach((batch) => {
                       if (batch.completed) {
-                        const match = batch.pizzas.find(p => p.id === pizza.id);
-                        if (match) {
-                          const onOrder = (batch.pizza_allocations || [])
-                            .filter(a => a.pizzaId === pizza.id)
-                            .reduce((sum, a) => sum + a.quantity, 0);
-                          pizzaStock += match.quantity;
-                          pizzaAllocated += onOrder;
-                          pizzaAvailable += match.quantity - onOrder;
-                        }
+                        const completedAllocations = (batch.pizza_allocations || [])
+                          .filter(a => a.pizzaId === pizza.id && a.status === "completed");
+
+                        const allocationSum = completedAllocations.reduce((sum, a) => sum + a.quantity, 0);
+                        pizzaStock += allocationSum;
                       }
                     });
-
 
                     return (
                     <>
