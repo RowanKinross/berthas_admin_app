@@ -80,16 +80,27 @@ function Inventory() {
     let totalOnOrder = 0;
     let totalAvailable = 0;
   
-    pizzaData.forEach((pizza) => {
-      stock.forEach((batch) => {
-        if (batch.completed && batch.pizzas.some(p => p.id === pizza.id)) {
-          batch.pizzas.forEach((p) => {
-            if (p.id === pizza.id) {
-              totalStock += p.quantity;
-              totalOnOrder += 0; // "On Order" is not yet tracked in your batches
-              totalAvailable += p.quantity_available;
-            }
-          });
+    pizzas.forEach((pizza) => {
+      batches.forEach((batch) => {
+        if (batch.completed) {
+          const match = batch.pizzas.find(p => p.id === pizza.id);
+          if (match) {
+          const allocations = batch.pizza_allocations || [];
+
+          const completedQty = allocations
+            .filter(a => a.pizzaId === pizza.id && a.status === "completed")
+            .reduce((sum, a) => sum + a.quantity, 0);
+
+          const activeQty = allocations
+            .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
+            .reduce((sum, a) => sum + a.quantity, 0);
+
+          const effectiveQuantity = match.quantity - completedQty;
+
+          totalStock += effectiveQuantity;
+          totalOnOrder += activeQty;
+          totalAvailable += effectiveQuantity - activeQty;
+          }
         }
       });
     });
@@ -229,7 +240,19 @@ return (
 
                 {/* Render inventory details for this pizza */}
                 {stock
-                  .filter(batch => batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0))
+                  .filter(batch => {
+                      if (!batch.completed) return false;
+
+                      const match = batch.pizzas.find(p => p.id === pizza.id);
+                      if (!match) return false;
+
+                      const completed = (batch.pizza_allocations || [])
+                        .filter(a => a.pizzaId === pizza.id && a.status === "completed")
+                        .reduce((sum, a) => sum + a.quantity, 0);
+
+                      const effectiveQuantity = match.quantity - completed;
+                      return effectiveQuantity > 0;
+                    })
                   .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
                   .map((batch, index) => (
                     <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
@@ -238,21 +261,27 @@ return (
                         p.id === pizza.id && p.quantity > 0 ? (
                           <div key={idx} className='container'>
                             {(() => {
-                              const onOrder = (batch.pizza_allocations || [])
-                                .filter(a => a.pizzaId === p.id)
-                                .reduce((sum, a) => sum + a.quantity, 0);
-                              const available = p.quantity - onOrder;
+                              const allocations = (batch.pizza_allocations || [])
+                              const completed = allocations
+                                  .filter(a => a.pizzaId === p.id && a.status === "completed")
+                                  .reduce((sum, a) => sum + a.quantity, 0);
+
+                                const active = allocations
+                                  .filter(a => a.pizzaId === p.id && a.status !== "completed")
+                                  .reduce((sum, a) => sum + a.quantity, 0);
+
+                                const effectiveQuantity = p.quantity - completed;
+                                const available = effectiveQuantity - active;
 
                               return (
                                 <>
-                                  <p>Total: {p.quantity}</p>
-                                  <p>On order: {onOrder}</p>
+                                  <p>Total: {effectiveQuantity}</p>
+                                  <p>On order: {active}</p>
                                   <p>Available: {available}</p>
                                 </>
                               );
                             })()}
 
-                            {/* <p className='hide'>{totalStock += p.quantity}{totalOnOrder == 0 ? totalAvailable = totalStock - totalOnOrder : 0}</p> */}
                           </div>
                         ) : null
                       ))}
@@ -270,12 +299,18 @@ return (
                       if (batch.completed) {
                         const match = batch.pizzas.find(p => p.id === pizza.id);
                         if (match) {
-                          const onOrder = (batch.pizza_allocations || [])
-                            .filter(a => a.pizzaId === pizza.id)
+                          const allocations = batch.pizza_allocations || [];
+                          const completedQty = allocations
+                            .filter(a => a.pizzaId === pizza.id && a.status === "completed")
                             .reduce((sum, a) => sum + a.quantity, 0);
-                          pizzaStock += match.quantity;
-                          pizzaAllocated += onOrder;
-                          pizzaAvailable += match.quantity - onOrder;
+                          const activeQty = allocations
+                            .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
+                            .reduce((sum, a) => sum + a.quantity, 0);
+                          const effectiveQuantity = match.quantity - completedQty;
+
+                          pizzaStock += effectiveQuantity;
+                          pizzaAllocated += activeQty;
+                          pizzaAvailable += effectiveQuantity - activeQty;
                         }
                       }
                     });

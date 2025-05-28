@@ -17,7 +17,6 @@
 
 #totals {
   display: flex;
-  justify-content: space-between;
   align-items: end;
   position: sticky;
   bottom: 0;
@@ -29,6 +28,8 @@
   border-bottom: 2px solid var(--darkLight);
   cursor: auto;
 }
+
+
 
 
 

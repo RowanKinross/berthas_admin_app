@@ -125,10 +125,10 @@
 
 
 /* inventory display */
-  .inventoryBox {
+  .archiveBox {
     border-radius: 10px;
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     color: var(--dark);
     border: dashed 1px var(--dark);
   }

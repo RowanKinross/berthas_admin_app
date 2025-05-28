@@ -251,6 +251,31 @@ const updateDeliveryDate = async (orderId, newDate) => {
           complete: true,
           order_status: "complete"
         });
+        // Update any batch allocations related to this order
+        const batchesSnapshot = await getDocs(collection(db, "batches"));
+        const batchDocs = batchesSnapshot.docs;
+
+        const updates = batchDocs.map(async (docSnap) => {
+          const batchData = docSnap.data();
+          let updated = false;
+
+          const updatedAllocations = (batchData.pizza_allocations || []).map(allocation => {
+            if (allocation.orderId === selectedOrder.id) {
+              updated = true;
+              return { ...allocation, status: "completed" };
+            }
+            return allocation;
+          });
+
+          if (updated) {
+            await updateDoc(doc(db, "batches", docSnap.id), {
+              pizza_allocations: updatedAllocations
+            });
+          }
+        });
+
+        await Promise.all(updates);
+        
         handleCloseModal();
         fetchOrdersAgain();
     } catch (error) {
