@@ -1,0 +1,202 @@
+// import berthasLogo from './bertha_logo'
+import './archive.css';
+import React, {useState, useEffect} from 'react';
+import { app, db } from '../firebase/firebase';
+import { collection, addDoc, getDocs } from '@firebase/firestore'; 
+import { Dropdown, Button, Form } from 'react-bootstrap';
+
+function Archive() {
+  // pizzas
+  const [modalVisible, setModalVisible] = useState(false); // modal for adding a new pizza
+  const [pizzaTitle, setPizzaTitle] = useState(''); //title of new pizza
+  const [hexColour, setHexColour] = useState(''); // colour of new pizza
+  const [pizzaData, setPizzaData] = useState([]); // pizza data from storage
+  const [sleeve, setSleeve] = useState(false);
+
+  // ingredients
+  const [ingredientsArr, setIngredientsArr] = useState([]); // an array of saved ingredients for the dropdown
+  const [ingredientName, setIngredientName] = useState('');
+  const [currentIngredientQuantity, setCurrentIngredientQuantity] = useState('');
+  const [ingredientUnits, setIngredientUnits] = useState('');
+  const [ingredientUnitQuantity, setIngredientUnitQuantity] = useState('');
+  const [addIngredientForm, setAddIngredientForm] = useState(false); // set ingredients form to not show
+  const [currentIngredient, setCurrentIngredient] = useState([]);
+  const [currentPizzaIngredients, setCurrentPizzaIngredients] = useState(["Flour (Caputo Red)", "Salt"]);
+
+  // stock
+  const [stock, setStock] = useState([]);
+  const [totalStockOverall, setTotalStockOverall] = useState(0);
+  const [totalOnOrderOverall, setTotalOnOrderOverall] = useState(0);
+  const [totalAvailableOverall, setTotalAvailableOverall] = useState(0);
+
+
+
+  // FETCHES
+  // fetch pizza data e.g what pizzas we offer & their hex codes
+  const fetchPizzaData = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'pizzas'));
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data()}));
+      data.sort((a, b) => {
+        if (a.sleeve === b.sleeve) {
+          return a.id.localeCompare(b.id);
+        }
+        return a.sleeve ? -1 : 1;
+      });
+      setPizzaData(data);
+    } catch (error) {
+      console.error("Error fetching pizza data:", error); // Debugging statement
+    }
+  };
+
+  // fetch stock data e.g what pizzas are in stock & their batches
+  const fetchStock = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'batches'));
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setStock(data);
+ 
+    } catch (error) {
+      console.error("Error fetching stock data:", error);
+    }
+  };
+
+
+
+  // calculate totals
+  const calculateOverallTotals = (pizzas, batches) => {
+    let totalStock = 0;
+    let totalOnOrder = 0;
+    let totalAvailable = 0;
+  
+    pizzas.forEach((pizza) => {
+      batches.forEach((batch) => {
+        if (batch.completed) {
+          const match = batch.pizzas.find(p => p.id === pizza.id);
+          if (match) {
+            const onOrder = (batch.pizza_allocations || [])
+              .filter(a => a.pizzaId === pizza.id)
+              .reduce((sum, a) => sum + a.quantity, 0);
+            totalStock += match.quantity;
+            totalOnOrder += onOrder;
+            totalAvailable += match.quantity - onOrder;
+          }
+        }
+      });
+    });
+  
+    setTotalStockOverall(totalStock);
+    setTotalOnOrderOverall(totalOnOrder);
+    setTotalAvailableOverall(totalAvailable);
+  }
+
+
+  // render pizza data, stock data and ingredients data dynamically
+  useEffect(() => {
+    fetchPizzaData();
+    fetchStock();
+  }, []);
+
+  useEffect(() => {
+    calculateOverallTotals(pizzaData, stock);
+  }, [pizzaData, stock]);
+
+
+  return (
+    <div className='inventory'>
+      <h2>ARCHIVE</h2>
+        <div className='archiveBox' id='totals'>
+        <p>Total: {totalStockOverall}</p>
+        </div>
+      <div>
+      </div>
+      {pizzaData.length > 0 ? (
+        <div className='inventoryContainer'>
+          {pizzaData.map((pizza, pizzaIndex) => {
+            let totalStock = 0;
+
+
+return (
+            <div 
+              className='pizzas' 
+              id={`pizzas${pizza.id}`} 
+              key={pizzaIndex} 
+              style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent', border: pizza.sleeve ? 'transparent' : `2px dotted ${pizza.hex_colour}` }}
+            >
+                <div className='pizzaHeader'>
+                  <h4 className='pizzaH4' style={{ color: pizza.sleeve ? `#fdfdfd` : `${pizza.hex_colour}` }}>{pizza.pizza_title}</h4>
+                </div>
+              <div className='pizzaContent' style={{ backgroundColor: pizza.sleeve ? `${pizza.hex_colour}f2` : 'transparent'}}>
+
+                {/* Render inventory details for this pizza */}
+                {stock
+                  .filter(batch => batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0))
+                  .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
+                  .map((batch, index) => (
+                    <div className='archiveBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
+                      <p>Batch Number: {batch.batch_code}</p>
+                      {batch.pizzas.map((p, idx) => (
+                        p.id === pizza.id && p.quantity > 0 ? (
+                          <div key={idx} className='container right'>
+                            {(() => {
+                              const onOrder = (batch.pizza_allocations || [])
+                                .filter(a => a.pizzaId === p.id)
+                                .reduce((sum, a) => sum + a.quantity, 0);
+                              const available = p.quantity - onOrder;
+
+                              return (
+                                <>
+                                  <p>Total: {p.quantity}</p>
+                                </>
+                              );
+                            })()}
+
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                ))}
+              </div>
+                {/* Render pizza totals */}
+                <div className='archiveBox' id='totals'>
+                  {(() => {
+                    let pizzaStock = 0;
+                    let pizzaAllocated = 0;
+                    let pizzaAvailable = 0;
+
+                    stock.forEach((batch) => {
+                      if (batch.completed) {
+                        const match = batch.pizzas.find(p => p.id === pizza.id);
+                        if (match) {
+                          const onOrder = (batch.pizza_allocations || [])
+                            .filter(a => a.pizzaId === pizza.id)
+                            .reduce((sum, a) => sum + a.quantity, 0);
+                          pizzaStock += match.quantity;
+                          pizzaAllocated += onOrder;
+                          pizzaAvailable += match.quantity - onOrder;
+                        }
+                      }
+                    });
+
+
+                    return (
+                    <>
+                      <p>Total: {pizzaStock}</p>
+                    </>
+                    );
+                  })()}
+                </div>
+            </div>
+          );
+        })}
+        </div>
+      ) : (
+        <p>Loading pizza data...</p>
+      )}
+
+
+    </div>
+  );
+}
+
+export default Archive;

@@ -119,3 +119,10 @@ button:hover {
 .modalContent button:hover {
   background-color: #45a049;
 }
+
+.right {
+  justify-content: right;
+}
+.centre {
+  justify-content: center;
+}
