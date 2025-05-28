@@ -80,16 +80,18 @@ function Inventory() {
     let totalOnOrder = 0;
     let totalAvailable = 0;
   
-    pizzaData.forEach((pizza) => {
-      stock.forEach((batch) => {
-        if (batch.completed && batch.pizzas.some(p => p.id === pizza.id)) {
-          batch.pizzas.forEach((p) => {
-            if (p.id === pizza.id) {
-              totalStock += p.quantity;
-              totalOnOrder += 0; // "On Order" is not yet tracked in your batches
-              totalAvailable += p.quantity_available;
-            }
-          });
+    pizzas.forEach((pizza) => {
+      batches.forEach((batch) => {
+        if (batch.completed) {
+          const match = batch.pizzas.find(p => p.id === pizza.id);
+          if (match) {
+            const onOrder = (batch.pizza_allocations || [])
+              .filter(a => a.pizzaId === pizza.id)
+              .reduce((sum, a) => sum + a.quantity, 0);
+            totalStock += match.quantity;
+            totalOnOrder += onOrder;
+            totalAvailable += match.quantity - onOrder;
+          }
         }
       });
     });
