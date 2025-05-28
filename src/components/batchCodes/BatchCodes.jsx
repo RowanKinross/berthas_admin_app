@@ -720,27 +720,18 @@ function BatchCodes() {
       })()}
           <p className='pizzaNumbers'>
             <strong>Pizza numbers complete:</strong>{" "}
-            {editingField === "pizzaNumbersComplete" ? (
-              <input
-                type="checkbox"
-                checked={editingValue}
-                autoFocus
-                onChange={(e) => setEditingValue(e.target.checked)}
-                onBlur={() =>
-                  handleInlineSave("batch", null, "pizza_numbers_complete", editingValue)
+            <input
+              type="checkbox"
+              checked={viewingBatch.pizza_numbers_complete || false}
+              onChange={async (e) => {
+                const newValue = e.target.checked;
+                try {
+                  await handleInlineSave("batch", null, "pizza_numbers_complete", newValue);
+                } catch (error) {
+                  console.error("Error updating checkbox:", error);
                 }
-              />
-            ) : (
-              <span
-                onClick={() => {
-                  setEditingField("pizzaNumbersComplete");
-                  setEditingValue(viewingBatch.pizza_numbers_complete || false);
-                }}
-                style={{ cursor: "pointer" }}
-              >
-                {viewingBatch.pizza_numbers_complete ? "✓" : "✘"}
-              </span>
-            )}
+              }}
+            />
           </p>
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
           <h4>Batch Codes:</h4>
