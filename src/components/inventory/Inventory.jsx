@@ -85,12 +85,21 @@ function Inventory() {
         if (batch.completed) {
           const match = batch.pizzas.find(p => p.id === pizza.id);
           if (match) {
-            const onOrder = (batch.pizza_allocations || [])
-              .filter(a => a.pizzaId === pizza.id)
-              .reduce((sum, a) => sum + a.quantity, 0);
-            totalStock += match.quantity;
-            totalOnOrder += onOrder;
-            totalAvailable += match.quantity - onOrder;
+          const allocations = batch.pizza_allocations || [];
+
+          const completedQty = allocations
+            .filter(a => a.pizzaId === pizza.id && a.status === "completed")
+            .reduce((sum, a) => sum + a.quantity, 0);
+
+          const activeQty = allocations
+            .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
+            .reduce((sum, a) => sum + a.quantity, 0);
+
+          const effectiveQuantity = match.quantity - completedQty;
+
+          totalStock += effectiveQuantity;
+          totalOnOrder += activeQty;
+          totalAvailable += effectiveQuantity - activeQty;
           }
         }
       });
@@ -240,15 +249,22 @@ return (
                         p.id === pizza.id && p.quantity > 0 ? (
                           <div key={idx} className='container'>
                             {(() => {
-                              const onOrder = (batch.pizza_allocations || [])
-                                .filter(a => a.pizzaId === p.id)
-                                .reduce((sum, a) => sum + a.quantity, 0);
-                              const available = p.quantity - onOrder;
+                              const allocations = (batch.pizza_allocations || [])
+                              const completed = allocations
+                                  .filter(a => a.pizzaId === p.id && a.status === "completed")
+                                  .reduce((sum, a) => sum + a.quantity, 0);
+
+                                const active = allocations
+                                  .filter(a => a.pizzaId === p.id && a.status !== "completed")
+                                  .reduce((sum, a) => sum + a.quantity, 0);
+
+                                const effectiveQuantity = p.quantity - completed;
+                                const available = effectiveQuantity - active;
 
                               return (
                                 <>
-                                  <p>Total: {p.quantity}</p>
-                                  <p>On order: {onOrder}</p>
+                                  <p>Total: {effectiveQuantity}</p>
+                                  <p>On order: {active}</p>
                                   <p>Available: {available}</p>
                                 </>
                               );
@@ -271,12 +287,18 @@ return (
                       if (batch.completed) {
                         const match = batch.pizzas.find(p => p.id === pizza.id);
                         if (match) {
-                          const onOrder = (batch.pizza_allocations || [])
-                            .filter(a => a.pizzaId === pizza.id)
+                          const allocations = batch.pizza_allocations || [];
+                          const completedQty = allocations
+                            .filter(a => a.pizzaId === pizza.id && a.status === "completed")
                             .reduce((sum, a) => sum + a.quantity, 0);
-                          pizzaStock += match.quantity;
-                          pizzaAllocated += onOrder;
-                          pizzaAvailable += match.quantity - onOrder;
+                          const activeQty = allocations
+                            .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
+                            .reduce((sum, a) => sum + a.quantity, 0);
+                          const effectiveQuantity = match.quantity - completedQty;
+
+                          pizzaStock += effectiveQuantity;
+                          pizzaAllocated += activeQty;
+                          pizzaAvailable += effectiveQuantity - activeQty;
                         }
                       }
                     });
