@@ -240,7 +240,19 @@ return (
 
                 {/* Render inventory details for this pizza */}
                 {stock
-                  .filter(batch => batch.completed && batch.pizzas.some(p => p.id === pizza.id && p.quantity > 0))
+                  .filter(batch => {
+                      if (!batch.completed) return false;
+
+                      const match = batch.pizzas.find(p => p.id === pizza.id);
+                      if (!match) return false;
+
+                      const completed = (batch.pizza_allocations || [])
+                        .filter(a => a.pizzaId === pizza.id && a.status === "completed")
+                        .reduce((sum, a) => sum + a.quantity, 0);
+
+                      const effectiveQuantity = match.quantity - completed;
+                      return effectiveQuantity > 0;
+                    })
                   .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
                   .map((batch, index) => (
                     <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
