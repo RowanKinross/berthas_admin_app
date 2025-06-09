@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
+import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 
 
 
@@ -22,7 +23,16 @@ function Orders() {
   const isEditingBatch = (pizzaId, batchIndex) =>
     editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
   const modalRef = useRef(null)
+  const [customerInfo, setCustomerInfo] = useState(null);
+  
+useEffect(() => {
+  const getCustomer = async () => {
+    const customer = await fetchCustomerByAccountID(selectedOrder?.account_ID);
+    setCustomerInfo(customer);
+  };
 
+  getCustomer();
+}, [selectedOrder?.account_ID]);
 
   const sortOrders = (orders) => {
   const now = new Date();
@@ -367,6 +377,17 @@ const updateDeliveryDate = async (orderId, newDate) => {
           </div>
           <div>
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
+            <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
+            <p><strong>Address:</strong><br />
+              <div className='displayAddress'>
+                {customerInfo?.customer || 'N/A'} <br/>
+                {customerInfo?.name_number || 'N/A'} <br/>
+                {customerInfo?.street || ''}<br />
+                {customerInfo?.city|| ''}<br />
+                {customerInfo?.postcode|| ''}<br />
+              </div>
+              <strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}
+            </p>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <p className='flexRow'>

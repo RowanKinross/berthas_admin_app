@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faSave, faPrint } from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
+import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 
 const OrderHistory = ({ accountID }) => {
   const [orders, setOrders] = useState([]);
@@ -13,11 +14,18 @@ const OrderHistory = ({ accountID }) => {
   const [pizzaNameMap, setPizzaNameMap] = useState({});
   const [editMode, setEditMode] = useState(false);
   const modalRef = useRef(null)
+  const [customerInfo, setCustomerInfo] = useState(null);
 
-  // Handle edit mode toggle
-  const handleEditClick = () => {
-    setEditMode(true);
+
+  useEffect(() => {
+  const getCustomer = async () => {
+    const customer = await fetchCustomerByAccountID(selectedOrder?.account_ID);
+    setCustomerInfo(customer);
   };
+
+  getCustomer();
+}, [selectedOrder?.account_ID]);
+
 
   const handleSaveClick = () => {
     updateOrderDetails();
@@ -222,6 +230,16 @@ const OrderHistory = ({ accountID }) => {
             ) : (
               <div>
                 <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
+                <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
+                <p><strong>Address:</strong><br />
+                  <div className='displayAddress'>
+                    {customerInfo?.customer || 'N/A'} <br/>
+                    {customerInfo?.name_number || 'N/A'} <br/>
+                    {customerInfo?.street || ''}<br />
+                    {customerInfo?.city|| ''}<br />
+                    {customerInfo?.postcode|| ''}<br />
+                  </div>
+                </p>
                 <p><strong>Order Placed:</strong> {formatDate(selectedOrder.order_placed_timestamp)}</p>
                 <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
                 <p><strong>Delivery Day:</strong> {formatDeliveryDay(selectedOrder.delivery_day)}</p>
