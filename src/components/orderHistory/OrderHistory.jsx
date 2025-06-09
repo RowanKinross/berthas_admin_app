@@ -1,7 +1,7 @@
 import './orderHistory.css';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from '@firebase/firestore';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faSave, faPrint } from '@fortawesome/free-solid-svg-icons';
 

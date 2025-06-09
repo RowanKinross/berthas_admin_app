@@ -1,6 +1,7 @@
 .orderHeaders {
   padding: 20px;
   cursor: default !important;
+  background-color: white;
 }
 .orderEntries {
   width: 130px;
