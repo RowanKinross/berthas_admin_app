@@ -2,7 +2,7 @@
 import './inventory.css';
 import React, {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
-import { collection, addDoc, getDocs } from '@firebase/firestore'; 
+import { collection, addDoc, getDocs, doc, updateDoc } from '@firebase/firestore'; 
 import { Dropdown, Button, Form } from 'react-bootstrap';
 
 function Inventory() {
@@ -22,6 +22,8 @@ function Inventory() {
   const [addIngredientForm, setAddIngredientForm] = useState(false); // set ingredients form to not show
   const [currentIngredient, setCurrentIngredient] = useState([]);
   const [currentPizzaIngredients, setCurrentPizzaIngredients] = useState(["Flour (Caputo Red)", "Salt"]);
+  const [editingField, setEditingField] = useState({ id: null, field: null });
+  const [editValue, setEditValue] = useState({});
 
   // stock
   const [stock, setStock] = useState([]);
@@ -66,7 +68,7 @@ function Inventory() {
     try {
       const querySnapshot = await getDocs(collection(db, 'ingredients'));
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const items = data.map(item => item.name);
+      const items = data.map(item => item);
       setIngredientsArr(items);
     } catch (error) {
       console.error("Error fetching ingredients data:", error);
@@ -197,7 +199,7 @@ function Inventory() {
 
   // add current ingredient to recipe on tick click
   const handleAddIngredientToRecipe = () => {
-    setCurrentPizzaIngredients([...currentPizzaIngredients, currentIngredient]);
+    setCurrentPizzaIngredients([...currentPizzaIngredients, currentIngredient.name]);
   };
 
   const handleRadioChange = (e) => {
@@ -207,6 +209,41 @@ function Inventory() {
       setSleeve(false);
     }
   };
+
+  //INLINE Save on ingredients
+  const handleEditChange = (e) => {
+    setEditValue(e.target.value);
+  };
+
+  const handleBlur = async (ingredient) => {
+  try {
+    const updatedField = editingField.field;
+    const updatedData = { ...ingredient };
+
+    if (updatedField === 'ratio') {
+      const [existingQtyPerPizza, existingQtyPerUnit] = ingredient.ratio.split(':');
+      updatedData.ratio = `${editValue}:${existingQtyPerUnit}`;
+    } else if (updatedField === 'unitQuantity') {
+      const [existingQtyPerPizza] = ingredient.ratio.split(':');
+      updatedData.ratio = `${existingQtyPerPizza}:${editValue}`;
+    } else {
+      updatedData[updatedField] = editValue;
+    }
+
+    const ingredientRef = doc(db, 'ingredients', ingredient.id);
+    if (updatedField === 'ratio' || updatedField === 'unitQuantity') {
+    await updateDoc(ingredientRef, { ratio: updatedData.ratio });
+    } else {
+      await updateDoc(ingredientRef, { [updatedField]: updatedData[updatedField] });
+    }
+
+    setEditingField({ id: null, field: null });
+    setEditValue('');
+    fetchIngredientsArr();
+  } catch (error) {
+    console.error('Error updating ingredient:', error);
+  }
+};
 
   return (
     <div className='inventory'>
@@ -328,6 +365,120 @@ return (
             </div>
           );
         })}
+          <div className='editIngredients pizzas'>
+            <h4 className='editIngredientsHeader'>INGREDIENTS:</h4>
+              <div className='container perPizza'>
+                <p></p>
+                <p><strong>Per pizza:</strong></p>
+              </div>
+              {ingredientsArr.length > 0 ? (
+              <div className='pizzaContent ingredientsScroll'>
+                {ingredientsArr.map((ingredient, index) => {
+                  const [qtyPerPizza, qtyPerUnit] = ingredient.ratio.split(':');
+                  const isSimpleUnit = ingredient.packaging === 'kg' || ingredient.packaging === 'g';
+
+                  return (
+                    <div className='container' key={ingredient.id}>
+                      {/* Name field */}
+                      <div className='nameUnit'>
+                      {editingField.id === ingredient.id && editingField.field === 'name' ? (
+                        <input
+                          className='inputField'
+                          type="text"
+                          value={editValue}
+                          onChange={handleEditChange}
+                          onBlur={() => handleBlur(ingredient)}
+                          autoFocus
+                        />
+                      ) : (
+                        <p onClick={() => {
+                          setEditingField({ id: ingredient.id, field: 'name' });
+                          setEditValue(ingredient.name);
+                        }}>
+                          <strong className='p-2'>{ingredient.name} </strong>
+                        </p>
+                      )}
+                      
+                    {/* Packaging */}
+                    {!isSimpleUnit && (
+                      <div className='unitBlock nameUnit'>
+                        {/* Edit unit quantity (second part of ratio) */}
+                        {editingField.id === ingredient.id && editingField.field === 'unitQuantity' ? (
+                          <input
+                            className='inputBox'
+                            type="text"
+                            value={editValue}
+                            onChange={handleEditChange}
+                            onBlur={() => handleBlur(ingredient)}
+                            autoFocus
+                          />
+                        ) : (
+                          <p
+                            onClick={() => {
+                              setEditingField({ id: ingredient.id, field: 'unitQuantity' });
+                              setEditValue(qtyPerUnit);
+                            }}
+                          >
+                            {qtyPerUnit}
+                          </p>
+                        )}
+
+                        {/* Edit packaging */}
+                        <p>kg</p>
+                        {editingField.id === ingredient.id && editingField.field === 'packaging' ? (
+                          <input
+                            className='inputBox'
+                            type="text"
+                            value={editValue}
+                            onChange={handleEditChange}
+                            onBlur={() => handleBlur(ingredient)}
+                            autoFocus
+                          />
+                        ) : (
+                          <p
+                            onClick={() => {
+                              setEditingField({ id: ingredient.id, field: 'packaging' });
+                              setEditValue(ingredient.packaging);
+                            }} className='unitSpacing'
+                          >
+                           {ingredient.packaging}
+                          </p>
+                        )}
+                      </div>
+                      )}
+                      </div>
+                      <div className='nameUnit'>
+                      {/* Quantity per pizza */}
+                      {editingField.id === ingredient.id && editingField.field === 'ratio' ? (
+                        <input
+                          className='inputBox'
+                          type="text"
+                          value={editValue}
+                          onChange={handleEditChange}
+                          onBlur={() => handleBlur(ingredient)}
+                          autoFocus
+                        />
+                      ) : (
+                        <p onClick={() => {
+                          setEditingField({ id: ingredient.id, field: 'ratio' });
+                          setEditValue(qtyPerPizza);
+                        }}>
+                          {qtyPerPizza}
+                        </p>
+                      )}
+                      <p>g</p>
+                      </div>
+                    
+                    </div>
+                  );
+                })}
+              </div>
+
+
+          ) : (
+            <p>No ingredients found.</p>
+          )}
+          </div>
           {/* Button to add a new pizza */}
           <button className='addPizza button pizzas' onClick={() => setModalVisible(true)}>+</button>
         </div>
@@ -357,12 +508,12 @@ return (
               {/* Dropdown for selecting an existing ingredient */}
               <Dropdown>
                 <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
-                  {currentIngredient != "" ? currentIngredient : 'Select Ingredient'}
+                  {currentIngredient?.name || 'Select Ingredient'}
                 </Dropdown.Toggle>
                 <Dropdown.Menu className='ingredientDropdown'>
                   {ingredientsArr.map((ingredient, index) => (
                     <Dropdown.Item key={index} onClick={() => { setCurrentIngredient(ingredient); }}>
-                      {ingredient}  
+                      {ingredient.name}  
                     </Dropdown.Item>
                   ))}
                   <button className='button' onClick={() => { setAddIngredientForm(true) }}>Add new</button>
