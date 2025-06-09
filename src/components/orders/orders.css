@@ -87,13 +87,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background-color: var(--paleGrey);
   border-radius: 5px;
-  box-shadow: 0 2px 4px var(--boxShadow);
   transition: background-color 0.3s, transform 0.3s;
   cursor: pointer;
   border: white;
+}
+
+.orderButton:not(.orderHeaders) {
+  background-color: var(--paleGrey);
+  box-shadow: 0 2px 4px var(--boxShadow);
+  padding: 10px 20px;
 }
 
 .orderButton.complete {

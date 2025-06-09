@@ -3,8 +3,7 @@ import './orders.css'
 import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback } from 'react';
-import Button from 'react-bootstrap/Button';
-import Modal from 'react-bootstrap/Modal';
+
 
 
 
