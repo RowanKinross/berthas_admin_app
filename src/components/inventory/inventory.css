@@ -47,7 +47,7 @@
   .pizzaContent::-webkit-scrollbar-track {
     background-color: var(--light); /* Background of the scrollbar track */
   }
-  .pizzaHeader {
+  .pizzaHeader, .editIngredientsHeader {
     position: sticky;
     top: 0;
     z-index: 10;
@@ -56,9 +56,30 @@
   .pizzaH4 {
     color: var(--pale);
     margin: auto;
+  }
+  .pizzaH4, .editIngredientsHeader {
     padding: 5%;
     font-weight:bold;
   }
+  .ingredientsScroll {
+    max-height: 70% !important;
+    padding: 0 10% !important;
+  }
+  .nameUnit{
+    display: flex;
+    cursor: pointer;
+  }
+  .unitSpacing {
+    padding-left: 4px;
+  }
+
+  .perPizza {
+    padding-right: 14%;
+  }
+  .inputBox {
+    max-width: 70px;
+  }
+
   #pizzasMEA_A1 {
     background-image: url(../Frozen-Characters-Website-1-copy.webp);
   }
@@ -155,6 +176,13 @@
 }
 .hide {
   display: none;
+}
+
+
+
+/* edit ingredients display */
+.editIngredients {
+  background-color: var(--light);
 }
 
 @media (max-width: 530px) {

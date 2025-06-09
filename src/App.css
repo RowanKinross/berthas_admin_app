@@ -28,6 +28,9 @@
   border-bottom: 2px solid var(--darkLight);
   cursor: auto;
 }
+.p-2 {
+  padding: 2px;
+}
 
 
 
