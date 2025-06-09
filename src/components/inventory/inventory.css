@@ -186,7 +186,7 @@
 }
 
 @media (max-width: 530px) {
-  .inventoryBox {
+  .inventoryBox, .ingredientsScroll, .perPizza  {
     font-size: 8px;
   }
 }
