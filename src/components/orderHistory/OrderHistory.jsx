@@ -1,9 +1,11 @@
 import './orderHistory.css';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from '@firebase/firestore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faSave, faPrint } from '@fortawesome/free-solid-svg-icons';
+import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
+import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 
 const OrderHistory = ({ accountID }) => {
   const [orders, setOrders] = useState([]);
@@ -11,11 +13,19 @@ const OrderHistory = ({ accountID }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pizzaNameMap, setPizzaNameMap] = useState({});
   const [editMode, setEditMode] = useState(false);
+  const modalRef = useRef(null)
+  const [customerInfo, setCustomerInfo] = useState(null);
 
-  // Handle edit mode toggle
-  const handleEditClick = () => {
-    setEditMode(true);
+
+  useEffect(() => {
+  const getCustomer = async () => {
+    const customer = await fetchCustomerByAccountID(selectedOrder?.account_ID);
+    setCustomerInfo(customer);
   };
+
+  getCustomer();
+}, [selectedOrder?.account_ID]);
+
 
   const handleSaveClick = () => {
     updateOrderDetails();
@@ -58,6 +68,20 @@ const OrderHistory = ({ accountID }) => {
     newWindow.print();
     newWindow.close();
   };
+
+    useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSelectedOrder(null);
+        setViewModal(false);
+      }
+    };
+  
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const updateOrderDetails = async () => {
     try {
@@ -121,27 +145,27 @@ const OrderHistory = ({ accountID }) => {
   };
 
   const transformPizzasObjectToArray = (pizzas) => {
-    console.log('Pizzas object:', pizzas);
     return Object.keys(pizzas).map(pizzaID => {
       const pizza = pizzas[pizzaID];
 
-          // Use the pizzaNameMap to get the name, fallback to pizzaID if not found
-    const pizzaName = pizzaNameMap[pizzaID] || pizzaID;
+      // Use the pizzaNameMap to get the name, fallback to pizzaID if not found
+      const pizzaName = pizzaNameMap[pizzaID] || pizzaID;
       
       // Combine batch info into a string
-      const batchDetails = pizza.batchesUsed.map(batch => `${batch.batch_number} (qty: ${batch.quantity})`).join(', ');
-  
+      const batchcode = pizza.batchesUsed.map(batch => `${batch.batch_number}`) ;
+      const batchQuantity = pizza.batchesUsed.map(batch => `${batch.quantity}`);
+
       return {
         name: pizzaName,
-        quantity: pizza.quantity,
-        batchDetails: batchDetails
+        batchQuantity: batchQuantity,
+        batchcode: batchcode
       };
     });
   };
 
   return (
     <div className="orders">
-      <h2>ORDERS</h2>
+      <h2>ORDER HISTORY</h2>
       <div className="ordersList">
         <div className="orderButton orderHeaders">
           <div className="entries">Order Placed:</div>
@@ -159,17 +183,17 @@ const OrderHistory = ({ accountID }) => {
               className={`orderButton button ${order.complete ? 'complete' : ''}`}
               onClick={() => handleOrderClick(order)}
             >
-              <div className="orderEntries">{order.order_placed_timestamp}</div>
+              <div className="orderEntries">{formatDate(order.order_placed_timestamp)}</div>
               <div className="orderEntries">{order.pizzaTotal}</div>
-              <div className="orderEntries">{order.delivery_week}</div>
-              <div className="orderEntries">{order.delivery_day}</div>
+              <div className="orderEntries">{formatDeliveryDay(order.delivery_week)}</div>
+              <div className="orderEntries">{formatDeliveryDay(order.delivery_day)}</div>
               <div className="orderEntries">{order.order_status}</div>
             </button>
           ))}
       </div>
       {viewModal && selectedOrder && (
         <div className="modal">
-          <div className="modalContent orderHistoryModal">
+          <div className="modalContent orderHistoryModal" ref={modalRef}>
             <div>
               <h3>Order Details</h3>
             </div>
@@ -206,9 +230,19 @@ const OrderHistory = ({ accountID }) => {
             ) : (
               <div>
                 <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
-                <p><strong>Order Placed:</strong> {selectedOrder.order_placed_timestamp}</p>
+                <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
+                <p><strong>Address:</strong><br />
+                  <div className='displayAddress'>
+                    {customerInfo?.customer || 'N/A'} <br/>
+                    {customerInfo?.name_number || 'N/A'} <br/>
+                    {customerInfo?.street || ''}<br />
+                    {customerInfo?.city|| ''}<br />
+                    {customerInfo?.postcode|| ''}<br />
+                  </div>
+                </p>
+                <p><strong>Order Placed:</strong> {formatDate(selectedOrder.order_placed_timestamp)}</p>
                 <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
-                <p><strong>Delivery Day:</strong> {selectedOrder.delivery_day}</p>
+                <p><strong>Delivery Day:</strong> {formatDeliveryDay(selectedOrder.delivery_day)}</p>
                 <p><strong>Order Status:</strong> {selectedOrder.order_status}</p>
                 {selectedOrder.pizzas ? (
                   <div>
@@ -216,7 +250,10 @@ const OrderHistory = ({ accountID }) => {
                     <ul>
                       {transformPizzasObjectToArray(selectedOrder.pizzas).map((pizza, index) => (
                         <li key={index}>
-                          {pizza.name} x {pizza.quantity} (batch: {pizza.batchDetails})
+                            {pizza.name} x {pizza.batchQuantity} 
+                          <p className='displayBatchcode'>
+                            batch: {pizza.batchcode}
+                          </p>
                         </li>
                       ))}
                     </ul>
@@ -226,18 +263,11 @@ const OrderHistory = ({ accountID }) => {
                 )}
                 <p><strong>Total no. of Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
 
-                
-                <button className='editButton' onClick={handleEditClick}>
-                  <FontAwesomeIcon icon={faEdit} className='icon' /> Edit
-                </button>
                 <button className='printButton' onClick={handlePrintClick}>
                   <FontAwesomeIcon icon={faPrint} className='icon' /> Print
                 </button>
               </div>
             )}
-            <button className="button" onClick={handleCloseModal}>
-              Close
-            </button>
           </div>
         </div>
       )}

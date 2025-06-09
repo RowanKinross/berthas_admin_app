@@ -2,8 +2,11 @@
 import './orders.css'
 import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore';
-import { useState, useEffect, useCallback } from 'react';
-
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {faPrint} from '@fortawesome/free-solid-svg-icons';
+import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
+import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 
 
 
@@ -18,35 +21,18 @@ function Orders() {
   const [deliveryDateInput, setDeliveryDateInput] = useState('');
   const [editingBatch, setEditingBatch] = useState({ pizzaId: null, batchIndex: null });
   const isEditingBatch = (pizzaId, batchIndex) =>
-  editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate();
-    const dd = String(date.getDate()).padStart(2, '0');
-    const mm = String(date.getMonth() + 1).padStart(2, '0'); // months are 0-indexed
-    const yyyy = date.getFullYear();
-    const hh = String(date.getHours()).padStart(2, '0');
-    const min = String(date.getMinutes()).padStart(2, '0');
-    return `${dd}-${mm}-${yyyy}, ${hh}:${min}`;
+    editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
+  const modalRef = useRef(null)
+  const [customerInfo, setCustomerInfo] = useState(null);
+  
+useEffect(() => {
+  const getCustomer = async () => {
+    const customer = await fetchCustomerByAccountID(selectedOrder?.account_ID);
+    setCustomerInfo(customer);
   };
 
-  const formatDeliveryDay = (input) => {
-    if (!input) return '';
-    let date;
-  if (typeof input.toDate === 'function') {
-    date = input.toDate();
-  } else {
-    date = new Date(input);
-  }
-  if (isNaN(date.getTime())) return ''; // handle invalid date
-  const days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat'];
-  const dayOfWeek = days[date.getDay()];
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${dayOfWeek}, ${dd}-${mm}-${yyyy}`;
-  };
+  getCustomer();
+}, [selectedOrder?.account_ID]);
 
   const sortOrders = (orders) => {
   const now = new Date();
@@ -81,6 +67,57 @@ function Orders() {
     return aTime - bTime;
   });
 };
+
+const handlePrintClick = () => {
+    const modalContent = document.querySelector('.orderModal');
+    // Clone content
+    const clone = modalContent.cloneNode(true);
+    // Remove the buttons
+    clone.querySelectorAll('button').forEach(btn => btn.remove());
+    // Open print window
+    const newWindow = window.open('', '', 'width=800,height=600');
+    newWindow.document.write(`
+      <html>
+        <head>
+          <title>Order Details</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 20px;
+            }
+            .modalContent {
+              border: 1px solid #ccc;
+              padding: 20px;
+            }
+            h3, h4 {
+              margin-top: 0;
+            }
+          </style>
+        </head>
+        <body>
+          ${clone.innerHTML}
+        </body>
+      </html>
+    `);
+    newWindow.document.close();
+    newWindow.focus();
+    newWindow.print();
+    newWindow.close();
+  };
+
+  useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (modalRef.current && !modalRef.current.contains(event.target)) {
+      setSelectedOrder(null);
+      setViewModal(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+}, []);
 
 
   useEffect(() => {
@@ -309,7 +346,6 @@ const updateDeliveryDate = async (orderId, newDate) => {
         <div>no. of pizzas:</div>
         <div>Order Status</div>
         <div>Delivery Day:</div>
-        {/* <button onClick={initializeAllocations}>Init Allocations</button> */}
       </div>
 
       {orders.length > 0 ? (
@@ -335,12 +371,23 @@ const updateDeliveryDate = async (orderId, newDate) => {
     </div>
     {selectedOrder && (
         <div className='modal'>
-          <div className='modalContent'>
+          <div className='modalContent orderModal' ref={modalRef}>
           <div>
             <div>Order Details</div>
           </div>
           <div>
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
+            <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
+            <p><strong>Address:</strong><br />
+              <div className='displayAddress'>
+                {customerInfo?.customer || 'N/A'} <br/>
+                {customerInfo?.name_number || 'N/A'} <br/>
+                {customerInfo?.street || ''}<br />
+                {customerInfo?.city|| ''}<br />
+                {customerInfo?.postcode|| ''}<br />
+              </div>
+              <strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}
+            </p>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <p className='flexRow'>
@@ -452,12 +499,14 @@ const updateDeliveryDate = async (orderId, newDate) => {
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
           <div>
-            <button className='button' onClick={handleComplete}>
-              Order Complete
+            <button className='button' onClick={handlePrintClick}>
+              <FontAwesomeIcon icon={faPrint} className='icon' /> Print
             </button>
-            <button className='button' onClick={handleCloseModal}>
-              Close
-            </button>
+            {!selectedOrder.complete && (
+              <button className='button' onClick={handleComplete}>
+                Order Complete
+              </button>
+            )}
           </div>
         </div>
         </div>

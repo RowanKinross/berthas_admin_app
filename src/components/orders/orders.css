@@ -119,13 +119,13 @@
   color: white;
 }
 
-.pizzasOrdered {
-  padding: 0 2%;
-}
-
 .flexRow {
   display: flex;
   padding: 0 10px;
+}
+
+.displayAddress, .pizzasOrdered {
+  padding-left: 20px;
 }
 
 @media (max-width: 530px) {
