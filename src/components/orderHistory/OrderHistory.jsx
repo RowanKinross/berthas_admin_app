@@ -4,6 +4,7 @@ import { collection, getDocs, doc, updateDoc } from '@firebase/firestore';
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faSave, faPrint } from '@fortawesome/free-solid-svg-icons';
+import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 
 const OrderHistory = ({ accountID }) => {
   const [orders, setOrders] = useState([]);
@@ -141,7 +142,7 @@ const OrderHistory = ({ accountID }) => {
 
   return (
     <div className="orders">
-      <h2>ORDERS</h2>
+      <h2>ORDER HISTORY</h2>
       <div className="ordersList">
         <div className="orderButton orderHeaders">
           <div className="entries">Order Placed:</div>
@@ -159,10 +160,10 @@ const OrderHistory = ({ accountID }) => {
               className={`orderButton button ${order.complete ? 'complete' : ''}`}
               onClick={() => handleOrderClick(order)}
             >
-              <div className="orderEntries">{order.order_placed_timestamp}</div>
+              <div className="orderEntries">{formatDate(order.order_placed_timestamp)}</div>
               <div className="orderEntries">{order.pizzaTotal}</div>
-              <div className="orderEntries">{order.delivery_week}</div>
-              <div className="orderEntries">{order.delivery_day}</div>
+              <div className="orderEntries">{formatDeliveryDay(order.delivery_week)}</div>
+              <div className="orderEntries">{formatDeliveryDay(order.delivery_day)}</div>
               <div className="orderEntries">{order.order_status}</div>
             </button>
           ))}
@@ -206,9 +207,9 @@ const OrderHistory = ({ accountID }) => {
             ) : (
               <div>
                 <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
-                <p><strong>Order Placed:</strong> {selectedOrder.order_placed_timestamp}</p>
+                <p><strong>Order Placed:</strong> {formatDate(selectedOrder.order_placed_timestamp)}</p>
                 <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
-                <p><strong>Delivery Day:</strong> {selectedOrder.delivery_day}</p>
+                <p><strong>Delivery Day:</strong> {formatDeliveryDay(selectedOrder.delivery_day)}</p>
                 <p><strong>Order Status:</strong> {selectedOrder.order_status}</p>
                 {selectedOrder.pizzas ? (
                   <div>
