@@ -1,7 +1,7 @@
 import './orderHistory.css';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from '@firebase/firestore';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faSave, faPrint } from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
@@ -12,6 +12,7 @@ const OrderHistory = ({ accountID }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pizzaNameMap, setPizzaNameMap] = useState({});
   const [editMode, setEditMode] = useState(false);
+  const modalRef = useRef(null)
 
   // Handle edit mode toggle
   const handleEditClick = () => {
@@ -59,6 +60,20 @@ const OrderHistory = ({ accountID }) => {
     newWindow.print();
     newWindow.close();
   };
+
+    useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSelectedOrder(null);
+        setViewModal(false);
+      }
+    };
+  
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const updateOrderDetails = async () => {
     try {
@@ -122,20 +137,20 @@ const OrderHistory = ({ accountID }) => {
   };
 
   const transformPizzasObjectToArray = (pizzas) => {
-    console.log('Pizzas object:', pizzas);
     return Object.keys(pizzas).map(pizzaID => {
       const pizza = pizzas[pizzaID];
 
-          // Use the pizzaNameMap to get the name, fallback to pizzaID if not found
-    const pizzaName = pizzaNameMap[pizzaID] || pizzaID;
+      // Use the pizzaNameMap to get the name, fallback to pizzaID if not found
+      const pizzaName = pizzaNameMap[pizzaID] || pizzaID;
       
       // Combine batch info into a string
-      const batchDetails = pizza.batchesUsed.map(batch => `${batch.batch_number} (qty: ${batch.quantity})`).join(', ');
-  
+      const batchcode = pizza.batchesUsed.map(batch => `${batch.batch_number}`) ;
+      const batchQuantity = pizza.batchesUsed.map(batch => `${batch.quantity}`);
+
       return {
         name: pizzaName,
-        quantity: pizza.quantity,
-        batchDetails: batchDetails
+        batchQuantity: batchQuantity,
+        batchcode: batchcode
       };
     });
   };
@@ -170,7 +185,7 @@ const OrderHistory = ({ accountID }) => {
       </div>
       {viewModal && selectedOrder && (
         <div className="modal">
-          <div className="modalContent orderHistoryModal">
+          <div className="modalContent orderHistoryModal" ref={modalRef}>
             <div>
               <h3>Order Details</h3>
             </div>
@@ -217,7 +232,10 @@ const OrderHistory = ({ accountID }) => {
                     <ul>
                       {transformPizzasObjectToArray(selectedOrder.pizzas).map((pizza, index) => (
                         <li key={index}>
-                          {pizza.name} x {pizza.quantity} (batch: {pizza.batchDetails})
+                            {pizza.name} x {pizza.batchQuantity} 
+                          <p className='displayBatchcode'>
+                            batch: {pizza.batchcode}
+                          </p>
                         </li>
                       ))}
                     </ul>
@@ -227,18 +245,11 @@ const OrderHistory = ({ accountID }) => {
                 )}
                 <p><strong>Total no. of Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
 
-                
-                <button className='editButton' onClick={handleEditClick}>
-                  <FontAwesomeIcon icon={faEdit} className='icon' /> Edit
-                </button>
                 <button className='printButton' onClick={handlePrintClick}>
                   <FontAwesomeIcon icon={faPrint} className='icon' /> Print
                 </button>
               </div>
             )}
-            <button className="button" onClick={handleCloseModal}>
-              Close
-            </button>
           </div>
         </div>
       )}

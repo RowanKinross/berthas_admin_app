@@ -2,7 +2,7 @@
 import './orders.css'
 import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
@@ -20,7 +20,8 @@ function Orders() {
   const [deliveryDateInput, setDeliveryDateInput] = useState('');
   const [editingBatch, setEditingBatch] = useState({ pizzaId: null, batchIndex: null });
   const isEditingBatch = (pizzaId, batchIndex) =>
-  editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
+    editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
+  const modalRef = useRef(null)
 
 
   const sortOrders = (orders) => {
@@ -93,6 +94,20 @@ const handlePrintClick = () => {
     newWindow.print();
     newWindow.close();
   };
+
+  useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (modalRef.current && !modalRef.current.contains(event.target)) {
+      setSelectedOrder(null);
+      setViewModal(false);
+    }
+  };
+
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside);
+  };
+}, []);
 
 
   useEffect(() => {
@@ -346,7 +361,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
     </div>
     {selectedOrder && (
         <div className='modal'>
-          <div className='modalContent orderModal'>
+          <div className='modalContent orderModal' ref={modalRef}>
           <div>
             <div>Order Details</div>
           </div>
@@ -471,9 +486,6 @@ const updateDeliveryDate = async (orderId, newDate) => {
                 Order Complete
               </button>
             )}
-            <button className='button' onClick={handleCloseModal}>
-              Close
-            </button>
           </div>
         </div>
         </div>
