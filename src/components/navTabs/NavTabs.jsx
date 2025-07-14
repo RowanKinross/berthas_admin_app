@@ -3,7 +3,8 @@ import { NavLink, useNavigate} from 'react-router-dom';
 import './navtabs.css';
 import { app, db } from '../firebase/firebase';
 import { collection, getDocs, addDoc } from '@firebase/firestore';
-import { Dropdown, Button, Form } from 'react-bootstrap';;
+import { Dropdown, Button, Form } from 'react-bootstrap';
+import { nanoid } from 'nanoid';
 
 
 function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
@@ -60,7 +61,7 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
             setName(value);
             break;
         case "nameNumber":
-            setNameNumber(value.toUpperCase());
+            setNameNumber(value);
             break;
         case "street":
             setStreet(value);
@@ -107,25 +108,29 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
 
 
   
-  const generateAccountID = (name, nameNumber) => {
-    if (!name) {
-        throw new Error("name is required to generate an account ID");
-    }
-    
-    const upperCaseName = name.toUpperCase().trim();
-    const truncatedName = upperCaseName.length > 6 ? upperCaseName.slice(0, 6) : upperCaseName;
-    const cleanTruncatedName = truncatedName.replace(/[^\w]/g, '');
-    const timestamp = Date.now().toString().slice(0, 4);
-    const cleanNameNumber = nameNumber.replace(/[^\w]/g, '');
-    const accountID = `#${cleanTruncatedName}${cleanNameNumber}${timestamp}`;
-    return accountID;
-}
+const generateAccountID = ({ name, postcode }) => {
+  const cleanedTitle = (name || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+
+  const cleanedPostcode = (postcode || '')
+    .replace(/\s+/g, '')
+    .slice(-4)
+    .toUpperCase();
+
+  const shortId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Short 4-char ID
+
+  console.log("Generating account ID from:", { name, postcode });
+
+  return `${cleanedTitle}${cleanedPostcode}${shortId}`;
+};
   
   
   //function to add customer data to firebase
   const handleAddNewCustomer = async () => {
+
     try {
-      const newAccountID = generateAccountID(name, nameNumber);
+      const newAccountID = generateAccountID({name, postcode});
       setAccountID(newAccountID);
       setCustomerName(name);
       handleAddRegion()
@@ -337,13 +342,13 @@ useEffect(() => {
           </Form.Label>
           <Form.Control
             type="text"
-            placeholder="Name/Number"
+            placeholder="First Line of Address"
             name="nameNumber"
             onChange={handleChange}
           />
           <Form.Control
             type="text"
-            placeholder="Street"
+            placeholder="Second Line of Address (optional)"
             name="street"
             onChange={handleChange}
           />
@@ -407,7 +412,12 @@ useEffect(() => {
             name="email"
             onChange={handleChange}
           />
-        <Button type="submit" className='button' onClick={() => {setAddCustomer(false); handleAddNewCustomer()}}>Submit</Button>
+        <Button 
+          type="submit" 
+          className='button' 
+          disabled={!name || !postcode}
+          onClick={() => {setAddCustomer(false); handleAddNewCustomer()}}
+        >Submit</Button>
         </div>
         </div>
       )}
