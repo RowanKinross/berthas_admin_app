@@ -172,10 +172,10 @@ const generateAccountID = ({ name, postcode }) => {
       return (
         <>
           <NavLink to="/" />
-          <NavLink to="/orders" className={({ isActive }) =>
+          {/* <NavLink to="/orders" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDERS</h3>
-          </NavLink>
+          </NavLink> */}
           <NavLink to="/inventory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>
@@ -184,10 +184,10 @@ const generateAccountID = ({ name, postcode }) => {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">DEMAND SUMMARY</h3>
           </NavLink> */}
-          <NavLink to="/archive" className={({ isActive }) =>
+          {/* <NavLink to="/archive" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ARCHIVE</h3>
-          </NavLink>          
+          </NavLink>           */}
           <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCH CODES</h3>
@@ -197,7 +197,7 @@ const generateAccountID = ({ name, postcode }) => {
     } else if (userRole === "customer") {
       return (
         <>
-          <NavLink to="/" />
+          {/* <NavLink to="/" />
          <NavLink to="/newOrder" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">NEW ORDER</h3>
@@ -209,7 +209,7 @@ const generateAccountID = ({ name, postcode }) => {
           <NavLink to="/account" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ACCOUNT INFO</h3>
-          </NavLink>
+          </NavLink> */}
         </>
       );
     } else {
