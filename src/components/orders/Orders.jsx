@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
+import { onSnapshot } from 'firebase/firestore';
 
 
 
@@ -134,19 +135,6 @@ const handlePrintClick = () => {
       }
     };
 
-    const fetchBatches = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "batches"));
-        const batchesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setBatches(batchesData);
-      } catch (error) {
-        console.error("Error fetching batches:", error);
-      }
-    };
-
     
     const fetchPizzaTitles = async () => {
       try {
@@ -165,8 +153,21 @@ const handlePrintClick = () => {
     };
     
     fetchOrders();
-    fetchBatches();
     fetchPizzaTitles();
+  }, []);
+
+  // fetch batches using a listener
+  useEffect(() => {
+  const unsubscribe = onSnapshot(collection(db, "batches"), (querySnapshot) => {
+    const batchesData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    setBatches(batchesData);
+  }, (error) => {
+    console.error("Error fetching batches in real-time:", error);
+  });
+    return () => unsubscribe(); // cleanup listener
   }, []);
   
 const updateDeliveryDate = async (orderId, newDate) => {
@@ -217,65 +218,73 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
 
 
- const handleBatchNumberUpdate = async ({ orderId, pizzaId, batchIndex, batchNumber }) => {
-   const orderRef = doc(db, "orders", orderId);
-  try {
-    const orderSnap = await getDoc(orderRef);
+    const handleBatchNumberUpdate = async ({ orderId, pizzaId, batchIndex, batchNumber }) => {
+      const orderRef = doc(db, "orders", orderId);
+      try {
+        const orderSnap = await getDoc(orderRef);
+        if (!orderSnap.exists()) throw new Error("Order not found");
 
-    if (!orderSnap.exists()) throw new Error("Order not found");
+        const orderData = orderSnap.data();
+        const batchesUsed = orderData.pizzas?.[pizzaId]?.batchesUsed || [];
+        const selectedBatch = batchesUsed[batchIndex];
+        const quantityOrdered = selectedBatch.quantity;
+        const prevBatchCode = selectedBatch.batch_number;
 
-    const orderData = orderSnap.data();
-    const batchesUsed = orderData.pizzas?.[pizzaId]?.batchesUsed || [];
-    const selectedBatch = batchesUsed[batchIndex];
-    const quantityOrdered = selectedBatch.quantity;
-
-    const prevBatchCode = selectedBatch.batch_number;
-
-    // Update Firestore order with new batch_number
-    selectedBatch.batch_number = batchNumber;
-    await updateDoc(orderRef, {
-      [`pizzas.${pizzaId}.batchesUsed`]: batchesUsed
-    });
-    // Update old batch (remove allocation)
-    if (prevBatchCode && prevBatchCode !== batchNumber) {
-      const prevBatchDoc = batches.find(b => b.batch_code === prevBatchCode);
-      if (prevBatchDoc) {
-        const updatedAllocations = (prevBatchDoc.pizza_allocations || []).filter(
-          a => !(a.orderId === orderId && a.pizzaId === pizzaId && a.quantity === quantityOrdered)
-        );
-        await updateDoc(doc(db, "batches", prevBatchDoc.id), {
-          pizza_allocations: updatedAllocations
+        // Update order: set new batch_number (could be empty string to clear)
+        selectedBatch.batch_number = batchNumber;
+        await updateDoc(orderRef, {
+          [`pizzas.${pizzaId}.batchesUsed`]: batchesUsed
         });
+
+        // Remove allocation from previous batch if necessary
+        if (prevBatchCode && prevBatchCode !== batchNumber) {
+          const prevBatchDoc = batches.find(b => b.batch_code === prevBatchCode);
+          if (prevBatchDoc) {
+            const updatedAllocations = (prevBatchDoc.pizza_allocations || []).filter(
+              a => !(a.orderId === orderId && a.pizzaId === pizzaId && a.quantity === quantityOrdered)
+            );
+            await updateDoc(doc(db, "batches", prevBatchDoc.id), {
+              pizza_allocations: updatedAllocations
+            });
+          }
+        }
+
+        // If a new batch was selected, add it (if not already present)
+        if (batchNumber) {
+          const newBatchDoc = batches.find(b => b.batch_code === batchNumber);
+          if (newBatchDoc) {
+            const existingAllocations = newBatchDoc.pizza_allocations || [];
+            const alreadyAllocated = existingAllocations.some(
+              a => a.orderId === orderId && a.pizzaId === pizzaId && a.quantity === quantityOrdered
+            );
+            if (!alreadyAllocated) {
+              const newAllocations = [...existingAllocations, {
+                orderId,
+                pizzaId,
+                quantity: quantityOrdered
+              }];
+              await updateDoc(doc(db, "batches", newBatchDoc.id), {
+                pizza_allocations: newAllocations
+              });
+            }
+          }
+        }
+
+        // Re-fetch updated order after assigning the batch
+        const updatedOrderSnap = await getDoc(orderRef);
+        const updatedOrder = updatedOrderSnap.data();
+
+        // Update order status if fully allocated
+        if (allPizzasAllocated(updatedOrder)) {
+          await updateDoc(orderRef, { order_status: "pizzas allocated" });
+          console.log("✅ Order status updated to 'pizzas allocated'");
+        }
+
+      } catch (error) {
+        console.error("Error updating batch assignment:", error);
       }
-    }
-    // Add new allocation
-    const newBatchDoc = batches.find(b => b.batch_code === batchNumber);
-    if (newBatchDoc) {
-      const newAllocations = [...(newBatchDoc.pizza_allocations || []), {
-        orderId,
-        pizzaId,
-        quantity: quantityOrdered
-      }];
-      await updateDoc(doc(db, "batches", newBatchDoc.id), {
-        pizza_allocations: newAllocations
-      });
-    }
-    console.log("✅ Allocation updated.");
-  } catch (error) {
-    console.error("Error allocating batch:", error);
-  }
+    };
 
-  // Re-fetch updated order after assigning the batch
-  const updatedOrderSnap = await getDoc(orderRef);
-  const updatedOrder = updatedOrderSnap.data();
-
-  // Check if all batches are allocated
-  if (allPizzasAllocated(updatedOrder)) {
-    await updateDoc(orderRef, { order_status: "pizzas allocated" });
-    console.log("✅ Order status updated to 'pizzas allocated'");
-  }
-  
-};
 
 
 
