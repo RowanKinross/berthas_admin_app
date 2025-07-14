@@ -212,7 +212,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
     .reduce((sum, a) => sum + a.quantity, 0);
 
   return pizza.quantity - allocated;
-};
+  };
 
 
 
@@ -352,8 +352,8 @@ const updateDeliveryDate = async (orderId, newDate) => {
     <div className='ordersList'>
       <div className='orderButton' id='totals'>
         <div>Account ID:</div>
-        <div>no. of pizzas:</div>
-        <div>Order Status</div>
+        <div>No. of Pizzas:</div>
+        <div className='orderStatus'>Order Status:</div>
         <div>Delivery Day:</div>
       </div>
 
@@ -368,7 +368,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
           onClick={() => handleOrderClick(order)}>
             <div>{order.account_ID}</div>
             <div>{order.pizzaTotal}</div>
-            <div>{order.order_status}</div>
+            <div className='orderStatus'>{order.order_status}</div>
             <div className={`${order.delivery_day === 'tbc'? 'tbc' : ''}`}>
               {order.delivery_day ==='tbc'? 'tbc' : formatDeliveryDay(order.delivery_day)}
             </div>
@@ -482,9 +482,9 @@ const updateDeliveryDate = async (orderId, newDate) => {
                                 <option
                                   key={batch.id || i}
                                   value={batch.batch_code}
-                                  disabled={available < batch.quantity}
+                                  disabled={available <= 0}
                                 >
-                                  {batch.batch_code} — ({available} available)
+                                  {batch.batch_code} — ({available} of {batch.pizzas.find(p => p.id === pizzaName)?.quantity || 0} available)
                                 </option>
                               );
                             })}

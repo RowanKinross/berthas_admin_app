@@ -130,12 +130,13 @@
 
 @media (max-width: 530px) {
   .orderButton {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 5px;
   }
 
   .modal {
     width: 95%;
+  }
+  .orderStatus {
+    display: none;
   }
 }
