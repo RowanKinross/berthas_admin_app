@@ -45,37 +45,36 @@ function BatchCodes() {
 
   // display all batches
   useEffect(() => {
-    const fetchBatches = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "batches"));
-        const batchesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+  const unsubscribe = onSnapshot(collection(db, "batches"), (querySnapshot) => {
+    const batchesData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-        setBatches(batchesData);
-        
-        const seenCodes = new Set();
+    setBatches(batchesData);
 
-        batchesData.forEach(batch => {
-          batch.pizzas?.forEach(pizza => {
-            Object.values(pizza.ingredientBatchCodes || {}).forEach(code => {
-              if (code?.trim()) {
-                seenCodes.add(code.trim());
-              }
-            });
-          });
+    // Build batchCodeSuggestions from live data
+    const seenCodes = new Set();
+    batchesData.forEach(batch => {
+      batch.pizzas?.forEach(pizza => {
+        Object.values(pizza.ingredientBatchCodes || {}).forEach(code => {
+          if (code?.trim()) {
+            seenCodes.add(code.trim());
+          }
         });
+      });
+    });
 
-        setBatchCodeSuggestions(Array.from(seenCodes));
+    setBatchCodeSuggestions(Array.from(seenCodes));
+  }, (error) => {
+    console.error("Error listening to batches:", error);
+  });
 
-      } catch (error) {
-        console.error("Error fetching batches:", error);
-      }
-    };
-    fetchBatches();
-  
-
+  return () => unsubscribe(); // Clean up listener on unmount
+  }, []);
+    
+    
+  useEffect(() => {
   // FETCH ingredients
     const fetchIngredients = async () => {
       setLoading(true); // Set loading to true at the start
