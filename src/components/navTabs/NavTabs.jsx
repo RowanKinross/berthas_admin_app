@@ -25,6 +25,7 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [currentRegion, setCurrentRegion] = useState("")
+  const [formError, setFormError] = useState('');
 
   const [deliveryRegions, setDeliveryRegions] = useState([])
   const [addDeliveryRegion, setAddDeliveryRegion] = useState(false)
@@ -229,7 +230,7 @@ const generateAccountID = ({ name, postcode }) => {
           </NavLink>
         </>
       );
-    } else if (userRole === "customer") {
+    } else if (userRole === "customers") {
       return (
         <>
           <NavLink to="/" />
@@ -310,7 +311,7 @@ useEffect(() => {
       {userRole ? (
         <div className="loginContainer">
            <p className='loggedInStatement'>
-            {userRole === "customer" ? customerName
+            {userRole === "customers" ? customerName
             : userRole === "admin" ? "Admin Team" 
             : userRole === "unit" ? "Unit Team"
             : null}</p>
@@ -581,11 +582,19 @@ useEffect(() => {
             name="email"
             onChange={handleChange}
           />
+        {formError && <p style={{ color: 'red', fontSize: '0.9em' }}>{formError}</p>}
         <Button 
           type="submit" 
           className='button' 
-          disabled={!name || !postcode}
-          onClick={() => {setAddCustomer(false); handleAddNewCustomer()}}
+          onClick={() => {
+            if (!name || !postcode) {
+              setFormError('Please fill in both Name and Postcode.');
+            } else {
+              setFormError('');
+              setAddCustomer(false);
+              handleAddNewCustomer();
+            }
+          }}
         >Submit</Button>
         </div>
         </div>
