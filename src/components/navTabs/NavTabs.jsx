@@ -168,31 +168,38 @@ const generateAccountID = ({ name, postcode }) => {
   
   // Render navigation tabs based on user role
   const renderNavTabs = () => {
-    if (userRole === "staff") {
+    if (userRole === "admin") {
       return (
         <>
           <NavLink to="/" />
-          {/* <NavLink to="/orders" className={({ isActive }) =>
+          <NavLink to="/orders" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDERS</h3>
-          </NavLink> */}
+          </NavLink>
           <NavLink to="/inventory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>
           </NavLink>
-          {/* <NavLink to="/demandSummary" className={({ isActive }) =>
+          <NavLink to="/demandSummary" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">DEMAND SUMMARY</h3>
-          </NavLink> */}
-          {/* <NavLink to="/archive" className={({ isActive }) =>
+          </NavLink>
+          <NavLink to="/archive" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ARCHIVE</h3>
-          </NavLink>           */}
+          </NavLink>          
           <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCH CODES</h3>
           </NavLink>
         </>
+      );
+    } else if (userRole === "unit team") {
+      return (
+        <NavLink to="/batchCodes" className={({ isActive }) =>
+          isActive ? 'nav-link active' : 'nav-link'}>
+          <h3 className="navTab">BATCH CODES</h3>
+        </NavLink>
       );
     } else if (userRole === "customer") {
       return (
@@ -278,7 +285,11 @@ useEffect(() => {
 
       {userRole ? (
         <div className="loginContainer">
-           <p className='loggedInStatement'>{userRole === "customer" ? customerName : userRole === "staff" ? "Bertha's Staff" : null}</p>
+           <p className='loggedInStatement'>
+            {userRole === "customer" ? customerName
+            : userRole === "admin" ? "Admin Team" 
+            : userRole === "unit team" ? "Unit Team"
+            : null}</p>
            {/* if userRole is staff, set the login statement to 'Berha's Staff', if */}
           <Button className='button' variant="outline-warning" onClick={() => {handleLogOut()}}>Logout</Button>
         </div>
@@ -289,8 +300,9 @@ useEffect(() => {
             Login
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item>
-            <Dropdown.Item onClick={() => setUserRole("staff")}> Staff Login</Dropdown.Item>
+            <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customers </Dropdown.Item>
+            <Dropdown.Item onClick={() => setUserRole("admin")}> Admin Team </Dropdown.Item>
+            <Dropdown.Item onClick={() => setUserRole("unit team")}> Unit Team</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
         </>
