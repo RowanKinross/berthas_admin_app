@@ -153,7 +153,7 @@ const Account = ({ accountID }) => {
                 </div>
                 <div className='entries'>
                   <label>Address:</label> 
-                  <p>{account.name_number} {account.street}, <br/>{account.city}</p>
+                  <p>{account.name_number}, {account.street} <br/>{account.city}</p>
                 </div>
                 <div className='entries'>
                   <label>Postcode:</label> 
@@ -161,7 +161,7 @@ const Account = ({ accountID }) => {
                 </div>
                 <div className='entries'>
                   <label>Phone Number:</label> 
-                  <p>{account.phoneNumber}</p>
+                  <p>{account.phone_number}</p>
                 </div>
                 <div className='entries'>
                   <label>Email:</label> 
