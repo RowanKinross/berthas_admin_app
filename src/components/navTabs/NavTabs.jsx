@@ -181,6 +181,7 @@ const generateAccountID = ({ name, postcode }) => {
     setUserRole(null); 
     setCustomerName(null);
     setAccountID(null)
+    setModalVisible(false)
 
     localStorage.removeItem('customerName');
     localStorage.removeItem('accountID');
@@ -349,25 +350,23 @@ useEffect(() => {
                     type="password"
                     placeholder="Enter password"
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                  />
-                  <Button
-                    className="button"
-                    onClick={async (e) => {
-                      e.stopPropagation(); // prevent dropdown close on button click
-                      try {
-                        await login("unit", loginPassword);
-                        setDropdownOpen(false);
-                        setActiveDropdown(null);
-                        setLoginPassword('');
-                        setLoginError('');
-                      } catch (err) {
-                        setLoginError(err.message);
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setLoginPassword(value);
+
+                      if (value.length === 4) {
+                        try {
+                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          setDropdownOpen(false);
+                          setActiveDropdown(null);
+                          setLoginPassword('');
+                          setLoginError('');
+                        } catch (err) {
+                          setLoginError(err.message);
+                        }
                       }
                     }}
-                  >
-                    Submit
-                  </Button>
+                  />
                   {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
                 </div>
               )}
@@ -394,25 +393,24 @@ useEffect(() => {
                     type="password"
                     placeholder="Enter password"
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                  />
-                  <Button
-                    className="button"
-                    onClick={async (e) => {
-                      e.stopPropagation(); // prevent dropdown close on button click
-                      try {
-                        await login("admin", loginPassword);
-                        setDropdownOpen(false);
-                        setActiveDropdown(null);
-                        setLoginPassword('');
-                        setLoginError('');
-                      } catch (err) {
-                        setLoginError(err.message);
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setLoginPassword(value);
+
+                      if (value.length === 4) {
+                        try {
+                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          setDropdownOpen(false);
+                          setActiveDropdown(null);
+                          setLoginPassword('');
+                          setLoginError('');
+                        } catch (err) {
+                          setLoginError(err.message);
+                        }
                       }
                     }}
-                  >
-                    Submit
-                  </Button>
+                  />
+
                   {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
                 </div>
               )}
@@ -440,37 +438,28 @@ useEffect(() => {
                     type="password"
                     placeholder="Enter password"
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                  />
-                  <Button
-                    className="button"
-                    onClick={async (e) => {
-                      e.stopPropagation(); // prevent dropdown close on button click
-                      try {
-                        await login("customers", loginPassword);
-                        setDropdownOpen(false);
-                        setActiveDropdown(null);
-                        setLoginPassword('');
-                        setLoginError('');
-                      } catch (err) {
-                        setLoginError(err.message);
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setLoginPassword(value);
+
+                      if (value.length === 4) {
+                        try {
+                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          setDropdownOpen(false);
+                          setActiveDropdown(null);
+                          setLoginPassword('');
+                          setLoginError('');
+                          setModalVisible(true);
+                        } catch (err) {
+                          setLoginError(err.message);
+                        }
                       }
                     }}
-                  >
-                    Submit
-                  </Button>
+                  />
                   {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
                 </div>
               )}
             </Dropdown.Item>
-
-            {/* <Dropdown.Item onClick={() => {
-              setModalVisible(true);
-              setDropdownOpen(false);
-            }}>
-              Customers
-            </Dropdown.Item> */}
-
           </Dropdown.Menu>
         </Dropdown>
         </>
