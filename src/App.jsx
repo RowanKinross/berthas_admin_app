@@ -18,39 +18,12 @@ import Auth from './components/auth/Auth';
 function App() {
   const [customerName, setCustomerName] = useState(null);
   const [accountID, setAccountID] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showModal, setShowModal] = useState(false);
 
-
-
-  useEffect(() => {
-    const authStatus = localStorage.getItem('isAuthenticated');
-    if (authStatus !== 'true') {
-      setShowModal(true);
-    } else {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  const handleAuth = (code) => {
-    const correctCode = import.meta.env.VITE_REACT_APP_CORRECT_CODE;
-
-    if (code === correctCode) {
-      localStorage.setItem('isAuthenticated', 'true');
-      setIsAuthenticated(true);
-      setShowModal(false);
-    } else {
-      alert('Incorrect Code');
-    }
-  };
 
 
 return (
   <>
       <div className="App">
-      {!isAuthenticated ? (
-        <Auth showModal={showModal} handleAuth={handleAuth} />
-      ): <></>}
       </div>
       <Router>
       <header className='header'>

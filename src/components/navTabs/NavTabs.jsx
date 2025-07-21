@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate} from 'react-router-dom';
 import './navtabs.css';
 import { app, db } from '../firebase/firebase';
-import { collection, getDocs, addDoc } from '@firebase/firestore';
+import { collection, query, where, getDocs, addDoc } from '@firebase/firestore';
 import { Dropdown, Button, Form } from 'react-bootstrap';
 import { nanoid } from 'nanoid';
+import bcrypt from 'bcryptjs';
 
 
 function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
@@ -31,6 +32,28 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
 
   const toggleAddRegion = () => {
     setAddRegion(!addRegion);
+  };
+
+  // login and password states
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [activeDropdown, setActiveDropdown] = useState(null); // 'admin' | 'unit' | null
+
+
+
+  const login = async (username, password) => {
+  const q = query(collection(db, "users"), where("user", "==", username));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) throw new Error("User not found");
+
+  const userData = snapshot.docs[0].data();
+  const isPasswordCorrect = await bcrypt.compare(password, userData.passwordHash);
+
+  if (!isPasswordCorrect) throw new Error("Incorrect password");
+
+  setUserRole(userData.role);
+  localStorage.setItem("userRole", userData.role);
 };
 
   const handleAddRegion = async (event) => {
@@ -168,27 +191,38 @@ const generateAccountID = ({ name, postcode }) => {
   
   // Render navigation tabs based on user role
   const renderNavTabs = () => {
-    if (userRole === "staff") {
+    if (!userRole) return null;
+
+    if (userRole === "admin") {
       return (
         <>
           <NavLink to="/" />
-          {/* <NavLink to="/orders" className={({ isActive }) =>
+          <NavLink to="/orders" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDERS</h3>
-          </NavLink> */}
+          </NavLink>
           <NavLink to="/inventory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>
           </NavLink>
-          {/* <NavLink to="/demandSummary" className={({ isActive }) =>
+          <NavLink to="/demandSummary" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">DEMAND SUMMARY</h3>
-          </NavLink> */}
-          {/* <NavLink to="/archive" className={({ isActive }) =>
+          </NavLink>
+          <NavLink to="/archive" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ARCHIVE</h3>
-          </NavLink>           */}
+          </NavLink>          
           <NavLink to="/batchCodes" className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'}>
+            <h3 className="navTab">BATCH CODES</h3>
+          </NavLink>
+        </>
+      );
+    } else if (userRole === "unit") {
+      return (
+        <>
+         <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCH CODES</h3>
           </NavLink>
@@ -197,7 +231,7 @@ const generateAccountID = ({ name, postcode }) => {
     } else if (userRole === "customer") {
       return (
         <>
-          {/* <NavLink to="/" />
+          <NavLink to="/" />
          <NavLink to="/newOrder" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">NEW ORDER</h3>
@@ -209,15 +243,11 @@ const generateAccountID = ({ name, postcode }) => {
           <NavLink to="/account" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ACCOUNT INFO</h3>
-          </NavLink> */}
+          </NavLink>
         </>
       );
-    } else {
-      // If user role is not set or unknown, only render the Home tab
-      return (
-          <NavLink to="/"/>
-      );
-    }
+    } 
+      return null;
   };
 
 
@@ -278,19 +308,169 @@ useEffect(() => {
 
       {userRole ? (
         <div className="loginContainer">
-           <p className='loggedInStatement'>{userRole === "customer" ? customerName : userRole === "staff" ? "Bertha's Staff" : null}</p>
-           {/* if userRole is staff, set the login statement to 'Berha's Staff', if */}
+           <p className='loggedInStatement'>
+            {userRole === "customer" ? customerName
+            : userRole === "admin" ? "Admin Team" 
+            : userRole === "unit" ? "Unit Team"
+            : null}</p>
+           {/* if userRole is unit, set the login statement to 'Unit Team', if */}
           <Button className='button' variant="outline-warning" onClick={() => {handleLogOut()}}>Logout</Button>
         </div>
         ) : (
         <>
-        <Dropdown className='loginContainer' show={dropdownOpen} onToggle={(isOpen) => setDropdownOpen(isOpen)}>
+        <Dropdown className='loginContainer' show={dropdownOpen} onToggle={(isOpen) => {
+          setDropdownOpen(isOpen);
+          if (!isOpen) {
+            setActiveDropdown(null); // Collapse input on close
+            setLoginPassword('');
+            setLoginError('');
+          }
+        }}>
           <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
             Login
           </Dropdown.Toggle>
           <Dropdown.Menu>
-            <Dropdown.Item onClick={() => {setUserRole("customer"); setModalVisible(true)}}> Customer Login </Dropdown.Item>
-            <Dropdown.Item onClick={() => setUserRole("staff")}> Staff Login</Dropdown.Item>
+            {/* Unit Team */}
+            <Dropdown.Item
+              as="div"
+              onClick={(e) => {
+                e.stopPropagation(); // prevent dropdown from closing
+                setActiveDropdown(activeDropdown === 'unit' ? null : 'unit');
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <div>Unit Team</div>
+              {activeDropdown === 'unit' && (
+                <div 
+                  className="dropdown-login-box"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                  <Button
+                    className="button"
+                    onClick={async (e) => {
+                      e.stopPropagation(); // prevent dropdown close on button click
+                      try {
+                        await login("unit", loginPassword);
+                        setDropdownOpen(false);
+                        setActiveDropdown(null);
+                        setLoginPassword('');
+                        setLoginError('');
+                      } catch (err) {
+                        setLoginError(err.message);
+                      }
+                    }}
+                  >
+                    Submit
+                  </Button>
+                  {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
+                </div>
+              )}
+            </Dropdown.Item>
+
+
+  
+            {/* Admin Team */}
+            <Dropdown.Item
+              as="div"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveDropdown(activeDropdown === 'admin' ? null : 'admin');
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <div>Admin Team</div>
+              {activeDropdown === 'admin' && (
+                <div 
+                  className="dropdown-login-box"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                  <Button
+                    className="button"
+                    onClick={async (e) => {
+                      e.stopPropagation(); // prevent dropdown close on button click
+                      try {
+                        await login("admin", loginPassword);
+                        setDropdownOpen(false);
+                        setActiveDropdown(null);
+                        setLoginPassword('');
+                        setLoginError('');
+                      } catch (err) {
+                        setLoginError(err.message);
+                      }
+                    }}
+                  >
+                    Submit
+                  </Button>
+                  {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
+                </div>
+              )}
+            </Dropdown.Item>
+
+
+
+
+            {/* Customers */}
+            <Dropdown.Item
+              as="div"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
+              }}
+              style={{ cursor: 'pointer' }}
+            >
+              <div>Customers</div>
+              {activeDropdown === 'customers' && (
+                <div 
+                  className="dropdown-login-box"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                  <Button
+                    className="button"
+                    onClick={async (e) => {
+                      e.stopPropagation(); // prevent dropdown close on button click
+                      try {
+                        await login("customers", loginPassword);
+                        setDropdownOpen(false);
+                        setActiveDropdown(null);
+                        setLoginPassword('');
+                        setLoginError('');
+                      } catch (err) {
+                        setLoginError(err.message);
+                      }
+                    }}
+                  >
+                    Submit
+                  </Button>
+                  {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
+                </div>
+              )}
+            </Dropdown.Item>
+
+            {/* <Dropdown.Item onClick={() => {
+              setModalVisible(true);
+              setDropdownOpen(false);
+            }}>
+              Customers
+            </Dropdown.Item> */}
+
           </Dropdown.Menu>
         </Dropdown>
         </>
@@ -307,7 +487,7 @@ useEffect(() => {
             </Dropdown.Toggle>
             <Dropdown.Menu>
               {customersData.length >0? ( customersData.map((customer, index) => (
-                <Dropdown.Item key={index} onClick={() => {setCustomerName(customer.customer); setAccountID(customer.account_ID); setModalVisible(false)}}>
+                <Dropdown.Item key={index} onClick={() => {setCustomerName(customer.customer); setAccountID(customer.account_ID);}}>
                   {customer.customer}
                 </Dropdown.Item>
               ))) :(
