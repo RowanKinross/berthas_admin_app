@@ -472,7 +472,10 @@ useEffect(() => {
             </Dropdown.Toggle>
             <Dropdown.Menu>
               {customersData.length >0? ( customersData.map((customer, index) => (
-                <Dropdown.Item key={index} onClick={() => {setCustomerName(customer.customer); setAccountID(customer.account_ID);}}>
+                <Dropdown.Item key={index} onClick={() => {
+                  setCustomerName(customer.customer); 
+                  setAccountID(customer.account_ID);
+                  setModalVisible(false);}}>
                   {customer.customer}
                 </Dropdown.Item>
               ))) :(
@@ -593,37 +596,37 @@ useEffect(() => {
         <Button 
           type="submit" 
           className='button' 
-          // onClick={() => {
-          //   if (!name || !postcode) {
-          //     setFormError('Please fill in both Name and Postcode.');
-          //   } else {
-          //     setFormError('');
-          //     setAddCustomer(false);
-          //     handleAddNewCustomer();
-          //   }
-          // }}
-          onClick={async () => {
-          if (!name || !postcode) {
-            setFormError('Please fill in both Name and Postcode.');
-          } else {
-            setFormError('');
-            await handleAddNewCustomer();
+          onClick={() => {
+            if (!name || !postcode) {
+              setFormError('Please fill in both Name and Postcode.');
+            } else {
+              setFormError('');
+              setAddCustomer(false);
+              handleAddNewCustomer();
+            }
+          }}
+        //   onClick={async () => {
+        //   if (!name || !postcode) {
+        //     setFormError('Please fill in both Name and Postcode.');
+        //   } else {
+        //     setFormError('');
+        //     await handleAddNewCustomer();
 
-            // Show flash message
-            setCustomerAddedMsg(true);
-            setTimeout(() => setCustomerAddedMsg(false), 2000); // hide after 2 seconds
+        //     // Show flash message
+        //     setCustomerAddedMsg(true);
+        //     setTimeout(() => setCustomerAddedMsg(false), 2000); // hide after 2 seconds
 
-            // Clear fields for next customer
-            setName('');
-            setNameNumber('');
-            setStreet('');
-            setCity('');
-            setPostcode('');
-            setEmail('');
-            setPhoneNumber('');
-            setCurrentRegion('');
-          }
-        }}
+        //     // Clear fields for next customer
+        //     setName('');
+        //     setNameNumber('');
+        //     setStreet('');
+        //     setCity('');
+        //     setPostcode('');
+        //     setEmail('');
+        //     setPhoneNumber('');
+        //     setCurrentRegion('');
+        //   }
+        // }}
         >Submit</Button>
         </div>
         </div>
