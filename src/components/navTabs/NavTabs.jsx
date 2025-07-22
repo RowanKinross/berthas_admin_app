@@ -12,9 +12,10 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [userRole, setUserRole] = useState(null); // Initially set to null (no user)
   const [dropdownOpen, setDropdownOpen] = useState(false); // dropdown menu visibility (staff or customer?)
   const [modalVisible, setModalVisible] = useState(false); // modal menu visibility (customer select or new customer)
-  const [customersArr, setCustomersArr] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState("");;
   const [customersData, setCustomersData] = useState([]);
   const [addCustomer, setAddCustomer] = useState(false); // set add customer to true to view the new customer form
+
 
   // form values
   const [name, setName] = useState("");
@@ -28,6 +29,7 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [formError, setFormError] = useState('');
 
   const [deliveryRegions, setDeliveryRegions] = useState([])
+  const [newRegion, setNewRegion] = useState("");
   const [addDeliveryRegion, setAddDeliveryRegion] = useState(false)
   const [addRegion, setAddRegion] = useState(false)
   const [customerAddedMsg, setCustomerAddedMsg] = useState(false);
@@ -40,8 +42,6 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null); // 'admin' | 'unit' | null
-
-
 
   const login = async (username, password) => {
   const q = query(collection(db, "users"), where("user", "==", username));
@@ -58,21 +58,21 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   localStorage.setItem("userRole", userData.role);
 };
 
-  const handleAddRegion = async (event) => {
-    const region = event?.target?.value || '';
-    setCurrentRegion(region);
-    toggleAddRegion();
+  const handleAddRegion = async () => {
+    const region = newRegion.trim();
+    if (!region) return;
 
-    if (addDeliveryRegion && region.trim()) {
-      try {
-        await addDoc(collection(db, "regions"), { name: region });
-      } catch (e) {
-        console.error("Error adding document: ", e);
-      }
+    try {
+      await addDoc(collection(db, "regions"), { name: region });
+      setDeliveryRegions((prev) => [...prev, region]); 
+      setCurrentRegion(region);                        
+      setNewRegion("");                                
+      setAddRegion(false);                             
+    } catch (e) {
+      console.error("Error adding document: ", e);
     }
   };
   
-
   let navigate = useNavigate()
   
   // handle inputs changing function
@@ -471,18 +471,29 @@ useEffect(() => {
               Select Customer
             </Dropdown.Toggle>
             <Dropdown.Menu>
-              {customersData.length >0? ( customersData.map((customer, index) => (
-                <Dropdown.Item key={index} onClick={() => {
-                  setCustomerName(customer.customer); 
-                  setAccountID(customer.account_ID);
-                  setModalVisible(false);}}>
-                  {customer.customer}
-                </Dropdown.Item>
-              ))) :(
-                <Dropdown.Item onClick={() => {setCustomerName(`customer`); setModalVisible(false)}}>
-                Customer List Loading...
-                </Dropdown.Item>
-              )}
+              <Form.Control
+                type="text"
+                placeholder="Search Customers"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="mx-3 my-2 w-auto"
+              />
+              {customersData
+                .filter((customer) =>
+                  customer.customer.toLowerCase().startsWith(customerSearch.toLowerCase())
+                )
+                .map((customer, index) => (
+                  <Dropdown.Item
+                    key={index}
+                    onClick={() => {
+                      setCustomerName(customer.customer);
+                      setAccountID(customer.account_ID);
+                      setModalVisible(false);
+                    }}
+                  >
+                    {customer.customer}
+                  </Dropdown.Item>
+              ))}
                 <button className='button' onClick={() => {setAddCustomer(true); setModalVisible(false)}}>Add customer</button>
             </Dropdown.Menu>
           </Dropdown>
@@ -492,7 +503,7 @@ useEffect(() => {
 
       {addCustomer && (
         <div className='modal'>
-        <div className='modalContent'>
+        <div className='modalContent addCustomerModal'>
         <button className='closeButton' onClick={() => {setModalVisible(true); setAddCustomer(false)}}>×</button>
         {customerAddedMsg && (
           <div className='customerAdded'>
@@ -559,11 +570,16 @@ useEffect(() => {
               )}
               {addRegion ? (
                 <Form.Control
-                    type="text"
-                    placeholder="Name of Region"
-                    name="deliveryRegion"
-                    onChange={handleChange}
-                    onBlur={toggleAddRegion}
+                  type="text"
+                  placeholder="Name of Region"
+                  value={newRegion}
+                  onChange={(e) => setNewRegion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddRegion();
+                    }
+                  }}
+                  autoFocus
                 />
                 ) : (
                 <button type="button" className='button' onClick={toggleAddRegion}>
@@ -605,28 +621,6 @@ useEffect(() => {
               handleAddNewCustomer();
             }
           }}
-        //   onClick={async () => {
-        //   if (!name || !postcode) {
-        //     setFormError('Please fill in both Name and Postcode.');
-        //   } else {
-        //     setFormError('');
-        //     await handleAddNewCustomer();
-
-        //     // Show flash message
-        //     setCustomerAddedMsg(true);
-        //     setTimeout(() => setCustomerAddedMsg(false), 2000); // hide after 2 seconds
-
-        //     // Clear fields for next customer
-        //     setName('');
-        //     setNameNumber('');
-        //     setStreet('');
-        //     setCity('');
-        //     setPostcode('');
-        //     setEmail('');
-        //     setPhoneNumber('');
-        //     setCurrentRegion('');
-        //   }
-        // }}
         >Submit</Button>
         </div>
         </div>
