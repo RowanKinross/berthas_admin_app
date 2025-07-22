@@ -30,6 +30,7 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [deliveryRegions, setDeliveryRegions] = useState([])
   const [addDeliveryRegion, setAddDeliveryRegion] = useState(false)
   const [addRegion, setAddRegion] = useState(false)
+  const [customerAddedMsg, setCustomerAddedMsg] = useState(false);
 
   const toggleAddRegion = () => {
     setAddRegion(!addRegion);
@@ -58,21 +59,18 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
 };
 
   const handleAddRegion = async (event) => {
-    if (addDeliveryRegion) {
-      event.preventDefault(); // Prevent the default form submission
-      toggleAddRegion(); // Toggles the input box back to the button
-      const region = event.target.value;
-      setCurrentRegion(region);
+    const region = event?.target?.value || '';
+    setCurrentRegion(region);
+    toggleAddRegion();
+
+    if (addDeliveryRegion && region.trim()) {
       try {
-        const docRef = await addDoc(collection(db, "regions"), {
-          name: region
-        });
-        console.log("Document written with ID: ", docRef.id);
+        await addDoc(collection(db, "regions"), { name: region });
       } catch (e) {
         console.error("Error adding document: ", e);
       }
     }
-  }
+  };
   
 
   let navigate = useNavigate()
@@ -144,8 +142,6 @@ const generateAccountID = ({ name, postcode }) => {
 
   const shortId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Short 4-char ID
 
-  console.log("Generating account ID from:", { name, postcode });
-
   return `${cleanedTitle}${cleanedPostcode}${shortId}`;
 };
   
@@ -172,7 +168,6 @@ const generateAccountID = ({ name, postcode }) => {
         delivery_region: currentRegion
       });
       
-      console.log("Document written with ID: ", docRef.id);
     } catch (e) {
       console.error("Error adding document: ", e);
     }
@@ -207,10 +202,10 @@ const generateAccountID = ({ name, postcode }) => {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>
           </NavLink>
-          <NavLink to="/demandSummary" className={({ isActive }) =>
+          {/* <NavLink to="/demandSummary" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">DEMAND SUMMARY</h3>
-          </NavLink>
+          </NavLink> */}
           <NavLink to="/archive" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ARCHIVE</h3>
@@ -496,6 +491,11 @@ useEffect(() => {
         <div className='modal'>
         <div className='modalContent'>
         <button className='closeButton' onClick={() => {setModalVisible(true); setAddCustomer(false)}}>×</button>
+        {customerAddedMsg && (
+          <div className='customerAdded'>
+            ✅ Customer added!
+          </div>
+        )}
         <Form.Group>
           <Form.Label>
             <h6>Name:</h6>
@@ -504,6 +504,7 @@ useEffect(() => {
             type="text"
             placeholder=""
             name="name"
+            value={name}
             onChange={handleChange}
           />
 
@@ -514,24 +515,28 @@ useEffect(() => {
             type="text"
             placeholder="First Line of Address"
             name="nameNumber"
+            value={nameNumber}
             onChange={handleChange}
           />
           <Form.Control
             type="text"
             placeholder="Second Line of Address (optional)"
             name="street"
+            value={street}
             onChange={handleChange}
           />
           <Form.Control
             type="text"
             placeholder="Town/City"
             name="city"
+            value={city}
             onChange={handleChange}
           />
           <Form.Control
             type="text"
             placeholder="postcode"
             name="postcode"
+            value={postcode}
             onChange={handleChange}
           />
         </Form.Group>
@@ -571,6 +576,7 @@ useEffect(() => {
             type="text"
             placeholder=""
             name="phoneNumber"
+            value={phoneNumber}
             onChange={handleChange}
           />
           <Form.Label>
@@ -580,21 +586,44 @@ useEffect(() => {
             type="text"
             placeholder=""
             name="email"
+            value={email}
             onChange={handleChange}
           />
         {formError && <p style={{ color: 'red', fontSize: '0.9em' }}>{formError}</p>}
         <Button 
           type="submit" 
           className='button' 
-          onClick={() => {
-            if (!name || !postcode) {
-              setFormError('Please fill in both Name and Postcode.');
-            } else {
-              setFormError('');
-              setAddCustomer(false);
-              handleAddNewCustomer();
-            }
-          }}
+          // onClick={() => {
+          //   if (!name || !postcode) {
+          //     setFormError('Please fill in both Name and Postcode.');
+          //   } else {
+          //     setFormError('');
+          //     setAddCustomer(false);
+          //     handleAddNewCustomer();
+          //   }
+          // }}
+          onClick={async () => {
+          if (!name || !postcode) {
+            setFormError('Please fill in both Name and Postcode.');
+          } else {
+            setFormError('');
+            await handleAddNewCustomer();
+
+            // Show flash message
+            setCustomerAddedMsg(true);
+            setTimeout(() => setCustomerAddedMsg(false), 2000); // hide after 2 seconds
+
+            // Clear fields for next customer
+            setName('');
+            setNameNumber('');
+            setStreet('');
+            setCity('');
+            setPostcode('');
+            setEmail('');
+            setPhoneNumber('');
+            setCurrentRegion('');
+          }
+        }}
         >Submit</Button>
         </div>
         </div>
