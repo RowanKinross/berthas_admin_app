@@ -59,6 +59,8 @@
   flex-direction: column;
   text-align: start;
   gap: 10px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modalContent p {
@@ -114,6 +116,9 @@
 }
 
 .orderButton.allocated {
+  background-color: var(--berthaReady);
+}
+.orderButton.packed {
   background-color: var(--berthaLight);
 }
 
