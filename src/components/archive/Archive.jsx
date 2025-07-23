@@ -13,6 +13,7 @@ function Archive() {
   const [totalStockOverall, setTotalStockOverall] = useState(0);
   const [totalOnOrderOverall, setTotalOnOrderOverall] = useState(0);
   const [totalAvailableOverall, setTotalAvailableOverall] = useState(0);
+  const [selectedBatchId, setSelectedBatchId] = useState(null);
 
   // FETCHES
   // fetch pizza data e.g what pizzas we offer & their hex codes
