@@ -37,39 +37,25 @@ useEffect(() => {
   getCustomer();
 }, [selectedOrder?.account_ID]);
 
-  const sortOrders = (orders) => {
-  const now = new Date();
+const sortOrders = (orders) => {
   return [...orders].sort((a, b) => {
-    const getDateValue = (order) => {
-      if (order.delivery_day === 'tbc') return null;
-      const date = new Date(order.delivery_day);
-      return isNaN(date.getTime()) ? null : date;
-    };
-    const aDate = getDateValue(a);
-    const bDate = getDateValue(b);
-    // Case 1: Both TBC — sort by order timestamp descending (newest first)
+    const aDate = a.delivery_day === 'tbc' ? null : new Date(a.delivery_day);
+    const bDate = b.delivery_day === 'tbc' ? null : new Date(b.delivery_day);
+
     if (!aDate && !bDate) {
       return b.timestamp?.toDate() - a.timestamp?.toDate();
     }
-    // Case 2: Only A is TBC
+    //TBCs at the top
     if (!aDate) return -1;
-    // Case 3: Only B is TBC
     if (!bDate) return 1;
-    const nowTime = now.getTime();
-    const aTime = aDate.getTime();
-    const bTime = bDate.getTime();
-    const aIsPast = aTime < nowTime;
-    const bIsPast = bTime < nowTime;
-    // Case 4: A is future, B is past => A goes first
-    if (!aIsPast && bIsPast) return -1;
-    // Case 5: A is past, B is future => B goes first
-    if (aIsPast && !bIsPast) return 1;
-    // Case 6: Both in future — soonest first
-    if (!aIsPast && !bIsPast) return aTime - bTime;
-    // Case 7: Both in past — latest past goes lower
-    return aTime - bTime;
+
+    // oldest at the bottom
+    return bDate - aDate;
   });
 };
+
+
+
 
 const handlePrintClick = () => {
     const modalContent = document.querySelector('.orderModal');
