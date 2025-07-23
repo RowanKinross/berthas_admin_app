@@ -1,14 +1,13 @@
 // import berthasLogo from './bertha_logo'
 import './orders.css'
 import { app, db } from '../firebase/firebase';
-import { collection, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore';
+import { collection, getDocs, getDoc, doc, updateDoc, writeBatch } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
-
 
 
 function Orders() {
@@ -228,7 +227,25 @@ const updateDeliveryDate = async (orderId, newDate) => {
   };
 
 
+    const markSelectedAsPacked = async () => {
+      try {
+        const batch = writeBatch(db);
 
+        selectedOrders.forEach(orderId => {
+          const orderRef = doc(db, "orders", orderId);
+          batch.update(orderRef, { order_status: "packed" });
+        });
+
+        await batch.commit();
+        console.log("✅ Selected orders marked as packed");
+
+        // Optionally refresh orders
+        fetchOrdersAgain();
+        setSelectedOrders([]);
+      } catch (error) {
+        console.error("❌ Error marking orders as packed:", error);
+      }
+    };
 
 
     const handleBatchNumberUpdate = async ({ orderId, pizzaId, batchIndex, batchNumber }) => {
@@ -403,14 +420,30 @@ const updateDeliveryDate = async (orderId, newDate) => {
   <div className='orders'>
     <h2>ORDERS</h2>
     <div style={{ marginBottom: '1rem' }}>
-      <button className='button' onClick={() => setSelectMode(!selectMode)}>
+      <button
+        className='button'
+        onClick={() => {
+          if (selectMode) {
+            setSelectedOrders([]); // clear selected orders when exiting selection mode
+          }
+          setSelectMode(!selectMode);
+        }}
+      >
         {selectMode ? "Cancel Selection" : "Select Orders"}
       </button>
-      {selectMode && selectedOrders.length > 0 && (
-        <button className='button' onClick={generatePDF}>
-          Generate packing list
-        </button>
+      {selectedOrders.length > 0 && (
+        <div className="bulk-actions">
+          {/* generate Packing list button */}
+          <button className="button" onClick={generatePDF}>
+            Generate Packing List
+          </button>
+          {/* mark as packed */}
+          <button className="button" onClick={markSelectedAsPacked}>
+            Mark as Packed
+          </button>
+        </div>
       )}
+
     </div>
 
     <div className='ordersList'>
@@ -444,7 +477,9 @@ const updateDeliveryDate = async (orderId, newDate) => {
             key={order.id}
             className={`orderButton button 
               ${order.complete ? 'complete' : ''} 
-              ${order.order_status === 'ready to pack' ? 'allocated' : ''}`}
+              ${order.order_status === 'ready to pack' ? 'allocated' : ''}
+              ${order.order_status === 'packed' ? 'packed' : ''}
+              `}
               onClick={() => handleOrderClick(order)}
               >
             <div>{order.account_ID}</div>

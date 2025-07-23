@@ -114,6 +114,9 @@
 }
 
 .orderButton.allocated {
+  background-color: var(--berthaReady);
+}
+.orderButton.packed {
   background-color: var(--berthaLight);
 }
 
