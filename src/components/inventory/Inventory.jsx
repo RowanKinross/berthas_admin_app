@@ -2,7 +2,7 @@
 import './inventory.css';
 import React, {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
-import { collection, addDoc, getDocs, doc, updateDoc } from '@firebase/firestore'; 
+import { collection, addDoc, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore'; 
 import { Dropdown, Button, Form } from 'react-bootstrap';
 
 function Inventory() {
@@ -30,6 +30,13 @@ function Inventory() {
   const [totalStockOverall, setTotalStockOverall] = useState(0);
   const [totalOnOrderOverall, setTotalOnOrderOverall] = useState(0);
   const [totalAvailableOverall, setTotalAvailableOverall] = useState(0);
+  
+  // modal for clicking on a batch
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [selectedPizzaId, setSelectedPizzaId] = useState(null);
+  const [archiveQty, setArchiveQty] = useState('');
+  const [orders, setOrders] = useState([]);
 
 
 
@@ -72,6 +79,19 @@ function Inventory() {
       setIngredientsArr(items);
     } catch (error) {
       console.error("Error fetching ingredients data:", error);
+    }
+  };
+  // fetch orders
+  const fetchOrders = async () => {
+  try {
+      const querySnapshot = await getDocs(collection(db, "orders"));
+      const orderList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setOrders(orderList);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
     }
   };
 
@@ -118,6 +138,7 @@ function Inventory() {
     fetchPizzaData();
     fetchStock();
     fetchIngredientsArr(); 
+    fetchOrders();
   }, []);
 
   useEffect(() => {
@@ -245,6 +266,88 @@ function Inventory() {
   }
 };
 
+const adjustArchive = async (delta) => {
+  try {
+    const batchRef = doc(db, "batches", selectedBatch.id);
+    const batchSnap = await getDoc(batchRef);
+    const batchData = batchSnap.data();
+
+    const allocations = [...(batchData.pizza_allocations || [])];
+    const pizzas = [...(batchData.pizzas || [])];
+
+    const pizzaIndex = pizzas.findIndex(p => p.id === selectedPizzaId);
+    const archivedIndex = allocations.findIndex(a =>
+      a.pizzaId === selectedPizzaId &&
+      a.orderId === 'archived' &&
+      a.status === 'completed'
+    );
+
+    if (delta === -1) {
+      // ARCHIVE one — increase archived allocation
+      if (pizzaIndex === -1) return; // safety check
+
+      const completed = allocations
+        .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const active = allocations
+        .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const effective = pizzas[pizzaIndex].quantity - completed;
+      const available = effective - active;
+
+      if (available <= 0) return; // nothing to archive
+
+      if (archivedIndex > -1) {
+        allocations[archivedIndex].quantity += 1;
+      } else {
+        allocations.push({
+          pizzaId: selectedPizzaId,
+          orderId: 'archived',
+          quantity: 1,
+          status: 'completed'
+        });
+      }
+    } 
+    
+    else if (delta === 1) {
+      // UN-ARCHIVE one
+      if (archivedIndex > -1) {
+        allocations[archivedIndex].quantity -= 1;
+        if (allocations[archivedIndex].quantity <= 0) {
+          allocations.splice(archivedIndex, 1);
+        }
+      } else if (pizzaIndex > -1) {
+        // No archived allocation exists — increase total batch quantity by 1
+        pizzas[pizzaIndex].quantity += 1;
+      }
+    }
+
+    // 🔄 Update Firestore
+    await updateDoc(batchRef, {
+      pizza_allocations: allocations,
+      pizzas: pizzas
+    });
+
+    // ✅ Update local selectedBatch
+    const updatedBatch = {
+      ...selectedBatch,
+      pizza_allocations: allocations,
+      pizzas: pizzas
+    };
+    setSelectedBatch(updatedBatch);
+
+  } catch (error) {
+    console.error("❌ Error adjusting archive:", error);
+  }
+};
+
+
+
+
+
+
   return (
     <div className='inventory'>
       <h2>INVENTORY</h2>
@@ -292,7 +395,14 @@ return (
                     })
                   .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
                   .map((batch, index) => (
-                    <div className='inventoryBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
+                    <div className='inventoryBox' 
+                    style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent', cursor: 'pointer'}} key={`${pizza.id}-${index}`}
+                    onClick={() => {
+                      setSelectedBatch(batch);
+                      setSelectedPizzaId(pizza.id);
+                      setShowArchiveModal(true);
+                    }}
+                    >
                       <p>Batch Number: {batch.batch_code}</p>
                       {batch.pizzas.map((p, idx) => (
                         p.id === pizza.id && p.quantity > 0 ? (
@@ -318,7 +428,6 @@ return (
                                 </>
                               );
                             })()}
-
                           </div>
                         ) : null
                       ))}
@@ -485,6 +594,66 @@ return (
       ) : (
         <p>Loading pizza data...</p>
       )}
+
+
+{/* show batch allocations & archive modal */}
+    {showArchiveModal && selectedBatch && (() => {
+      const match = selectedBatch.pizzas.find(p => p.id === selectedPizzaId);
+      const total = match?.quantity || 0;
+
+      const completed = (selectedBatch.pizza_allocations || [])
+        .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const active = (selectedBatch.pizza_allocations || [])
+        .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const effective = total - completed;
+      const available = effective - active;
+
+      const hasArchivedAllocation = (selectedBatch.pizza_allocations || []).some(
+        a => a.pizzaId === selectedPizzaId &&
+            a.orderId === 'archived' &&
+            a.status === 'completed' &&
+            a.quantity > 0
+      );
+
+      return (
+      <div className="modal">
+            <div className="modalContent"
+              style={{
+                backgroundColor: pizzaData.find(p => p.id === selectedPizzaId)?.hex_colour || '#fff',
+                padding: '20px',
+                borderRadius: '10px'
+              }}
+            >
+              <h3>{selectedPizzaId} : batch {selectedBatch.batch_code}</h3>
+              <h5><strong>Allocations: </strong></h5>
+              {(selectedBatch.pizza_allocations || [])
+                .filter(a => a.pizzaId === selectedPizzaId)
+                .map((a, i) => {
+                  const linkedOrder = orders.find(o => o.id === a.orderId);
+                  const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  return (
+                    <p key={i}>
+                      {accountName}: {a.quantity}
+                    </p>
+                  );
+                })}
+              <div style={{ marginTop: '1rem' }}>
+                <p><strong>Total:</strong> {effective}</p>
+                <p><strong>On order:</strong> {active}</p>
+                <div className='availableControls'>
+                  <p className='available'><strong>Available:</strong> {available} </p>
+                    <p onClick={() => adjustArchive(-1)} disabled={available <= 0} className='minusArch'> − </p>{' '}
+                    <p onClick={() => adjustArchive(1)} disabled={!hasArchivedAllocation} className='plusArch'> + </p>
+              </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal content for adding a new pizza */}
       {modalVisible && (
