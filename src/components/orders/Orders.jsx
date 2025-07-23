@@ -227,21 +227,17 @@ const updateDeliveryDate = async (orderId, newDate) => {
   };
 
 
-    const markSelectedAsPacked = async () => {
+    const markSelectedAsPacked = async (orderIds = selectedOrders) => {
       try {
         const batch = writeBatch(db);
-
-        selectedOrders.forEach(orderId => {
+        orderIds.forEach(orderId => {
           const orderRef = doc(db, "orders", orderId);
           batch.update(orderRef, { order_status: "packed" });
         });
-
         await batch.commit();
-        console.log("✅ Selected orders marked as packed");
-
-        // Optionally refresh orders
         fetchOrdersAgain();
         setSelectedOrders([]);
+        setSelectMode(false);
       } catch (error) {
         console.error("❌ Error marking orders as packed:", error);
       }
@@ -628,9 +624,16 @@ const updateDeliveryDate = async (orderId, newDate) => {
             <button className='button' onClick={handlePrintClick}>
               <FontAwesomeIcon icon={faPrint} className='icon' /> Print
             </button>
-            {!selectedOrder.complete && (
-              <button className='button' onClick={handleComplete}>
-                Order Complete
+            {!selectedOrder.complete && selectedOrder.order_status !== "order placed" && (
+              <button
+                className='button'
+                onClick={
+                  selectedOrder.order_status === "ready to pack"
+                    ? () => markSelectedAsPacked([selectedOrder.id]) // Pass single ID
+                    : handleComplete
+                }
+              >
+                {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
               </button>
             )}
           </div>
