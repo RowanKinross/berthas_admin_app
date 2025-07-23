@@ -338,6 +338,19 @@ const adjustArchive = async (delta) => {
     };
     setSelectedBatch(updatedBatch);
 
+    // Update top-level stock
+    setStock(prevStock =>
+      prevStock.map(batch =>
+        batch.id === selectedBatch.id
+          ? {
+              ...batch,
+              pizza_allocations: allocations,
+              pizzas: pizzas
+            }
+          : batch
+      )
+    );
+
   } catch (error) {
     console.error("❌ Error adjusting archive:", error);
   }
@@ -620,7 +633,15 @@ return (
       );
 
       return (
-      <div className="modal">
+      <div 
+        className="modal"
+        onClick={(e) => {
+          if (e.target.className === 'modal') {
+            setShowArchiveModal(false);
+            setSelectedBatch(null);
+          }
+        }}
+      >
             <div className="modalContent"
               style={{
                 backgroundColor: pizzaData.find(p => p.id === selectedPizzaId)?.hex_colour || '#fff',
