@@ -25,7 +25,9 @@ function Orders() {
     editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
   const modalRef = useRef(null)
   const [customerInfo, setCustomerInfo] = useState(null);
-  
+
+
+
 useEffect(() => {
   const getCustomer = async () => {
     const customer = await fetchCustomerByAccountID(selectedOrder?.account_ID);
@@ -276,8 +278,8 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
         // Update order status if fully allocated
         if (allPizzasAllocated(updatedOrder)) {
-          await updateDoc(orderRef, { order_status: "pizzas allocated" });
-          console.log("✅ Order status updated to 'pizzas allocated'");
+          await updateDoc(orderRef, { order_status: "ready to pack" });
+          console.log("✅ Order status updated to 'ready to pack'");
         }
 
       } catch (error) {
@@ -363,7 +365,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
           key={order.id} 
           className={`orderButton button 
             ${order.complete ? 'complete' : ''} 
-            ${order.order_status === 'pizzas allocated' ? 'allocated' : ''}`}
+            ${order.order_status === 'ready to pack' ? 'allocated' : ''}`}
  
           onClick={() => handleOrderClick(order)}>
             <div>{order.account_ID}</div>
@@ -462,7 +464,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
                             updatedOrder.pizzas[pizzaName].batchesUsed[i].batch_number = selectedBatchCode;
 
                             if (allPizzasAllocated(updatedOrder)) {
-                              updatedOrder.order_status = "pizzas allocated";
+                              updatedOrder.order_status = "ready to pack";
                             }
 
                             setSelectedOrder(updatedOrder);
