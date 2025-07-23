@@ -480,7 +480,7 @@ useEffect(() => {
               />
               {customersData
                 .filter((customer) =>
-                  customer.customer.toLowerCase().startsWith(customerSearch.toLowerCase())
+                  customer.customer.toLowerCase().includes(customerSearch.toLowerCase())
                 )
                 .map((customer, index) => (
                   <Dropdown.Item
