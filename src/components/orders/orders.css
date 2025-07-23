@@ -91,6 +91,15 @@
   transition: background-color 0.3s, transform 0.3s;
   cursor: pointer;
   border: white;
+  width: 100%;
+}
+.checkbox-wrapper {
+  padding: 2%;
+}
+.orderRow {
+  width: 100%;
+  display: flex;
+  
 }
 
 .orderButton:not(.orderHeaders) {
@@ -127,6 +136,7 @@
 .displayAddress, .pizzasOrdered {
   padding-left: 20px;
 }
+
 
 @media (max-width: 530px) {
   .orderButton {
