@@ -215,6 +215,23 @@ const updateDeliveryDate = async (orderId, newDate) => {
     }
   };
 
+
+  useEffect(() => {
+  const getCustomer = async () => {
+    if (!selectedOrder?.account_ID) return;
+    try {
+      const customer = await fetchCustomerByAccountID(selectedOrder.account_ID);
+      setCustomerInfo(customer);
+    } catch (error) {
+      console.error("Error fetching customer info:", error);
+    }
+  };
+    getCustomer();
+  }, [selectedOrder]);
+
+
+
+  
   const getAvailableQuantity = (batch, pizzaId, currentOrderId) => {
   const pizza = batch.pizzas.find(p => p.id === pizzaId);
   if (!pizza) return 0;
