@@ -12,9 +12,10 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [userRole, setUserRole] = useState(null); // Initially set to null (no user)
   const [dropdownOpen, setDropdownOpen] = useState(false); // dropdown menu visibility (staff or customer?)
   const [modalVisible, setModalVisible] = useState(false); // modal menu visibility (customer select or new customer)
-  const [customersArr, setCustomersArr] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState("");;
   const [customersData, setCustomersData] = useState([]);
   const [addCustomer, setAddCustomer] = useState(false); // set add customer to true to view the new customer form
+
 
   // form values
   const [name, setName] = useState("");
@@ -25,10 +26,13 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [currentRegion, setCurrentRegion] = useState("")
+  const [formError, setFormError] = useState('');
 
   const [deliveryRegions, setDeliveryRegions] = useState([])
+  const [newRegion, setNewRegion] = useState("");
   const [addDeliveryRegion, setAddDeliveryRegion] = useState(false)
   const [addRegion, setAddRegion] = useState(false)
+  const [customerAddedMsg, setCustomerAddedMsg] = useState(false);
 
   const toggleAddRegion = () => {
     setAddRegion(!addRegion);
@@ -38,8 +42,6 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null); // 'admin' | 'unit' | null
-
-
 
   const login = async (username, password) => {
   const q = query(collection(db, "users"), where("user", "==", username));
@@ -56,24 +58,21 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   localStorage.setItem("userRole", userData.role);
 };
 
-  const handleAddRegion = async (event) => {
-    if (addDeliveryRegion) {
-      event.preventDefault(); // Prevent the default form submission
-      toggleAddRegion(); // Toggles the input box back to the button
-      const region = event.target.value;
-      setCurrentRegion(region);
-      try {
-        const docRef = await addDoc(collection(db, "regions"), {
-          name: region
-        });
-        console.log("Document written with ID: ", docRef.id);
-      } catch (e) {
-        console.error("Error adding document: ", e);
-      }
-    }
-  }
-  
+  const handleAddRegion = async () => {
+    const region = newRegion.trim();
+    if (!region) return;
 
+    try {
+      await addDoc(collection(db, "regions"), { name: region });
+      setDeliveryRegions((prev) => [...prev, region]); 
+      setCurrentRegion(region);                        
+      setNewRegion("");                                
+      setAddRegion(false);                             
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
+  };
+  
   let navigate = useNavigate()
   
   // handle inputs changing function
@@ -143,8 +142,6 @@ const generateAccountID = ({ name, postcode }) => {
 
   const shortId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Short 4-char ID
 
-  console.log("Generating account ID from:", { name, postcode });
-
   return `${cleanedTitle}${cleanedPostcode}${shortId}`;
 };
   
@@ -171,7 +168,6 @@ const generateAccountID = ({ name, postcode }) => {
         delivery_region: currentRegion
       });
       
-      console.log("Document written with ID: ", docRef.id);
     } catch (e) {
       console.error("Error adding document: ", e);
     }
@@ -181,6 +177,7 @@ const generateAccountID = ({ name, postcode }) => {
     setUserRole(null); 
     setCustomerName(null);
     setAccountID(null)
+    setModalVisible(false)
 
     localStorage.removeItem('customerName');
     localStorage.removeItem('accountID');
@@ -205,7 +202,7 @@ const generateAccountID = ({ name, postcode }) => {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>
           </NavLink>
-          <NavLink to="/demandSummary" className={({ isActive }) =>
+          <NavLink to="/summary" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">DEMAND SUMMARY</h3>
           </NavLink>
@@ -228,7 +225,7 @@ const generateAccountID = ({ name, postcode }) => {
           </NavLink>
         </>
       );
-    } else if (userRole === "customer") {
+    } else if (userRole === "customers") {
       return (
         <>
           <NavLink to="/" />
@@ -309,7 +306,7 @@ useEffect(() => {
       {userRole ? (
         <div className="loginContainer">
            <p className='loggedInStatement'>
-            {userRole === "customer" ? customerName
+            {userRole === "customers" ? customerName
             : userRole === "admin" ? "Admin Team" 
             : userRole === "unit" ? "Unit Team"
             : null}</p>
@@ -349,25 +346,23 @@ useEffect(() => {
                     type="password"
                     placeholder="Enter password"
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                  />
-                  <Button
-                    className="button"
-                    onClick={async (e) => {
-                      e.stopPropagation(); // prevent dropdown close on button click
-                      try {
-                        await login("unit", loginPassword);
-                        setDropdownOpen(false);
-                        setActiveDropdown(null);
-                        setLoginPassword('');
-                        setLoginError('');
-                      } catch (err) {
-                        setLoginError(err.message);
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setLoginPassword(value);
+
+                      if (value.length === 4) {
+                        try {
+                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          setDropdownOpen(false);
+                          setActiveDropdown(null);
+                          setLoginPassword('');
+                          setLoginError('');
+                        } catch (err) {
+                          setLoginError(err.message);
+                        }
                       }
                     }}
-                  >
-                    Submit
-                  </Button>
+                  />
                   {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
                 </div>
               )}
@@ -394,25 +389,24 @@ useEffect(() => {
                     type="password"
                     placeholder="Enter password"
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                  />
-                  <Button
-                    className="button"
-                    onClick={async (e) => {
-                      e.stopPropagation(); // prevent dropdown close on button click
-                      try {
-                        await login("admin", loginPassword);
-                        setDropdownOpen(false);
-                        setActiveDropdown(null);
-                        setLoginPassword('');
-                        setLoginError('');
-                      } catch (err) {
-                        setLoginError(err.message);
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setLoginPassword(value);
+
+                      if (value.length === 4) {
+                        try {
+                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          setDropdownOpen(false);
+                          setActiveDropdown(null);
+                          setLoginPassword('');
+                          setLoginError('');
+                        } catch (err) {
+                          setLoginError(err.message);
+                        }
                       }
                     }}
-                  >
-                    Submit
-                  </Button>
+                  />
+
                   {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
                 </div>
               )}
@@ -440,37 +434,28 @@ useEffect(() => {
                     type="password"
                     placeholder="Enter password"
                     value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                  />
-                  <Button
-                    className="button"
-                    onClick={async (e) => {
-                      e.stopPropagation(); // prevent dropdown close on button click
-                      try {
-                        await login("customers", loginPassword);
-                        setDropdownOpen(false);
-                        setActiveDropdown(null);
-                        setLoginPassword('');
-                        setLoginError('');
-                      } catch (err) {
-                        setLoginError(err.message);
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setLoginPassword(value);
+
+                      if (value.length === 4) {
+                        try {
+                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          setDropdownOpen(false);
+                          setActiveDropdown(null);
+                          setLoginPassword('');
+                          setLoginError('');
+                          setModalVisible(true);
+                        } catch (err) {
+                          setLoginError(err.message);
+                        }
                       }
                     }}
-                  >
-                    Submit
-                  </Button>
+                  />
                   {loginError && <p style={{ color: 'red', fontSize: '0.8em' }}>{loginError}</p>}
                 </div>
               )}
             </Dropdown.Item>
-
-            {/* <Dropdown.Item onClick={() => {
-              setModalVisible(true);
-              setDropdownOpen(false);
-            }}>
-              Customers
-            </Dropdown.Item> */}
-
           </Dropdown.Menu>
         </Dropdown>
         </>
@@ -486,15 +471,29 @@ useEffect(() => {
               Select Customer
             </Dropdown.Toggle>
             <Dropdown.Menu>
-              {customersData.length >0? ( customersData.map((customer, index) => (
-                <Dropdown.Item key={index} onClick={() => {setCustomerName(customer.customer); setAccountID(customer.account_ID);}}>
-                  {customer.customer}
-                </Dropdown.Item>
-              ))) :(
-                <Dropdown.Item onClick={() => {setCustomerName(`customer`); setModalVisible(false)}}>
-                Customer List Loading...
-                </Dropdown.Item>
-              )}
+              <Form.Control
+                type="text"
+                placeholder="Search Customers"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="mx-3 my-2 w-auto"
+              />
+              {customersData
+                .filter((customer) =>
+                  customer.customer.toLowerCase().includes(customerSearch.toLowerCase())
+                )
+                .map((customer, index) => (
+                  <Dropdown.Item
+                    key={index}
+                    onClick={() => {
+                      setCustomerName(customer.customer);
+                      setAccountID(customer.account_ID);
+                      setModalVisible(false);
+                    }}
+                  >
+                    {customer.customer}
+                  </Dropdown.Item>
+              ))}
                 <button className='button' onClick={() => {setAddCustomer(true); setModalVisible(false)}}>Add customer</button>
             </Dropdown.Menu>
           </Dropdown>
@@ -504,8 +503,13 @@ useEffect(() => {
 
       {addCustomer && (
         <div className='modal'>
-        <div className='modalContent'>
+        <div className='modalContent addCustomerModal'>
         <button className='closeButton' onClick={() => {setModalVisible(true); setAddCustomer(false)}}>×</button>
+        {customerAddedMsg && (
+          <div className='customerAdded'>
+            ✅ Customer added!
+          </div>
+        )}
         <Form.Group>
           <Form.Label>
             <h6>Name:</h6>
@@ -514,6 +518,7 @@ useEffect(() => {
             type="text"
             placeholder=""
             name="name"
+            value={name}
             onChange={handleChange}
           />
 
@@ -524,24 +529,28 @@ useEffect(() => {
             type="text"
             placeholder="First Line of Address"
             name="nameNumber"
+            value={nameNumber}
             onChange={handleChange}
           />
           <Form.Control
             type="text"
             placeholder="Second Line of Address (optional)"
             name="street"
+            value={street}
             onChange={handleChange}
           />
           <Form.Control
             type="text"
             placeholder="Town/City"
             name="city"
+            value={city}
             onChange={handleChange}
           />
           <Form.Control
             type="text"
             placeholder="postcode"
             name="postcode"
+            value={postcode}
             onChange={handleChange}
           />
         </Form.Group>
@@ -561,11 +570,16 @@ useEffect(() => {
               )}
               {addRegion ? (
                 <Form.Control
-                    type="text"
-                    placeholder="Name of Region"
-                    name="deliveryRegion"
-                    onChange={handleChange}
-                    onBlur={toggleAddRegion}
+                  type="text"
+                  placeholder="Name of Region"
+                  value={newRegion}
+                  onChange={(e) => setNewRegion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddRegion();
+                    }
+                  }}
+                  autoFocus
                 />
                 ) : (
                 <button type="button" className='button' onClick={toggleAddRegion}>
@@ -581,6 +595,7 @@ useEffect(() => {
             type="text"
             placeholder=""
             name="phoneNumber"
+            value={phoneNumber}
             onChange={handleChange}
           />
           <Form.Label>
@@ -590,13 +605,22 @@ useEffect(() => {
             type="text"
             placeholder=""
             name="email"
+            value={email}
             onChange={handleChange}
           />
+        {formError && <p style={{ color: 'red', fontSize: '0.9em' }}>{formError}</p>}
         <Button 
           type="submit" 
           className='button' 
-          disabled={!name || !postcode}
-          onClick={() => {setAddCustomer(false); handleAddNewCustomer()}}
+          onClick={() => {
+            if (!name || !postcode) {
+              setFormError('Please fill in both Name and Postcode.');
+            } else {
+              setFormError('');
+              setAddCustomer(false);
+              handleAddNewCustomer();
+            }
+          }}
         >Submit</Button>
         </div>
         </div>

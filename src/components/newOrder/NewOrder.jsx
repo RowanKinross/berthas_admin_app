@@ -29,6 +29,7 @@ const handleFilterChange = (event) => {
   setFilterCriteria(event.target.value);
 };
 
+
 // fetch stock data e.g what pizzas are in stock & their batches
 const fetchStock = async () => {
   try {
