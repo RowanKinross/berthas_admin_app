@@ -408,7 +408,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
       </button>
       {selectMode && selectedOrders.length > 0 && (
         <button className='button' onClick={generatePDF}>
-          Generate PDF for {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''}
+          Generate packing list
         </button>
       )}
     </div>
