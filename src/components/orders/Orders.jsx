@@ -25,17 +25,34 @@ function Orders() {
     editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
   const modalRef = useRef(null)
   const [customerInfo, setCustomerInfo] = useState(null);
+  const [allCustomers, setAllCustomers] = useState({})
+  // select mode on the orders
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState([]);
 
 
 
 useEffect(() => {
-  const getCustomer = async () => {
-    const customer = await fetchCustomerByAccountID(selectedOrder?.account_ID);
-    setCustomerInfo(customer);
+  const fetchAllCustomers = async () => {
+    try {
+      const snapshot = await getDocs(collection(db, "customers"));
+      const customerMap = {};
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.account_ID && data.customer) {
+          customerMap[data.account_ID] = data.customer;
+        }
+      });
+      setAllCustomers(customerMap);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    }
   };
 
-  getCustomer();
-}, [selectedOrder?.account_ID]);
+  fetchAllCustomers();
+}, []);
+
+
 
 const sortOrders = (orders) => {
   return [...orders].sort((a, b) => {
@@ -54,6 +71,14 @@ const sortOrders = (orders) => {
   });
 };
 
+
+const formatBatchDate = (code) => {
+  if (!code || code.length !== 8) return '';
+  const year = code.slice(0, 4);
+  const month = code.slice(4, 6);
+  const day = code.slice(6, 8);
+  return `${day}.${month}.${year}`;
+};
 
 
 
@@ -334,9 +359,60 @@ const updateDeliveryDate = async (orderId, newDate) => {
 };
 
 
+  const generatePDF = () => {
+    const selected = orders.filter(o => selectedOrders.includes(o.id));
+
+    let html = `<html><head><title>Combined Orders</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      .order-block { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
+      h3 { margin-top: 0; }
+    </style></head><body>`;
+
+    selected.forEach(order => {
+      const customerName = allCustomers[order.account_ID] || order.account_ID;
+      html += `<div class="order-block">
+        <h3>${customerName}</h3>
+        <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
+
+      Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
+        const pizzaName = pizzaTitles[pizzaId] || pizzaId;
+        pizzaData.batchesUsed.forEach(b => {
+          const batchDate = formatBatchDate(b.batch_number);
+          const batchCode = b.batch_number || 'unassigned';
+          html += `<p>${pizzaName} x ${b.quantity} batch: ${batchDate ? ` ${batchDate}` : ''}</p>`;
+        });
+      });
+
+
+      html += `</div>`;
+    });
+
+    html += `</body></html>`;
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  };
+
+
   return (
   <div className='orders'>
     <h2>ORDERS</h2>
+    <div style={{ marginBottom: '1rem' }}>
+      <button className='button' onClick={() => setSelectMode(!selectMode)}>
+        {selectMode ? "Cancel Selection" : "Select Orders"}
+      </button>
+      {selectMode && selectedOrders.length > 0 && (
+        <button className='button' onClick={generatePDF}>
+          Generate PDF for {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''}
+        </button>
+      )}
+    </div>
+
     <div className='ordersList'>
       <div className='orderButton' id='totals'>
         <div>Account ID:</div>
@@ -347,20 +423,38 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
       {orders.length > 0 ? (
         sortOrders(orders).map(order => (
+          
+          <div className="orderRow">
+            {selectMode && (
+              <div className="checkbox-wrapper">
+                <input
+                  type="checkbox"
+                  checked={selectedOrders.includes(order.id)}
+                  onChange={() => {
+                    setSelectedOrders(prev =>
+                      prev.includes(order.id)
+                        ? prev.filter(id => id !== order.id)
+                        : [...prev, order.id]
+                    );
+                  }}
+                />
+              </div>
+            )}
           <button 
-          key={order.id} 
-          className={`orderButton button 
-            ${order.complete ? 'complete' : ''} 
-            ${order.order_status === 'ready to pack' ? 'allocated' : ''}`}
- 
-          onClick={() => handleOrderClick(order)}>
+            key={order.id}
+            className={`orderButton button 
+              ${order.complete ? 'complete' : ''} 
+              ${order.order_status === 'ready to pack' ? 'allocated' : ''}`}
+              onClick={() => handleOrderClick(order)}
+              >
             <div>{order.account_ID}</div>
             <div>{order.pizzaTotal}</div>
             <div className='orderStatus'>{order.order_status}</div>
-            <div className={`${order.delivery_day === 'tbc'? 'tbc' : ''}`}>
-              {order.delivery_day ==='tbc'? 'tbc' : formatDeliveryDay(order.delivery_day)}
+            <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
+              {order.delivery_day === 'tbc' ? 'tbc' : formatDeliveryDay(order.delivery_day)}
             </div>
           </button>
+        </div>
         ))
       ):(
         <p className='py-3'>Loading orders...</p>
