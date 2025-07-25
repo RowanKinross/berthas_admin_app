@@ -612,6 +612,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
                 <input 
                   type="checkbox"
                   checked={isSplitChecked}
+                  disabled="true"
                   onChange={(e) => setIsSplitChecked(e.target.checked)}
                 />
                 <span class="slider round"></span>
