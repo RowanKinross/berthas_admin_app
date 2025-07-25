@@ -158,7 +158,8 @@
 }
 
 @media (max-width: 530px) {
-  .inventoryBox {
+  .archiveBox {
     font-size: 8px;
   }
+
 }
