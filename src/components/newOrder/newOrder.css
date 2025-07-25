@@ -13,3 +13,9 @@
   background-color: var(--bertha);
   padding: 20px;
 }
+
+@media (max-width: 530px) {
+  .newOrderForm {
+    width: 90vw;
+  }
+}
