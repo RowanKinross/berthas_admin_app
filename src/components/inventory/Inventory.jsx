@@ -642,7 +642,7 @@ return (
           }
         }}
       >
-            <div className="modalContent"
+            <div className="modalContent archiveModal"
               style={{
                 backgroundColor: pizzaData.find(p => p.id === selectedPizzaId)?.hex_colour || '#fff',
                 padding: '20px',

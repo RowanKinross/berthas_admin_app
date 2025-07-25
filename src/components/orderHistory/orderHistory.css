@@ -1,12 +1,10 @@
 .orderHeaders {
-  padding: 20px;
+  padding: 10px 20px;
   cursor: default !important;
   background-color: white;
 }
 .orderEntries {
-  width: 130px;
   text-align: start;
-  padding: 2px;
 }
 
 .orderButton {
@@ -16,10 +14,31 @@
 
 .orderHistoryModal {
   text-align: left;
+  overflow-y: auto;
+  max-width: 90vw;
 }
 
 .displayBatchcode {
   font-style:italic;
   padding-left: 20px;
   font-size: 0.8em !important;
+}
+
+.mobileLabel {
+  display: none;
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+@media (max-width: 530px) {
+  .orderHistoryHeaders {
+    display: none !important;
+  }
+  .orderHistoryButton {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  }
+  .mobileLabel {
+    display: inline;
+  }
 }

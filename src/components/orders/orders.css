@@ -29,7 +29,7 @@
 
 #totals div {
   flex: 1;
-  text-align: center; /* Center text in each header column */
+  text-align: center; 
 }
 
 #totals div:first-child {
@@ -42,16 +42,10 @@
 
 .orderButton div {
   flex: 1;
-  text-align: center; /* Align text in each order column */
+  text-align: center;
 }
 
-.orderButton div:first-child {
-  text-align: left;
-}
 
-.orderButton div:last-child {
-  text-align: right;
-}
 
 
 .modalContent {
@@ -60,13 +54,15 @@
   text-align: start;
   gap: 10px;
   max-height: 90vh;
-  overflow-y: auto;
 }
 
 .modalContent p {
   margin: 0;
   font-size: 1.1em;
   color: var(--dark);
+}
+.orderModal {
+  overflow-y: auto; 
 }
 
 .modalContent .button {

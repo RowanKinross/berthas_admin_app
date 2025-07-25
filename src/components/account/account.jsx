@@ -37,6 +37,7 @@ const Account = ({ accountID }) => {
       postcode: account.postcode,
       phoneNumber: account.phoneNumber,
       email: account.email,
+      default_pizza_view: account.default_pizza_view || "",
     });
   };
 
@@ -57,7 +58,8 @@ const Account = ({ accountID }) => {
         city: formValues.city || "",
         postcode: formValues.postcode || "",
         phoneNumber: formValues.phoneNumber || "",
-        email: formValues.email || ""
+        email: formValues.email || "",
+        default_pizza_view: formValues.default_pizza_view || ""
       };
 
 
@@ -139,6 +141,18 @@ const Account = ({ accountID }) => {
                     onChange={handleChange}
                   />
                 </div>
+                <div className='entries'>
+                  <label>Pizza Type:</label>
+                  <select
+                    name="default_pizza_view"
+                    value={formValues.default_pizza_view}
+                    onChange={handleChange}
+                  >
+                    <option value="withSleeve">With Sleeves</option>
+                    <option value="withoutSleeve">Without Sleeves</option>
+                    <option value="all">All Pizzas</option>
+                  </select>
+                </div>
                 <button className='saveButton button' onClick={() => handleSaveClick(account.id)}>Save</button>
               </div>
             ) : (
@@ -166,6 +180,16 @@ const Account = ({ accountID }) => {
                 <div className='entries'>
                   <label>Email:</label> 
                   <p>{account.email} </p>
+                </div>
+                <div className='entries'>
+                  <label>Pizza Type:</label>
+                  <p>  {
+                    {
+                      withSleeve: 'With Sleeves',
+                      withoutSleeve: 'Without Sleeves',
+                      all: 'All Pizzas',
+                    }[account.default_pizza_view] || 'No Preference'
+                  }</p>
                 </div>
                 <button className='editButton' onClick={() => handleEditClick(account)}><FontAwesomeIcon icon={faEdit} className='icon' /></button>
               </div>

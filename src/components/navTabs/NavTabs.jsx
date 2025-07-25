@@ -466,37 +466,41 @@ useEffect(() => {
           <div className='modalContent'>
             <button className='closeButton' onClick={() => {handleLogOut()}}>×</button>
             <h3>Customer Login</h3>
-            <Dropdown>
-            <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
-              Select Customer
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Form.Control
-                type="text"
-                placeholder="Search Customers"
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-                className="mx-3 my-2 w-auto"
-              />
-              {customersData
-                .filter((customer) =>
-                  customer.customer.toLowerCase().includes(customerSearch.toLowerCase())
-                )
-                .map((customer, index) => (
-                  <Dropdown.Item
-                    key={index}
-                    onClick={() => {
-                      setCustomerName(customer.customer);
-                      setAccountID(customer.account_ID);
-                      setModalVisible(false);
-                    }}
-                  >
-                    {customer.customer}
-                  </Dropdown.Item>
-              ))}
-                <button className='button' onClick={() => {setAddCustomer(true); setModalVisible(false)}}>Add customer</button>
-            </Dropdown.Menu>
-          </Dropdown>
+            <div className='selectAdd'>
+              <Dropdown>
+              <Dropdown.Toggle className='button selectCustomerButton' variant="outline-warning" id="dropdown-basic">
+                Select Customer
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Form.Control
+                  type="text"
+                  placeholder="Search Customers"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="mx-3 my-2 w-auto"
+                />
+                <div className='customersScroll'>
+                  {customersData
+                    .filter((customer) =>
+                      customer.customer.toLowerCase().includes(customerSearch.toLowerCase())
+                    )
+                    .map((customer, index) => (
+                      <Dropdown.Item
+                        key={index}
+                        onClick={() => {
+                          setCustomerName(customer.customer);
+                          setAccountID(customer.account_ID);
+                          setModalVisible(false);
+                        }}
+                      >
+                        {customer.customer}
+                      </Dropdown.Item>
+                    ))}
+                  </div>
+              </Dropdown.Menu>
+            </Dropdown>
+            <button className='button' onClick={() => {setAddCustomer(true); setModalVisible(false)}}>Add customer</button>
+          </div>
           </div>
         </div>
       )}

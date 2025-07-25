@@ -461,7 +461,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
     <div className='ordersList'>
       <div className='orderButton' id='totals'>
-        <div>Account ID:</div>
+        <div>Account Name:</div>
         <div>No. of Pizzas:</div>
         <div className='orderStatus'>Order Status:</div>
         <div>Delivery Day:</div>
@@ -470,7 +470,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
       {orders.length > 0 ? (
         sortOrders(orders).map(order => (
           
-          <div className="orderRow">
+          <div className="orderRow" key={order.id}>
             {selectMode && (
               <div className="checkbox-wrapper">
                 <input
@@ -495,7 +495,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
               `}
               onClick={() => handleOrderClick(order)}
               >
-            <div>{order.account_ID}</div>
+            <div>{order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
             <div className='orderStatus'>{order.order_status}</div>
             <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
@@ -518,13 +518,21 @@ const updateDeliveryDate = async (orderId, newDate) => {
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
             <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
             <p><strong>Address:</strong><br />
-              <div className='displayAddress'>
-                {customerInfo?.customer || 'N/A'} <br/>
-                {customerInfo?.name_number || 'N/A'} <br/>
-                {customerInfo?.street || ''}<br />
-                {customerInfo?.city|| ''}<br />
-                {customerInfo?.postcode|| ''}<br />
-              </div>
+                  <div className='displayAddress'>
+                    {customerInfo?.customer || 'N/A'} <br/>
+                    {customerInfo?.name_number && (
+                      <>{customerInfo.name_number}<br/></>
+                    )}                    
+                    {customerInfo?.street && (
+                      <>{customerInfo.street}<br/></>
+                    )}
+                    {customerInfo?.city && (
+                      <>{customerInfo.city}<br/></>
+                    )}
+                    {customerInfo?.postcode && (
+                      <>{customerInfo.postcode}<br/></>
+                    )}
+                  </div>
               <strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}
             </p>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
@@ -596,7 +604,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
                             }
 
                             setSelectedOrder(updatedOrder);
-                            setEditingBatch({ pizzaId: null, batchIndex: null }); // close dropdown
+                            setEditingBatch({ pizzaId: null, batchIndex: null });
                             fetchOrdersAgain();
                           }}
                           onBlur={() => setEditingBatch({ pizzaId: null, batchIndex: null })}

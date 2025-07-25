@@ -6,7 +6,7 @@ import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import dayjs from 'dayjs';
 import { app, db } from '../firebase/firebase';
-import { addDoc, getDocs, collection, serverTimestamp } from '@firebase/firestore';
+import { addDoc, getDocs, collection, serverTimestamp, updateDoc, doc} from '@firebase/firestore';
 
 
 // Hook customer name and account ID
@@ -21,6 +21,7 @@ const [customDeliveryWeek, setCustomDeliveryWeek] = useState("");
 const [customerData, setCustomerData] = useState("");
 const [customerAddress, setCustomerAddress] = useState("")
 const [stock, setStock] = useState([])
+const [submitting, setSubmitting] = useState(false);
 
 const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
@@ -106,11 +107,11 @@ useEffect(() => {
       const customer = customerData.find(cust => cust.account_ID === accountID);
       if (customer) {
         setCustomerAddress(`${customer.name_number} ${customer.street}, ${customer.city}, ${customer.postcode}`);
+        setFilterCriteria(customer.default_pizza_view || "withSleeve");
       } else {
         setCustomerAddress("");
+        setFilterCriteria("withSleeve");
       }
-    } else {
-      setCustomerAddress("");
     }
   }, [accountID, customerData]);
 
@@ -144,27 +145,6 @@ useEffect(() => {
     }
   }
   
-
-
-
-  const findEarliestBatchWithEnoughPizza = (pizzaID, quantityRequired) => {
-  // Filter stock for batches of the given pizzaID and sort them by batch_number
-  const relevantBatches = stock
-  .filter(batch => batch.pizza_id === pizzaID)
-  .sort((a, b) => a.batch_number - b.batch_number);
-
-  // Look for the first batch that can fulfill the entire quantity
-  const batchWithEnoughStock = relevantBatches.find(batch => batch.quantity_available >= quantityRequired);
-
-  // If a suitable batch is found, return it with the requested quantity
-  if (batchWithEnoughStock) {
-  return [{ batch_number: batchWithEnoughStock.batch_number, quantity: quantityRequired }];
-  }
-
-  // If no single batch can fulfill the order, return null (indicating not enough stock in any single batch)
-  return null;
-  };
-
 
 
 
@@ -230,32 +210,27 @@ const handleDateChange = (e) => {
 const handleSubmit = async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+
   if (form.checkValidity() === false) {
     event.preventDefault();
     event.stopPropagation();
-  } else {
-    setValidated(true);
+    return;
+  }
 
-     // Check stock availability for each pizza
-     const pizzas = filteredPizzaData.reduce((acc, pizza) => {
-      const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+  setValidated(true);
+  setSubmitting(true); // ✅ prevent further submissions
 
-  if (quantityRequired > 0) {
-      // Manually split quantity into individual units or chunks for future batch assignment
+  // Your pizza and stock logic...
+  const pizzas = filteredPizzaData.reduce((acc, pizza) => {
+    const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+    if (quantityRequired > 0) {
       acc[pizza.id] = {
-        batchesUsed: [
-          {
-            quantity: quantityRequired,
-            batch_number: null  // Manual assignment to happen later
-          }
-        ]
+        batchesUsed: [{ quantity: quantityRequired, batch_number: null }],
       };
     }
+    return acc;
+  }, {});
 
-  return acc;
-}, {});
-
-//send to database
   try {
     const docRef = await addDoc(collection(db, "orders"), {
       timestamp: serverTimestamp(),
@@ -264,7 +239,7 @@ const handleSubmit = async (event) => {
       delivery_day: "tbc",
       account_ID: accountID,
       customer_name: customerName,
-      pizzas: pizzas,  // Store pizzas with their respective batch details
+      pizzas: pizzas,
       pizzaTotal: totalPizzas,
       additional_notes: document.getElementById('additonalNotes').value,
       order_status: "order placed",
@@ -274,9 +249,10 @@ const handleSubmit = async (event) => {
     console.log("Document written with ID: ", docRef.id);
   } catch (e) {
     console.error("Error adding document: ", e);
+    setSubmitting(false); // 🔁 Re-enable if failed
   }
-}
 };
+
 
 
 
@@ -296,7 +272,7 @@ return (
 
       <fieldset>
       <Form.Group as={Row} className="mb-3">
-        <Form.Label as="legend" column sm={2}>
+        <Form.Label>
           <h5> Delivery Week:</h5>
         </Form.Label>
         <Col sm={10}>
@@ -360,6 +336,7 @@ return (
             label="With Sleeve" 
             value="withSleeve" 
             checked={filterCriteria === "withSleeve"} 
+            disabled = {filterCriteria !== "withSleeve"}
             onChange={handleFilterChange} 
             inline 
           />
@@ -368,6 +345,7 @@ return (
             label="Without Sleeve" 
             value="withoutSleeve" 
             checked={filterCriteria === "withoutSleeve"} 
+            disabled = {filterCriteria !== "withoutSleeve"}
             onChange={handleFilterChange} 
             inline 
           />
@@ -375,7 +353,8 @@ return (
             type="radio" 
             label="All Pizzas" 
             value="all" 
-            checked={filterCriteria === "all"} 
+            checked={filterCriteria === "all"}
+            disabled = {filterCriteria !== "all"} 
             onChange={handleFilterChange} 
             inline 
           />
@@ -428,7 +407,9 @@ return (
         feedbackType="invalid"
         />
     </Form.Group>
-    <Button type="submit" className='button'>Submit Order</Button>
+    <Button type="submit" className='button' disabled={submitting}>
+      Submit
+    </Button>
     <Button className='button' onClick={() =>window.location.reload()}>clear fields</Button>
   </Form>
 </div>
