@@ -27,6 +27,7 @@ function BatchCodes() {
   const batchDetailsRef = useRef(null);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
 
 
@@ -48,7 +49,6 @@ function BatchCodes() {
       id: doc.id,
       ...doc.data()
     }));
-
     setBatches(batchesData);
 
     // Build batchCodeSuggestions from live data
@@ -70,7 +70,14 @@ function BatchCodes() {
 
   return () => unsubscribe(); // Clean up listener on unmount
   }, []);
-    
+  
+
+  // filter function to be able to search batches
+  const filteredBatches = batches.filter(batch =>
+    batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
     
   useEffect(() => {
   // FETCH ingredients
@@ -523,8 +530,16 @@ function BatchCodes() {
     <div className='batchCodes'>
       <h2>BATCH CODES</h2>
       
+      <div 
+        className="alignRight">
+        <input
+          type="text"
+          placeholder="Search batch codes..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          />
+      </div>
       <button className='button' onClick={handleAddClick}>+</button>
-      
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
           <h2>Batch Details</h2>
@@ -907,8 +922,8 @@ function BatchCodes() {
         <p>Pizzas:</p>
         <p>Ingredients Ordered?</p>
       </div>
-      {batches.length > 0 ? (
-        batches
+      {filteredBatches.length > 0 ? (
+        filteredBatches
         .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
         .map(batch => (
           <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
