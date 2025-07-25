@@ -37,7 +37,10 @@
   flex-direction: column;
 }
 
-
+.selectAdd {
+  display: flex;
+  flex-wrap: wrap;
+}
 
 .modal {
   position: fixed;
@@ -59,6 +62,11 @@
   width: 500px;
   max-width: 100%;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.customersScroll {
+  max-height: 20vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .addCustomerModal {
   max-height: 90vh;     

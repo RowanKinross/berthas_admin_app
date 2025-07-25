@@ -60,13 +60,15 @@
   text-align: start;
   gap: 10px;
   max-height: 90vh;
-  overflow-y: auto;
 }
 
 .modalContent p {
   margin: 0;
   font-size: 1.1em;
   color: var(--dark);
+}
+.orderModal {
+  overflow-y: auto; 
 }
 
 .modalContent .button {
