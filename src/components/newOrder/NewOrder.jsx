@@ -21,6 +21,7 @@ const [customDeliveryWeek, setCustomDeliveryWeek] = useState("");
 const [customerData, setCustomerData] = useState("");
 const [customerAddress, setCustomerAddress] = useState("")
 const [stock, setStock] = useState([])
+const [submitting, setSubmitting] = useState(false);
 
 const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
@@ -209,32 +210,27 @@ const handleDateChange = (e) => {
 const handleSubmit = async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+
   if (form.checkValidity() === false) {
     event.preventDefault();
     event.stopPropagation();
-  } else {
-    setValidated(true);
+    return;
+  }
 
-     // Check stock availability for each pizza
-     const pizzas = filteredPizzaData.reduce((acc, pizza) => {
-      const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+  setValidated(true);
+  setSubmitting(true); // ✅ prevent further submissions
 
-  if (quantityRequired > 0) {
-      // Manually split quantity into individual units or chunks for future batch assignment
+  // Your pizza and stock logic...
+  const pizzas = filteredPizzaData.reduce((acc, pizza) => {
+    const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
+    if (quantityRequired > 0) {
       acc[pizza.id] = {
-        batchesUsed: [
-          {
-            quantity: quantityRequired,
-            batch_number: null  // Manual assignment to happen later
-          }
-        ]
+        batchesUsed: [{ quantity: quantityRequired, batch_number: null }],
       };
     }
+    return acc;
+  }, {});
 
-  return acc;
-}, {});
-
-//send to database
   try {
     const docRef = await addDoc(collection(db, "orders"), {
       timestamp: serverTimestamp(),
@@ -243,7 +239,7 @@ const handleSubmit = async (event) => {
       delivery_day: "tbc",
       account_ID: accountID,
       customer_name: customerName,
-      pizzas: pizzas,  // Store pizzas with their respective batch details
+      pizzas: pizzas,
       pizzaTotal: totalPizzas,
       additional_notes: document.getElementById('additonalNotes').value,
       order_status: "order placed",
@@ -253,9 +249,10 @@ const handleSubmit = async (event) => {
     console.log("Document written with ID: ", docRef.id);
   } catch (e) {
     console.error("Error adding document: ", e);
+    setSubmitting(false); // 🔁 Re-enable if failed
   }
-}
 };
+
 
 
 
@@ -410,7 +407,9 @@ return (
         feedbackType="invalid"
         />
     </Form.Group>
-    <Button type="submit" className='button'>Submit Order</Button>
+    <Button type="submit" className='button' disabled={submitting}>
+      Submit
+    </Button>
     <Button className='button' onClick={() =>window.location.reload()}>clear fields</Button>
   </Form>
 </div>
