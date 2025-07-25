@@ -167,7 +167,7 @@ const OrderHistory = ({ accountID }) => {
     <div className="orders">
       <h2>ORDER HISTORY</h2>
       <div className="ordersList">
-        <div className="orderButton orderHeaders">
+        <div className="orderButton orderHeaders orderHistoryHeaders">
           <div className="entries">Order Placed:</div>
           <div className="entries">No. of Pizzas:</div>
           <div className="entries">Delivery Week:</div>
@@ -180,14 +180,29 @@ const OrderHistory = ({ accountID }) => {
           .map(order => (
             <button
               key={order.id}
-              className={`orderButton button ${order.complete ? 'complete' : ''}`}
+              className={`orderButton orderHistoryButton button ${order.complete ? 'complete' : ''}`}
               onClick={() => handleOrderClick(order)}
             >
-              <div className="orderEntries">{formatDate(order.order_placed_timestamp)}</div>
-              <div className="orderEntries">{order.pizzaTotal}</div>
-              <div className="orderEntries">{formatDeliveryDay(order.delivery_week)}</div>
-              <div className="orderEntries">{formatDeliveryDay(order.delivery_day)}</div>
-              <div className="orderEntries">{order.order_status}</div>
+              <div className="orderEntries">
+                <span className="mobileLabel">Order Placed:</span>
+                {formatDate(order.order_placed_timestamp)}
+              </div>
+              <div className="orderEntries">
+                <span className="mobileLabel">No. of Pizzas:</span>
+                {order.pizzaTotal}
+              </div>
+              <div className="orderEntries">
+                <span className="mobileLabel">Delivery Week:</span>
+                {formatDeliveryDay(order.delivery_week)}
+              </div>
+              <div className="orderEntries">
+                <span className="mobileLabel">Delivery Day:</span>
+                {formatDeliveryDay(order.delivery_day)}
+              </div>
+              <div className="orderEntries">
+                <span className="mobileLabel">Order Status:</span>
+                {order.order_status}
+              </div>
             </button>
           ))}
       </div>
@@ -229,18 +244,26 @@ const OrderHistory = ({ accountID }) => {
               </>
             ) : (
               <div>
-                <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
+                <p><strong>Account ID:</strong></p>
+                <p>{selectedOrder.account_ID}</p>
                 <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
                 <p><strong>Address:</strong><br />
                   <div className='displayAddress'>
                     {customerInfo?.customer || 'N/A'} <br/>
                     {customerInfo?.name_number || 'N/A'} <br/>
-                    {customerInfo?.street || ''}<br />
-                    {customerInfo?.city|| ''}<br />
-                    {customerInfo?.postcode|| ''}<br />
+                    {customerInfo?.street && (
+                      <>{customerInfo.street}<br/></>
+                    )}
+                    {customerInfo?.city && (
+                      <>{customerInfo.city}<br/></>
+                    )}
+                    {customerInfo?.postcode && (
+                      <>{customerInfo.postcode}<br/></>
+                    )}
                   </div>
                 </p>
-                <p><strong>Order Placed:</strong> {formatDate(selectedOrder.order_placed_timestamp)}</p>
+                <p><strong>Order Placed:</strong></p>
+                <p>{formatDate(selectedOrder.order_placed_timestamp)}</p>
                 <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
                 <p><strong>Delivery Day:</strong> {formatDeliveryDay(selectedOrder.delivery_day)}</p>
                 <p><strong>Order Status:</strong> {selectedOrder.order_status}</p>

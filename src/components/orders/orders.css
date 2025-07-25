@@ -45,13 +45,7 @@
   text-align: center; /* Align text in each order column */
 }
 
-.orderButton div:first-child {
-  text-align: left;
-}
 
-.orderButton div:last-child {
-  text-align: right;
-}
 
 
 .modalContent {
