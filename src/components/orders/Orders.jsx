@@ -672,7 +672,11 @@ const updateDeliveryDate = async (orderId, newDate) => {
                     >
                       <option value="">Select batch</option>
                       {batches
-                        .filter(batch => batch.pizzas.some(p => p.id === pizzaName))
+                        .filter(batch => {
+                          const pizza = batch.pizzas.find(p => p.id === pizzaName);
+                          const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
+                          return pizza && available > 0; // only include if available > 0
+                          })
                         .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
                         .map((batch, i) => {
                           const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
