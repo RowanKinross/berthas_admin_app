@@ -122,6 +122,24 @@
     justify-content: center;
   }
 
+  /* plus minus on the available */
+  .availableControls {
+    display: flex;
+  }
+  .available {
+    padding-right: 10px;
+  }
+  .minusArch, .plusArch {
+    padding: 0 1%;
+    border: solid 1px var(--darkLight);
+    border-radius: 25%;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .minusArch:hover, .plusArch:hover {
+    background-color: var(--berthaLight);
+  }
 
 
 /* inventory display */

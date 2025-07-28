@@ -2,7 +2,7 @@
 import './archive.css';
 import {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
-import { collection, addDoc, getDocs } from '@firebase/firestore'; 
+import { collection, addDoc, getDocs, doc, getDoc, updateDoc} from '@firebase/firestore'; 
 
 function Archive() {
   // pizzas
@@ -14,6 +14,12 @@ function Archive() {
   const [totalOnOrderOverall, setTotalOnOrderOverall] = useState(0);
   const [totalAvailableOverall, setTotalAvailableOverall] = useState(0);
   const [selectedBatchId, setSelectedBatchId] = useState(null);
+
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [selectedPizzaId, setSelectedPizzaId] = useState(null);
+  const [orders, setOrders] = useState([]);
+
 
   // FETCHES
   // fetch pizza data e.g what pizzas we offer & their hex codes
@@ -45,6 +51,20 @@ function Archive() {
     }
   };
 
+  // fetch orders data
+  const fetchOrders = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "orders"));
+    const orderList = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setOrders(orderList);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+  }
+  };
+
 
 
   // calculate totals
@@ -67,10 +87,106 @@ function Archive() {
   }
 
 
+const adjustArchive = async (delta) => {
+  try {
+    const batchRef = doc(db, "batches", selectedBatch.id);
+    const batchSnap = await getDoc(batchRef);
+    const batchData = batchSnap.data();
+
+    const allocations = [...(batchData.pizza_allocations || [])];
+    const pizzas = [...(batchData.pizzas || [])];
+
+    const pizzaIndex = pizzas.findIndex(p => p.id === selectedPizzaId);
+    const archivedIndex = allocations.findIndex(a =>
+      a.pizzaId === selectedPizzaId &&
+      a.orderId === 'archived' &&
+      a.status === 'completed'
+    );
+
+    if (delta === -1) {
+      // ARCHIVE one — increase archived allocation
+      if (pizzaIndex === -1) return;
+
+      const completed = allocations
+        .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const active = allocations
+        .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const effective = pizzas[pizzaIndex].quantity - completed;
+      const available = effective - active;
+
+      if (available <= 0) return; // nothing left to archive
+
+      if (archivedIndex > -1) {
+        allocations[archivedIndex].quantity += 1;
+      } else {
+        allocations.push({
+          pizzaId: selectedPizzaId,
+          orderId: 'archived',
+          quantity: 1,
+          status: 'completed'
+        });
+      }
+
+    } else if (delta === 1) {
+      // UNARCHIVE one
+      if (archivedIndex > -1) {
+        allocations[archivedIndex].quantity -= 1;
+
+        if (allocations[archivedIndex].quantity <= 0) {
+          allocations.splice(archivedIndex, 1);
+        }
+
+        // No need to touch pizzas[] here — we're only removing from archive
+      } else if (pizzaIndex > -1) {
+        // No archived allocation exists — return 1 to total batch quantity
+        pizzas[pizzaIndex].quantity += 1;
+      }
+    }
+
+    // Update Firestore
+    await updateDoc(batchRef, {
+      pizza_allocations: allocations,
+      pizzas: pizzas
+    });
+
+    // Update local selectedBatch
+    const updatedBatch = {
+      ...selectedBatch,
+      pizza_allocations: allocations,
+      pizzas: pizzas
+    };
+    setSelectedBatch(updatedBatch);
+
+    // Update overall stock state
+    setStock(prevStock =>
+      prevStock.map(batch =>
+        batch.id === selectedBatch.id
+          ? {
+              ...batch,
+              pizza_allocations: allocations,
+              pizzas: pizzas
+            }
+          : batch
+      )
+    );
+
+  } catch (error) {
+    console.error("❌ Error adjusting archive:", error);
+  }
+};
+
+
+
+
   // render pizza data, stock data and ingredients data dynamically
   useEffect(() => {
     fetchPizzaData();
     fetchStock();
+    fetchOrders();
   }, []);
 
   useEffect(() => {
@@ -82,8 +198,9 @@ function Archive() {
     <div className='inventory'>
       <h2>ARCHIVE</h2>
         <div className='archiveBox' id='totals'>
-        <p>Total: {totalStockOverall}</p>
+          <p>Total: {totalStockOverall}</p>
         </div>
+
       <div>
       </div>
       {pizzaData.length > 0 ? (
@@ -113,7 +230,15 @@ return (
                   )
                   .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // Sort batches by batch_code in descending order
                   .map((batch, index) => (
-                    <div className='archiveBox' style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent'}} key={`${pizza.id}-${index}`}>
+                    <div className='archiveBox' 
+                    style={{ backgroundColor: pizza.sleeve ? pizza.hex_colour : 'transparent', cursor:'pointer'}} 
+                    key={`${pizza.id}-${index}`}
+                    onClick={() => {
+                      setSelectedBatch(batch);
+                      setSelectedPizzaId(pizza.id);
+                      setShowArchiveModal(true);
+                    }
+                    }>
                       <p>Batch Number: {batch.batch_code}</p>
                       {batch.pizzas.map((p, idx) => (
                         p.id === pizza.id && p.quantity > 0 ? (
@@ -166,6 +291,69 @@ return (
       ) : (
         <p>Loading pizza data...</p>
       )}
+      {/* Archive batch viewing modal  */}
+      {showArchiveModal && selectedBatch && (() => {
+        const match = selectedBatch.pizzas.find(p => p.id === selectedPizzaId);
+        const total = match?.quantity || 0;
+
+        const completed = (selectedBatch.pizza_allocations || [])
+          .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
+          .reduce((sum, a) => sum + a.quantity, 0);
+
+        const active = (selectedBatch.pizza_allocations || [])
+          .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
+          .reduce((sum, a) => sum + a.quantity, 0);
+
+        const effective = total - completed;
+        const available = effective - active;
+
+        const hasArchivedAllocation = (selectedBatch.pizza_allocations || []).some(
+          a => a.pizzaId === selectedPizzaId &&
+              a.orderId === 'archived' &&
+              a.status === 'completed' &&
+              a.quantity > 0
+        );
+
+        return (
+          <div 
+            className="modal"
+            onClick={(e) => {
+              if (e.target.className === 'modal') {
+                setShowArchiveModal(false);
+                setSelectedBatch(null);
+              }
+            }}
+          >
+            <div className="modalContent archiveModal"
+              style={{
+                backgroundColor: pizzaData.find(p => p.id === selectedPizzaId)?.hex_colour || '#fff',
+                padding: '20px',
+                borderRadius: '10px'
+              }}
+            >
+              <h3>{selectedPizzaId} : batch {selectedBatch.batch_code}</h3>
+              <h5><strong>Allocations: </strong></h5>
+              {(selectedBatch.pizza_allocations || [])
+                .filter(a => a.pizzaId === selectedPizzaId)
+                .map((a, i) => {
+                  const linkedOrder = orders.find(o => o.id === a.orderId);
+                  const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  return (
+                    <p key={i}>
+                      {accountName}: {a.quantity}
+                    </p>
+                  );
+                })}
+              <div style={{ marginTop: '1rem' }}>
+                <div className='availableControls'>
+                  <p className='available'><strong>Archived:</strong> {completed} of {total}</p>
+                  <p onClick={() => adjustArchive(1)} disabled={!hasArchivedAllocation} className='plusArch' title='add found stock'> + </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
 
     </div>
