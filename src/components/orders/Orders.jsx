@@ -27,6 +27,9 @@ function Orders() {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [batchErrors, setBatchErrors] = useState({});
   const [isSplitChecked, setIsSplitChecked] = useState(false);
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 20;
 
 
 
@@ -463,6 +466,12 @@ const orderHasBatchErrors = (order) => {
   });
 };
 
+  const sortedOrders = sortOrders(orders);
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  
+
 
 
 
@@ -505,7 +514,7 @@ const orderHasBatchErrors = (order) => {
     printWindow.close();
   };
 
-
+  
   return (
   <div className='orders'>
     <h2>ORDERS</h2>
@@ -546,10 +555,9 @@ const orderHasBatchErrors = (order) => {
       </div>
 
     {orders.length > 0 ? (
-      sortOrders(orders).map(order => {  
-      const orderCustomer = allCustomers[order.account_ID];
-
-
+      
+      currentOrders.map(order => { 
+        const orderCustomer = allCustomers[order.account_ID];
       return(
           <div className="orderRow" key={order.id}>
             {selectMode && (
@@ -591,6 +599,17 @@ const orderHasBatchErrors = (order) => {
       ):(
         <p className='py-3'>Loading orders...</p>
       )}
+    </div>
+    <div className="pagination">
+      {Array.from({ length: Math.ceil(orders.length / ordersPerPage) }, (_, index) => (
+        <button
+          key={index + 1}
+          className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
+          onClick={() => setCurrentPage(index + 1)}
+        >
+          {index + 1}
+        </button>
+      ))}
     </div>
     {selectedOrder && (
         <div className='modal'>

@@ -38,6 +38,24 @@
 }
 
 
+/* pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  gap: 0.5rem;
+}
+.page-button {
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+  cursor: pointer;
+}
+.page-button.active {
+  font-weight: bold;
+  background: #eee;
+}
+
 
 
 .modalContent {
