@@ -8,7 +8,8 @@ import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
-
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 function Orders() {
   //make an orders array
@@ -31,6 +32,7 @@ function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 20;
 
+  const [packingHtml, setPackingHtml] = useState('');
 
 
 
@@ -121,42 +123,90 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
 
 
-const handlePrintClick = () => {
-    const modalContent = document.querySelector('.orderModal');
-    // Clone content
-    const clone = modalContent.cloneNode(true);
-    // Remove the buttons
-    clone.querySelectorAll('button').forEach(btn => btn.remove());
-    // Open print window
-    const newWindow = window.open('', '', 'width=800,height=600');
-    newWindow.document.write(`
-      <html>
-        <head>
-          <title>Order Details</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
-            }
-            .modalContent {
-              border: 1px solid #ccc;
-              padding: 20px;
-            }
-            h3, h4 {
-              margin-top: 0;
-            }
-          </style>
-        </head>
-        <body>
-          ${clone.innerHTML}
-        </body>
-      </html>
-    `);
-    newWindow.document.close();
-    newWindow.focus();
-    newWindow.print();
-    newWindow.close();
-  };
+const handlePrintClick = async () => {
+  const selected = orders.filter(o => selectedOrders.includes(o.id));
+  const container = document.getElementById('packing-slip-preview');
+
+  let html = '';
+
+  selected.forEach(order => {
+    const customer = allCustomers[order.account_ID] || {};
+    const po = order.purchase_order || '—';
+    const date = formatDate(order.timestamp);
+    const address = [
+      customer.customer,
+      customer.name_number,
+      customer.street,
+      customer.city,
+      customer.postcode,
+      'GBR'
+    ].filter(Boolean).join('<br/>');
+
+    html += `
+      <div style="page-break-after: always; margin-bottom: 40px;">
+        <h2 style="text-align: center;">PACKING SLIP</h2>
+        <strong>Deliver to</strong><br/>
+        <p>${address}</p>
+        <strong>Invoice Date:</strong> ${date}<br/>
+        <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
+        <strong>Reference:</strong> ${po}<br/><br/>
+        <strong>Bill to</strong><br/>
+        <p>${address}</p>
+        <strong>Bertha's At Home</strong><br/>
+        accounts@berthas.co.uk<br/>sales@berthas.co.uk<br/>
+        <strong>VAT Number:</strong> 458323187
+
+        <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
+          <thead style="background: #f5f5f5;">
+            <tr>
+              <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Description</th>
+              <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Batch Date</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+    Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
+      const pizzaName = pizzaTitles[pizzaId] || pizzaId;
+      pizzaData.batchesUsed.forEach((b, index) => {
+        const batchDate = formatBatchDate(b.batch_number);
+        const label = index === 0 ? `${pizzaName} (${pizzaData.quantity})` : '';
+        html += `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${label}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${batchDate}</td>
+          </tr>`;
+      });
+    });
+
+    html += `</tbody></table></div>`;
+  });
+
+  // Inject HTML into a visible off-screen container
+  container.innerHTML = html;
+  container.style.display = 'block'; // just in case
+  container.style.position = 'absolute';
+  container.style.top = '-9999px';
+  container.style.left = '-9999px';
+
+  setPackingHtml(html);
+
+  // Wait for browser to render it
+  await new Promise(resolve => setTimeout(resolve, 200));
+
+  // const container = document.getElementById('packing-slip-preview');
+  const canvas = await html2canvas(container, { scale: 2 });
+  const imgData = canvas.toDataURL('image/png');
+
+  const pdf = new jsPDF('p', 'pt', 'a4');
+  const imgProps = pdf.getImageProperties(imgData);
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+  pdf.output('dataurlnewwindow');
+};
+
+
 
   useEffect(() => {
   const handleClickOutside = (event) => {
@@ -641,7 +691,7 @@ const orderHasBatchErrors = (order) => {
             </div>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
-            <p className='flexRow'>
+            <div className='flexRow'>
               <strong className='space'>Delivery Day:</strong>{" "}
               {editingDeliveryDate ? (
                 <>
@@ -672,10 +722,10 @@ const orderHasBatchErrors = (order) => {
                 </div>
                 </span>
               )}
-            </p>
+            </div>
             <div className='split'>
             <strong>Pizzas Ordered:</strong>
-              <label class="switch" title='split over multiple batch codes?'>
+              <label className="switch" title='split over multiple batch codes?'>
                 <input 
                   type="checkbox"
                   checked={isSplitChecked}
@@ -782,7 +832,7 @@ const orderHasBatchErrors = (order) => {
           </div>
           <div>
             <button className='button' onClick={handlePrintClick}>
-              <FontAwesomeIcon icon={faPrint} className='icon' /> Print
+              <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
             </button>
             {!selectedOrder.complete && selectedOrder.order_status !== "order placed" && (
               <button
@@ -800,6 +850,19 @@ const orderHasBatchErrors = (order) => {
         </div>
         </div>
       )}
+      <div
+        id="packing-slip-preview"
+        dangerouslySetInnerHTML={{ __html: packingHtml }}
+        style={{
+          position: 'absolute',
+          top: '-9999px',
+          left: '-9999px',
+          width: '794px',
+          padding: '40px',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '14px'
+        }}
+      />
   </div>
   )
 }
