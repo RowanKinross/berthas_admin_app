@@ -247,7 +247,9 @@ const OrderHistory = ({ accountID }) => {
                 <p><strong>Account ID:</strong></p>
                 <p>{selectedOrder.account_ID}</p>
                 <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
-                <p><strong>Address:</strong><br />
+                <p><strong>Email: </strong> {selectedOrder.email}</p>
+                <p><strong>PO:</strong> {selectedOrder.purchase_order}</p>
+                <div><strong>Address:</strong><br />
                   <div className='displayAddress'>
                     {customerInfo?.customer || 'N/A'} <br/>
                     {customerInfo?.name_number && (
@@ -263,7 +265,7 @@ const OrderHistory = ({ accountID }) => {
                       <>{customerInfo.postcode}<br/></>
                     )}
                   </div>
-                </p>
+                </div>
                 <p><strong>Order Placed:</strong></p>
                 <p>{formatDate(selectedOrder.order_placed_timestamp)}</p>
                 <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>

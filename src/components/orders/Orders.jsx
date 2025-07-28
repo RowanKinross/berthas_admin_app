@@ -27,6 +27,9 @@ function Orders() {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [batchErrors, setBatchErrors] = useState({});
   const [isSplitChecked, setIsSplitChecked] = useState(false);
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 20;
 
 
 
@@ -38,8 +41,8 @@ useEffect(() => {
       const customerMap = {};
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.account_ID && data.customer) {
-          customerMap[data.account_ID] = data.customer;
+        if (data.account_ID) {
+          customerMap[data.account_ID] = data;
         }
       });
       setAllCustomers(customerMap);
@@ -463,6 +466,12 @@ const orderHasBatchErrors = (order) => {
   });
 };
 
+  const sortedOrders = sortOrders(orders);
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  
+
 
 
 
@@ -505,7 +514,7 @@ const orderHasBatchErrors = (order) => {
     printWindow.close();
   };
 
-
+  
   return (
   <div className='orders'>
     <h2>ORDERS</h2>
@@ -542,11 +551,14 @@ const orderHasBatchErrors = (order) => {
         <div>No. of Pizzas:</div>
         <div className='orderStatus'>Order Status:</div>
         <div>Delivery Day:</div>
+        <div>Region:</div>
       </div>
 
-      {orders.length > 0 ? (
-        sortOrders(orders).map(order => (
-          
+    {orders.length > 0 ? (
+      
+      currentOrders.map(order => { 
+        const orderCustomer = allCustomers[order.account_ID];
+      return(
           <div className="orderRow" key={order.id}>
             {selectMode && (
               <div className="checkbox-wrapper">
@@ -556,13 +568,14 @@ const orderHasBatchErrors = (order) => {
                   onChange={() => {
                     setSelectedOrders(prev =>
                       prev.includes(order.id)
-                        ? prev.filter(id => id !== order.id)
-                        : [...prev, order.id]
+                      ? prev.filter(id => id !== order.id)
+                      : [...prev, order.id]
                     );
                   }}
-                />
+                  />
               </div>
             )}
+            
           <button 
             key={order.id}
             className={`orderButton button 
@@ -571,6 +584,7 @@ const orderHasBatchErrors = (order) => {
               ${order.order_status === 'packed' ? 'packed' : ''}
               `}
               onClick={() => handleOrderClick(order)}
+              
               >
             <div>{order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
@@ -578,12 +592,24 @@ const orderHasBatchErrors = (order) => {
             <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
               {order.delivery_day === 'tbc' ? 'tbc' : formatDeliveryDay(order.delivery_day)}
             </div>
+            <div>{orderCustomer?.delivery_region || '—'}</div>
           </button>
         </div>
-        ))
+        )})
       ):(
         <p className='py-3'>Loading orders...</p>
       )}
+    </div>
+    <div className="pagination">
+      {Array.from({ length: Math.ceil(orders.length / ordersPerPage) }, (_, index) => (
+        <button
+          key={index + 1}
+          className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
+          onClick={() => setCurrentPage(index + 1)}
+        >
+          {index + 1}
+        </button>
+      ))}
     </div>
     {selectedOrder && (
         <div className='modal'>
@@ -610,7 +636,8 @@ const orderHasBatchErrors = (order) => {
                       <>{customerInfo.postcode}<br/></>
                     )}
                   </div>
-              <strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}
+              <p><strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}</p>
+              <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
             </div>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>

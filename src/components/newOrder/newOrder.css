@@ -13,6 +13,17 @@
   background-color: var(--bertha);
   padding: 20px;
 }
+.email {
+  display: flex;
+  align-items: start;
+  justify-content: flex-start;
+}
+.emailBox {
+  width: 100%;
+}
+.editIcon {
+  padding: 0.5%;
+}
 
 @media (max-width: 530px) {
   .newOrderForm {

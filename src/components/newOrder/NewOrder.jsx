@@ -7,6 +7,8 @@ import Row from 'react-bootstrap/Row';
 import dayjs from 'dayjs';
 import { app, db } from '../firebase/firebase';
 import { addDoc, getDocs, collection, serverTimestamp, updateDoc, doc} from '@firebase/firestore';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEdit } from '@fortawesome/free-solid-svg-icons';
 
 
 // Hook customer name and account ID
@@ -19,9 +21,13 @@ const [pizzaData, setPizzaData] = useState([]);
 const [filterCriteria, setFilterCriteria] = useState("withSleeve");
 const [customDeliveryWeek, setCustomDeliveryWeek] = useState("");
 const [customerData, setCustomerData] = useState("");
-const [customerAddress, setCustomerAddress] = useState("")
+const [customerAddress, setCustomerAddress] = useState("");
+const [customerEmail, setCustomerEmail] = useState("");
+const [editableEmail, setEditableEmail] = useState("");
+const [editingEmail, setEditingEmail] = useState(false);
 const [stock, setStock] = useState([])
 const [submitting, setSubmitting] = useState(false);
+const [purchaseOrder, setPurchaseOrder] = useState('');
 
 const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
@@ -108,6 +114,7 @@ useEffect(() => {
       if (customer) {
         setCustomerAddress(`${customer.name_number} ${customer.street}, ${customer.city}, ${customer.postcode}`);
         setFilterCriteria(customer.default_pizza_view || "withSleeve");
+        setEditableEmail(customer.email);
       } else {
         setCustomerAddress("");
         setFilterCriteria("withSleeve");
@@ -145,6 +152,10 @@ useEffect(() => {
     }
   }
   
+
+  const handleSaveEmail = () => {
+  setEditingEmail(false);
+  };
 
 
 
@@ -207,19 +218,23 @@ const handleDateChange = (e) => {
 
 
 //form submit
-const handleSubmit = async (event) => {
+const handleSubmit = async (event) => {  
   event.preventDefault();
   const form = event.currentTarget;
-
+  
   if (form.checkValidity() === false) {
     event.preventDefault();
     event.stopPropagation();
     return;
   }
-
+  if (!editableEmail || !editableEmail.includes('@')) {
+    alert("Please enter a valid email address.");
+    setSubmitting(false);
+    return;
+  }
   setValidated(true);
   setSubmitting(true); // ✅ prevent further submissions
-
+  
   // Your pizza and stock logic...
   const pizzas = filteredPizzaData.reduce((acc, pizza) => {
     const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
@@ -234,6 +249,10 @@ const handleSubmit = async (event) => {
     return acc;
   }, {});
 
+  const finalPO = purchaseOrder.trim() !== '' 
+  ? purchaseOrder.trim() 
+  : `AUTO-${dayjs().format('YYYYMMDD-HHmmss')}`;
+
   try {
     const docRef = await addDoc(collection(db, "orders"), {
       timestamp: serverTimestamp(),
@@ -242,6 +261,8 @@ const handleSubmit = async (event) => {
       delivery_day: "tbc",
       account_ID: accountID,
       customer_name: customerName,
+      customer_email: editableEmail,
+      purchase_order: finalPO,
       pizzas: pizzas,
       pizzaTotal: totalPizzas,
       additional_notes: document.getElementById('additonalNotes').value,
@@ -272,6 +293,29 @@ return (
       <p className='today'>{today}</p>
       <p>Account ID: {accountID} </p>
       <p>Address: {customerAddress} </p>
+      <div className='email'>
+        {editingEmail ? (
+        <>
+          <input
+            type='email'
+            className='emailBox'
+            value={editableEmail}
+            onChange={(e) => setEditableEmail(e.target.value)}
+            onBlur={handleSaveEmail}
+            autoFocus
+          />
+        </>
+      ) : (
+        <>
+          <p>Email: {editableEmail}</p>
+          <FontAwesomeIcon
+            icon={faEdit}
+            className='icon editIcon'
+            onClick={() => setEditingEmail(true)}
+          />
+        </>
+      )}
+      </div>
 
       <fieldset>
       <Form.Group as={Row} className="mb-3">
@@ -329,6 +373,19 @@ return (
         </Col>
       </Form.Group>
     </fieldset>
+    <Form.Group as={Row} className="mb-3" controlId="purchaseOrder">
+      <Form.Label column sm={3}>
+        <h5>Purchase Order:</h5>
+      </Form.Label>
+      <Col sm={9}>
+        <Form.Control
+          type="text"
+          placeholder="(Optional)"
+          value={purchaseOrder}
+          onChange={(e) => setPurchaseOrder(e.target.value)}
+        />
+      </Col>
+    </Form.Group>
       <Form.Label><h5> Pizzas: </h5></Form.Label>
     <fieldset>
     <Form.Group as={Row} className="mb-3">
