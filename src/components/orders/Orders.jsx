@@ -95,6 +95,12 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   order.pizzas[pizzaId].batchesUsed = batches;
   setSelectedOrder(order);
 
+  await syncPizzaAllocation({
+    pizzaId,
+    batchCode,
+    quantity: newQuantity
+  });
+
   try {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaId}.batchesUsed`]: batches,
@@ -274,6 +280,29 @@ const updateDeliveryDate = async (orderId, newDate) => {
   };
 
 
+    const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
+      const batchDoc = batches.find(b => b.batch_code === batchCode);
+      if (!batchDoc) return;
+      const allocations = batchDoc.pizza_allocations || [];
+      const orderId = selectedOrder.id;
+      // Remove any existing allocation for this order/pizza/batch
+      const filtered = allocations.filter(
+        a => !(a.orderId === orderId && a.pizzaId === pizzaId)
+      );
+      // If quantity is > 0, re-add it
+      if (quantity > 0) {
+        filtered.push({ orderId, pizzaId, quantity });
+      }
+      try {
+        await updateDoc(doc(db, "batches", batchDoc.id), {
+          pizza_allocations: filtered
+        });
+      } catch (error) {
+        console.error("Error syncing pizza allocation:", error);
+      }
+    };
+
+
     const markSelectedAsPacked = async (orderIds = selectedOrders) => {
       try {
         const batch = writeBatch(db);
@@ -292,38 +321,51 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
 
   const handleBatchClick = async (pizzaName, batchCode) => {
-    const currentBatches = [...selectedOrder.pizzas[pizzaName].batchesUsed];
-    const index = currentBatches.findIndex(b => b.batch_number === batchCode);
-    const totalQty = selectedOrder.pizzas[pizzaName].quantity;
-    let newBatches;
-      if (isSplitChecked) {
-        // Toggle selection in multi mode
-        if (index !== -1) {
-          newBatches = currentBatches.filter(b => b.batch_number !== batchCode);
-        } else {
-          newBatches = [...currentBatches, { batch_number: batchCode, quantity: 0 }];
-        }
-        } else {
-            // single select mode
-            if (index !== -1) {
-              // Already selected → deselect
-              newBatches = [];
-            } else {
-              // Not selected → select it
-              newBatches = [{ batch_number: batchCode, quantity: totalQty }];
-            }
-          }
-      const updatedOrder = { ...selectedOrder };
-      updatedOrder.pizzas[pizzaName].batchesUsed = newBatches;
-      setSelectedOrder(updatedOrder);
-      try {
-        await updateDoc(doc(db, "orders", selectedOrder.id), {
-          [`pizzas.${pizzaName}.batchesUsed`]: newBatches,
-        });
-      } catch (error) {
-        console.error("Error updating batch assignment:", error);
-      }
-    };
+  const currentBatches = [...selectedOrder.pizzas[pizzaName].batchesUsed];
+  const index = currentBatches.findIndex(b => b.batch_number === batchCode);
+  const totalQty = selectedOrder.pizzas[pizzaName].quantity;
+
+  let newBatches;
+  let newQuantity = 0;
+
+  if (isSplitChecked) {
+    if (index !== -1) {
+      // deselect
+      newBatches = currentBatches.filter(b => b.batch_number !== batchCode);
+      newQuantity = 0;
+    } else {
+      newBatches = [...currentBatches, { batch_number: batchCode, quantity: 0 }];
+      newQuantity = 0;
+    }
+  } else {
+    if (index !== -1) {
+      newBatches = []; // deselect
+      newQuantity = 0;
+    } else {
+      newBatches = [{ batch_number: batchCode, quantity: totalQty }];
+      newQuantity = totalQty;
+    }
+  }
+
+  const updatedOrder = { ...selectedOrder };
+  updatedOrder.pizzas[pizzaName].batchesUsed = newBatches;
+  setSelectedOrder(updatedOrder);
+
+  try {
+    await updateDoc(doc(db, "orders", selectedOrder.id), {
+      [`pizzas.${pizzaName}.batchesUsed`]: newBatches,
+    });
+
+    await syncPizzaAllocation({
+      pizzaId: pizzaName,
+      batchCode,
+      quantity: newQuantity
+    });
+  } catch (error) {
+    console.error("Error updating batch assignment:", error);
+  }
+};
+
 
 
 
