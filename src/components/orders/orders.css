@@ -188,10 +188,44 @@ input:checked + .slider:before {
   margin-bottom: 8px;
 }
 
+.batchButtonContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.batchButton {
+  border: 2px solid #ccc;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  min-width: 100px;
+  background: white;
+  font-size: 12px;
+}
+
+.batchButton.selected {
+  background: black;
+  color: white;
+  border-color: black;
+}
+
+.batchButton.faded {
+  opacity: 0.3;
+  cursor: pointer;
+}
+
+.batchButton select {
+  margin-top: 5px;
+  font-size: 12px;
+}
 
 
 
-.tbc {
+
+.pizzasOrdered .tbc, .tbc {
   color: red;
   font-style: italic;
   font-size: 12pt;

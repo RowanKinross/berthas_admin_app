@@ -19,9 +19,6 @@ function Orders() {
   const [batches, setBatches] = useState({});
   const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
   const [deliveryDateInput, setDeliveryDateInput] = useState('');
-  const [editingBatch, setEditingBatch] = useState({ pizzaId: null, batchIndex: null });
-  const isEditingBatch = (pizzaId, batchIndex) =>
-    editingBatch.pizzaId === pizzaId && editingBatch.batchIndex === batchIndex;
   const modalRef = useRef(null)
   const [customerInfo, setCustomerInfo] = useState(null);
   const [allCustomers, setAllCustomers] = useState({})
@@ -29,9 +26,6 @@ function Orders() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [batchErrors, setBatchErrors] = useState({});
-  const [editingQuantity, setEditingQuantity] = useState({ pizzaName: null, batchIndex: null });
-  const isEditingQuantity = (pizzaName, i) =>
-    editingQuantity.pizzaName === pizzaName && editingQuantity.batchIndex === i;
   const [isSplitChecked, setIsSplitChecked] = useState(false);
 
 
@@ -89,20 +83,18 @@ const formatBatchDate = (code) => {
 };
 
 
-const handleBatchQuantityChange = async (pizzaId, changedIndex, newQuantity) => {
+const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   const order = { ...selectedOrder };
   const pizza = order.pizzas[pizzaId];
-  const total = pizza.quantity;
-  const otherIndex = changedIndex === 0 ? 1 : 0;
   const batches = [...pizza.batchesUsed];
-  // Auto-correct if the number is invalid
-  if (isNaN(newQuantity) || newQuantity < 0 || newQuantity > total) return;
-  // Calculate remaining for the other batch
-  const otherQuantity = total - newQuantity;
-  batches[changedIndex].quantity = newQuantity;
-  batches[otherIndex].quantity = otherQuantity;
+  const index = batches.findIndex(b => b.batch_number === batchCode);
+
+  if (index === -1) return;
+
+  batches[index].quantity = newQuantity;
   order.pizzas[pizzaId].batchesUsed = batches;
   setSelectedOrder(order);
+
   try {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaId}.batchesUsed`]: batches,
@@ -111,6 +103,7 @@ const handleBatchQuantityChange = async (pizzaId, changedIndex, newQuantity) => 
     console.error("Error updating batch quantities in Firestore:", error);
   }
 };
+
 
 
 
@@ -298,72 +291,41 @@ const updateDeliveryDate = async (orderId, newDate) => {
     };
 
 
-    const handleBatchNumberUpdate = async ({ orderId, pizzaId, batchIndex, batchNumber }) => {
-      const orderRef = doc(db, "orders", orderId);
-      try {
-        const orderSnap = await getDoc(orderRef);
-        if (!orderSnap.exists()) throw new Error("Order not found");
-
-        const orderData = orderSnap.data();
-        const batchesUsed = orderData.pizzas?.[pizzaId]?.batchesUsed || [];
-        const selectedBatch = batchesUsed[batchIndex];
-        const quantityOrdered = selectedBatch.quantity;
-        const prevBatchCode = selectedBatch.batch_number;
-
-        // Update order: set new batch_number (could be empty string to clear)
-        selectedBatch.batch_number = batchNumber;
-        await updateDoc(orderRef, {
-          [`pizzas.${pizzaId}.batchesUsed`]: batchesUsed
-        });
-
-        // Remove allocation from previous batch if necessary
-        if (prevBatchCode && prevBatchCode !== batchNumber) {
-          const prevBatchDoc = batches.find(b => b.batch_code === prevBatchCode);
-          if (prevBatchDoc) {
-            const updatedAllocations = (prevBatchDoc.pizza_allocations || []).filter(
-              a => !(a.orderId === orderId && a.pizzaId === pizzaId && a.quantity === quantityOrdered)
-            );
-            await updateDoc(doc(db, "batches", prevBatchDoc.id), {
-              pizza_allocations: updatedAllocations
-            });
-          }
+  const handleBatchClick = async (pizzaName, batchCode) => {
+    const currentBatches = [...selectedOrder.pizzas[pizzaName].batchesUsed];
+    const index = currentBatches.findIndex(b => b.batch_number === batchCode);
+    const totalQty = selectedOrder.pizzas[pizzaName].quantity;
+    let newBatches;
+      if (isSplitChecked) {
+        // Toggle selection in multi mode
+        if (index !== -1) {
+          newBatches = currentBatches.filter(b => b.batch_number !== batchCode);
+        } else {
+          newBatches = [...currentBatches, { batch_number: batchCode, quantity: 0 }];
         }
-
-        // If a new batch was selected, add it (if not already present)
-        if (batchNumber) {
-          const newBatchDoc = batches.find(b => b.batch_code === batchNumber);
-          if (newBatchDoc) {
-            const existingAllocations = newBatchDoc.pizza_allocations || [];
-            const alreadyAllocated = existingAllocations.some(
-              a => a.orderId === orderId && a.pizzaId === pizzaId && a.quantity === quantityOrdered
-            );
-            if (!alreadyAllocated) {
-              const newAllocations = [...existingAllocations, {
-                orderId,
-                pizzaId,
-                quantity: quantityOrdered
-              }];
-              await updateDoc(doc(db, "batches", newBatchDoc.id), {
-                pizza_allocations: newAllocations
-              });
+        } else {
+            // single select mode
+            if (index !== -1) {
+              // Already selected → deselect
+              newBatches = [];
+            } else {
+              // Not selected → select it
+              newBatches = [{ batch_number: batchCode, quantity: totalQty }];
             }
           }
-        }
-
-        // Re-fetch updated order after assigning the batch
-        const updatedOrderSnap = await getDoc(orderRef);
-        const updatedOrder = updatedOrderSnap.data();
-
-        // Update order status if fully allocated
-        if (allPizzasAllocated(updatedOrder)) {
-          await updateDoc(orderRef, { order_status: "ready to pack" });
-          console.log("✅ Order status updated to 'ready to pack'");
-        }
-
+      const updatedOrder = { ...selectedOrder };
+      updatedOrder.pizzas[pizzaName].batchesUsed = newBatches;
+      setSelectedOrder(updatedOrder);
+      try {
+        await updateDoc(doc(db, "orders", selectedOrder.id), {
+          [`pizzas.${pizzaName}.batchesUsed`]: newBatches,
+        });
       } catch (error) {
         console.error("Error updating batch assignment:", error);
       }
     };
+
+
 
 
 
@@ -612,7 +574,6 @@ const updateDeliveryDate = async (orderId, newDate) => {
                 <input 
                   type="checkbox"
                   checked={isSplitChecked}
-                  disabled="true"
                   onChange={(e) => setIsSplitChecked(e.target.checked)}
                 />
                 <span class="slider round"></span>
@@ -623,91 +584,57 @@ const updateDeliveryDate = async (orderId, newDate) => {
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
                 <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
-                <p>{pizzaData.quantity}</p>
-              </div>
+                <p>{pizzaData.quantity} </p>
+              </div>    
+                {/* Show error if no batch selected */}
+                {pizzaData.batchesUsed.length === 0 ||
+                pizzaData.batchesUsed.every(b => !b.batch_number) ? (
+                  <p className='tbc'>*select batch</p>
+                ) : null}
 
-              {/* Then show all batch allocations */}
-              {pizzaData.batchesUsed.map((batch, i) => (
-                <div key={i} className='flexRow'>
-                <span onClick={() => setEditingQuantity({ pizzaName, batchIndex: i })}>
-                  {isEditingQuantity(pizzaName, i) ? (
-                    <input
-                      type="number"
-                      value={batch.quantity}
-                      min={0}
-                      onChange={(e) => handleBatchQuantityChange(pizzaName, i, parseInt(e.target.value))}
-                      onBlur={() => setEditingQuantity({ pizzaName: null, batchIndex: null })}
-                      autoFocus
-                    />
-                  ) : (
-                    <span className="clickable">{batch.quantity} x</span>
-                  )}
-                </span>
-                  <span className='flexRow'>batch code:</span>
-                  {isEditingBatch(pizzaName, i) ? (
-                    <select
-                      value={batch.batch_number || ""}
-                      onChange={async (e) => {
-                        const selectedBatchCode = e.target.value;
+              <div className="batchButtonContainer">
+              {batches
+                .filter(batch => {
+                  const pizza = batch.pizzas.find(p => p.id === pizzaName);
+                  return pizza && getAvailableQuantity(batch, pizzaName, selectedOrder.id) > 0;
+                })
+                .map((batch, i) => {
+                  const isSelected = pizzaData.batchesUsed.some(b => b.batch_number === batch.batch_code);
+                  const selectedBatch = pizzaData.batchesUsed.find(b => b.batch_number === batch.batch_code);
+                  const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
+                  const quantity = selectedBatch?.quantity || 0;
+                  const hasSelection = pizzaData.batchesUsed.some(b => !!b.batch_number);
 
-                        await handleBatchNumberUpdate({
-                          orderId: selectedOrder.id,
-                          pizzaId: pizzaName,
-                          batchIndex: i,
-                          batchNumber: selectedBatchCode,
-                        });
-
-                        const updatedOrder = { ...selectedOrder };
-                        updatedOrder.pizzas[pizzaName].batchesUsed[i].batch_number = selectedBatchCode;
-
-                        if (allPizzasAllocated(updatedOrder)) {
-                          updatedOrder.order_status = "ready to pack";
-                        }
-
-                        setSelectedOrder(updatedOrder);
-                        setEditingBatch({ pizzaId: null, batchIndex: null });
-                        fetchOrdersAgain();
-                      }}
-                      onBlur={() => setEditingBatch({ pizzaId: null, batchIndex: null })}
-                      autoFocus
+                  return (
+                    <div
+                      key={i}
+                      className={`batchButton 
+                        ${isSelected ? 'selected' : ''} 
+                        ${!isSplitChecked && hasSelection && !isSelected ? 'faded' : ''}`}
+                      onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
                     >
-                      <option value="">Select batch</option>
-                      {batches
-                        .filter(batch => {
-                          const pizza = batch.pizzas.find(p => p.id === pizzaName);
-                          const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
-                          return pizza && available > 0; // only include if available > 0
-                          })
-                        .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
-                        .map((batch, i) => {
-                          const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
-                          return (
-                            <option
-                              key={batch.id || i}
-                              value={batch.batch_code}
-                              disabled={available <= 0}
-                            >
-                              {batch.batch_code} — ({available} of {batch.pizzas.find(p => p.id === pizzaName)?.quantity || 0} available)
-                            </option>
-                          );
-                        })}
-                    </select>
-                  ) : (
-                    <span
-                      className="clickable"
-                      onClick={() => setEditingBatch({ pizzaId: pizzaName, batchIndex: i })}
-                    >
-                      {batch.batch_number || <em className='tbc'>select batch</em>}
-                    </span>
-                  )}
-                </div>
-              ))}
-              {pizzaData.batchesUsed.length < 2 && isSplitChecked &&(
-                <div className='plus plusArch' onClick={() => handleAddBatchCode(pizzaName)}> + </div>
-              )}
-              {batchErrors[pizzaName] && (
-                <p className="error">{batchErrors[pizzaName]}</p>
-              )}
+                      <div className="batchLabel">
+                        {batch.batch_code} <br /> ({available} available)
+                      </div>
+
+                      {isSplitChecked && isSelected && (
+                        <input
+                          type="number"
+                          min={0}
+                          max={available}
+                          value={quantity === 0 ? "" : quantity}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            handleBatchQuantityChange(pizzaName, batch.batch_code, isNaN(val) ? 0 : val);
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+
             </div>
           ))}
 
