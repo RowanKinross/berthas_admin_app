@@ -38,8 +38,8 @@ useEffect(() => {
       const customerMap = {};
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.account_ID && data.customer) {
-          customerMap[data.account_ID] = data.customer;
+        if (data.account_ID) {
+          customerMap[data.account_ID] = data;
         }
       });
       setAllCustomers(customerMap);
@@ -542,11 +542,15 @@ const orderHasBatchErrors = (order) => {
         <div>No. of Pizzas:</div>
         <div className='orderStatus'>Order Status:</div>
         <div>Delivery Day:</div>
+        <div>Region:</div>
       </div>
 
-      {orders.length > 0 ? (
-        sortOrders(orders).map(order => (
-          
+    {orders.length > 0 ? (
+      sortOrders(orders).map(order => {  
+      const orderCustomer = allCustomers[order.account_ID];
+
+
+      return(
           <div className="orderRow" key={order.id}>
             {selectMode && (
               <div className="checkbox-wrapper">
@@ -556,13 +560,14 @@ const orderHasBatchErrors = (order) => {
                   onChange={() => {
                     setSelectedOrders(prev =>
                       prev.includes(order.id)
-                        ? prev.filter(id => id !== order.id)
-                        : [...prev, order.id]
+                      ? prev.filter(id => id !== order.id)
+                      : [...prev, order.id]
                     );
                   }}
-                />
+                  />
               </div>
             )}
+            
           <button 
             key={order.id}
             className={`orderButton button 
@@ -571,6 +576,7 @@ const orderHasBatchErrors = (order) => {
               ${order.order_status === 'packed' ? 'packed' : ''}
               `}
               onClick={() => handleOrderClick(order)}
+              
               >
             <div>{order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
@@ -578,9 +584,10 @@ const orderHasBatchErrors = (order) => {
             <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
               {order.delivery_day === 'tbc' ? 'tbc' : formatDeliveryDay(order.delivery_day)}
             </div>
+            <div>{orderCustomer?.delivery_region || '—'}</div>
           </button>
         </div>
-        ))
+        )})
       ):(
         <p className='py-3'>Loading orders...</p>
       )}
