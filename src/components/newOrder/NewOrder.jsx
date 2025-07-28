@@ -27,6 +27,7 @@ const [editableEmail, setEditableEmail] = useState("");
 const [editingEmail, setEditingEmail] = useState(false);
 const [stock, setStock] = useState([])
 const [submitting, setSubmitting] = useState(false);
+const [purchaseOrder, setPurchaseOrder] = useState('');
 
 const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
@@ -248,6 +249,10 @@ const handleSubmit = async (event) => {
     return acc;
   }, {});
 
+  const finalPO = purchaseOrder.trim() !== '' 
+  ? purchaseOrder.trim() 
+  : `AUTO-${dayjs().format('YYYYMMDD-HHmmss')}`;
+
   try {
     const docRef = await addDoc(collection(db, "orders"), {
       timestamp: serverTimestamp(),
@@ -257,6 +262,7 @@ const handleSubmit = async (event) => {
       account_ID: accountID,
       customer_name: customerName,
       customer_email: editableEmail,
+      purchase_order: finalPO,
       pizzas: pizzas,
       pizzaTotal: totalPizzas,
       additional_notes: document.getElementById('additonalNotes').value,
@@ -367,6 +373,19 @@ return (
         </Col>
       </Form.Group>
     </fieldset>
+    <Form.Group as={Row} className="mb-3" controlId="purchaseOrder">
+      <Form.Label column sm={3}>
+        <h5>Purchase Order:</h5>
+      </Form.Label>
+      <Col sm={9}>
+        <Form.Control
+          type="text"
+          placeholder="(Optional)"
+          value={purchaseOrder}
+          onChange={(e) => setPurchaseOrder(e.target.value)}
+        />
+      </Col>
+    </Form.Group>
       <Form.Label><h5> Pizzas: </h5></Form.Label>
     <fieldset>
     <Form.Group as={Row} className="mb-3">

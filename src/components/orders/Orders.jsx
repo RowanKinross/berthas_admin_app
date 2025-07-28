@@ -610,7 +610,8 @@ const orderHasBatchErrors = (order) => {
                       <>{customerInfo.postcode}<br/></>
                     )}
                   </div>
-              <strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}
+              <p><strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}</p>
+              <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
             </div>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>

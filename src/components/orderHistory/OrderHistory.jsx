@@ -248,6 +248,7 @@ const OrderHistory = ({ accountID }) => {
                 <p>{selectedOrder.account_ID}</p>
                 <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
                 <p><strong>Email: </strong> {selectedOrder.email}</p>
+                <p><strong>PO:</strong> {selectedOrder.purchase_order}</p>
                 <div><strong>Address:</strong><br />
                   <div className='displayAddress'>
                     {customerInfo?.customer || 'N/A'} <br/>
