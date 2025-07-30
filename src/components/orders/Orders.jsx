@@ -485,41 +485,73 @@ const handlePrintClick = () => {
   const date = formatDate(order.timestamp);
   const address = [
     order.customer_name,
-    order.name_number,
-    order.street,
-    order.city,
-    order.postcode,
+    // order.name_number,
+    // order.street,
+    // order.city,
+    // order.postcode,
     'GBR'
   ].filter(Boolean).join('<br/>');
 
   let html = `
-    <html>
-      <head>
-        <title>Packing Slip</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          .order-block { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
-          h3 { margin-top: 0; }
-        </style>
-      </head>
-      <body>
-        <div class="order-block">
-          <h2 style="text-align: center;">PACKING SLIP</h2>
-          <h3>${customerName}</h3>
-          <strong>Deliver to</strong><br/>
-          <p>${address}</p>
-          <strong>Invoice Date:</strong> ${date}<br/>
-          <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
-          <strong>Reference:</strong> ${po}<br/><br/>
-          <strong>Bill to</strong><br/>
-          <p>${address}</p>
-          <strong>Bertha's At Home</strong><br/>
-          accounts@berthas.co.uk<br/>sales@berthas.co.uk<br/>
-          <strong>VAT Number:</strong>
-          <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>
-        </div>
-      </body>
-    </html>`;
+  <div style="page-break-after: always; font-family: Arial, sans-serif; font-size: 14px; padding: 40px; max-width: 700px; margin: auto;">
+
+    <div style="text-align: center; margin-bottom: 20px;">
+      <img src="/bertha_logo.png" style="max-height: 80px;" />
+    </div>
+    <h2 style=" margin-bottom: 30px;">PACKING SLIP</h2>
+
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+      <div style="border: 1px solid #000; padding: 10px; width: 48%;">
+        <strong>Deliver to</strong><br/>
+        ${address}
+      </div>
+      <div style=" padding: 10px; width: 48%;">
+        <strong>Bill to</strong><br/>
+        ${address}
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+      <div style="margin-bottom: 20px;">
+        <strong>Invoice Date:</strong> ${date}<br/>
+        <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
+        <strong>Reference:</strong> PO ${po}
+      </div>
+      <div style="margin-bottom: 20px;">
+        <strong>Bertha's At Home</strong><br/>
+        accounts@berthas.co.uk<br/>
+        sales@berthas.co.uk<br/>
+        <strong>VAT Number:</strong> 458323187
+      </div>
+    </div>
+
+    <table style="width:100%; border-collapse: collapse;">
+      <thead style="border-bottom: 2px solid #000;">
+        <tr>
+          <th style="text-align: left; padding: 6px 0;">Description</th>
+          <th style="text-align: left; padding: 6px 0;">Quantity</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+
+      Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
+    const pizzaName = pizzaTitles[pizzaId] || pizzaId;
+    pizzaData.batchesUsed.forEach(b => {
+      const batchDate = formatBatchDate(b.batch_number); // e.g., 26.06.2025
+      const quantity = parseFloat(b.quantity || 0).toFixed(2);
+      html += `
+          <tr>
+            <td style="padding: 4px 0;">${pizzaName} ${batchDate}</td>
+            <td style="padding: 4px 0;">${quantity}</td>
+          </tr>`;
+    });
+  });
+
+  html += `
+        </tbody>
+      </table>
+    </div>`;
 
     const printWindow = window.open('', '', 'width=800,height=600');
     printWindow.document.write(html);
