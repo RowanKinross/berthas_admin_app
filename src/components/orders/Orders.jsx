@@ -120,94 +120,6 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
 
 
-
-
-
-const handlePrintClick = async () => {
-  const selected = orders.filter(o => selectedOrders.includes(o.id));
-  const container = document.getElementById('packing-slip-preview');
-
-  let html = '';
-
-  selected.forEach(order => {
-    const customer = allCustomers[order.account_ID] || {};
-    const po = order.purchase_order || '—';
-    const date = formatDate(order.timestamp);
-    const address = [
-      customer.customer,
-      customer.name_number,
-      customer.street,
-      customer.city,
-      customer.postcode,
-      'GBR'
-    ].filter(Boolean).join('<br/>');
-
-    html += `
-      <div style="page-break-after: always; margin-bottom: 40px;">
-        <h2 style="text-align: center;">PACKING SLIP</h2>
-        <strong>Deliver to</strong><br/>
-        <p>${address}</p>
-        <strong>Invoice Date:</strong> ${date}<br/>
-        <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
-        <strong>Reference:</strong> ${po}<br/><br/>
-        <strong>Bill to</strong><br/>
-        <p>${address}</p>
-        <strong>Bertha's At Home</strong><br/>
-        accounts@berthas.co.uk<br/>sales@berthas.co.uk<br/>
-        <strong>VAT Number:</strong> 458323187
-
-        <table style="width:100%; border-collapse: collapse; margin-top: 20px;">
-          <thead style="background: #f5f5f5;">
-            <tr>
-              <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Description</th>
-              <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Batch Date</th>
-            </tr>
-          </thead>
-          <tbody>`;
-
-    Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
-      const pizzaName = pizzaTitles[pizzaId] || pizzaId;
-      pizzaData.batchesUsed.forEach((b, index) => {
-        const batchDate = formatBatchDate(b.batch_number);
-        const label = index === 0 ? `${pizzaName} (${pizzaData.quantity})` : '';
-        html += `
-          <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${label}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${batchDate}</td>
-          </tr>`;
-      });
-    });
-
-    html += `</tbody></table></div>`;
-  });
-
-  // Inject HTML into a visible off-screen container
-  container.innerHTML = html;
-  container.style.display = 'block'; // just in case
-  container.style.position = 'absolute';
-  container.style.top = '-9999px';
-  container.style.left = '-9999px';
-
-  setPackingHtml(html);
-
-  // Wait for browser to render it
-  await new Promise(resolve => setTimeout(resolve, 200));
-
-  // const container = document.getElementById('packing-slip-preview');
-  const canvas = await html2canvas(container, { scale: 2 });
-  const imgData = canvas.toDataURL('image/png');
-
-  const pdf = new jsPDF('p', 'pt', 'a4');
-  const imgProps = pdf.getImageProperties(imgData);
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-  pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-  pdf.output('dataurlnewwindow');
-};
-
-
-
   useEffect(() => {
   const handleClickOutside = (event) => {
     if (modalRef.current && !modalRef.current.contains(event.target)) {
@@ -215,7 +127,6 @@ const handlePrintClick = async () => {
       setViewModal(false);
     }
   };
-
   document.addEventListener('mousedown', handleClickOutside);
   return () => {
     document.removeEventListener('mousedown', handleClickOutside);
@@ -524,7 +435,7 @@ const orderHasBatchErrors = (order) => {
 
 
 
-
+// PACKING LIST
   const generatePDF = () => {
     const selected = orders.filter(o => selectedOrders.includes(o.id));
 
@@ -563,6 +474,65 @@ const orderHasBatchErrors = (order) => {
     printWindow.print();
     printWindow.close();
   };
+
+
+// PACKING SLIP 
+const handlePrintClick = () => {
+  const order = selectedOrder;
+
+  const customerName = order.customer_name || order.account_ID;
+  const po = order.purchase_order || '—';
+  const date = formatDate(order.timestamp);
+  const address = [
+    order.customer_name,
+    order.name_number,
+    order.street,
+    order.city,
+    order.postcode,
+    'GBR'
+  ].filter(Boolean).join('<br/>');
+
+  let html = `
+    <html>
+      <head>
+        <title>Packing Slip</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          .order-block { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
+          h3 { margin-top: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="order-block">
+          <h2 style="text-align: center;">PACKING SLIP</h2>
+          <h3>${customerName}</h3>
+          <strong>Deliver to</strong><br/>
+          <p>${address}</p>
+          <strong>Invoice Date:</strong> ${date}<br/>
+          <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
+          <strong>Reference:</strong> ${po}<br/><br/>
+          <strong>Bill to</strong><br/>
+          <p>${address}</p>
+          <strong>Bertha's At Home</strong><br/>
+          accounts@berthas.co.uk<br/>sales@berthas.co.uk<br/>
+          <strong>VAT Number:</strong>
+          <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>
+        </div>
+      </body>
+    </html>`;
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+};
+
+
+
+
+
 
   
   return (
@@ -850,19 +820,6 @@ const orderHasBatchErrors = (order) => {
         </div>
         </div>
       )}
-      <div
-        id="packing-slip-preview"
-        dangerouslySetInnerHTML={{ __html: packingHtml }}
-        style={{
-          position: 'absolute',
-          top: '-9999px',
-          left: '-9999px',
-          width: '794px',
-          padding: '40px',
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '14px'
-        }}
-      />
   </div>
   )
 }
