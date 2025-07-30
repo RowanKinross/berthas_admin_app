@@ -536,7 +536,7 @@ const orderHasBatchErrors = (order) => {
     </style></head><body>`;
 
     selected.forEach(order => {
-      const customerName = allCustomers[order.account_ID] || order.account_ID;
+      const customerName = order.customer_name || order.account_ID ;
       html += `<div class="order-block">
         <h3>${customerName}</h3>
         <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
