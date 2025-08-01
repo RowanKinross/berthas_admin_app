@@ -8,6 +8,7 @@ import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
+import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -33,6 +34,13 @@ function Orders() {
   const ordersPerPage = 20;
 
   const [packingHtml, setPackingHtml] = useState('');
+
+  // format batchcode into a date as it appears on the sleeves
+const formatBatchCode = (code) => {
+  const parsed = dayjs(code, 'YYYYMMDD', true);
+  return parsed.isValid() ? parsed.format('DD.MM.YYYY') : code;
+};
+
 
 
 
@@ -683,7 +691,7 @@ const handlePrintClick = () => {
               onClick={() => handleOrderClick(order)}
               
               >
-            <div>{order.customer_name}</div>
+            <div title={order.additional_notes && order.additional_notes !== '...' ? order.additional_notes : ''}>{order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
             <div className='orderStatus'>{order.order_status}</div>
             <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
@@ -737,6 +745,7 @@ const handlePrintClick = () => {
               <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
             </div>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
+            <p><strong>Delivery Notes: </strong> {selectedOrder.additional_notes}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <div className='flexRow'>
               <strong className='space'>Delivery Day:</strong>{" "}
@@ -834,6 +843,7 @@ const handlePrintClick = () => {
                     batch.pizza_numbers_complete === true
                   );
                 })
+                .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
                 .map((batch, i) => {
                   const isSelected = pizzaData.batchesUsed.some(b => b.batch_number === batch.batch_code);
                   const selectedBatch = pizzaData.batchesUsed.find(b => b.batch_number === batch.batch_code);
@@ -850,7 +860,7 @@ const handlePrintClick = () => {
                       onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
                     >
                       <div className="batchLabel">
-                        {batch.batch_code} <br /> ({available} available)
+                        {formatBatchCode(batch.batch_code)} <br /> ({available} available)
                       </div>
 
                       {isSplitChecked && isSelected && (
@@ -882,17 +892,24 @@ const handlePrintClick = () => {
               <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
             </button>
             {!selectedOrder.complete && selectedOrder.order_status !== "order placed" && (
-              <button
-                className='button'
-                onClick={
-                  selectedOrder.order_status === "ready to pack"
-                    ? () => markSelectedAsPacked([selectedOrder.id]) // Pass single ID
-                    : handleComplete
-                }
-              >
-                {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
-              </button>
-            )}
+            <button
+              className="button"
+              onClick={
+                selectedOrder.order_status === "ready to pack"
+                  ? () => {
+                      markSelectedAsPacked([selectedOrder.id]); // ✅ update DB
+                      setSelectedOrder(prev => ({
+                        ...prev,
+                        order_status: "packed" // ✅ update local state
+                      }));
+                    }
+                  : handleComplete
+              }
+            >
+              {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
+            </button>
+          )}
+
           </div>
         </div>
         </div>
