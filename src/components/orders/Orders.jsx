@@ -270,6 +270,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
     const markSelectedAsPacked = async (orderIds = selectedOrders) => {
       try {
+        console.log(orderIds)
         const batch = writeBatch(db);
         orderIds.forEach(orderId => {
           const orderRef = doc(db, "orders", orderId);
@@ -281,6 +282,24 @@ const updateDeliveryDate = async (orderId, newDate) => {
         setSelectMode(false);
       } catch (error) {
         console.error("❌ Error marking orders as packed:", error);
+      }
+    };
+
+
+    const markSelectedAsComplete = async (orderIds = selectedOrders) => {
+      try {
+        const batch = writeBatch(db);
+        orderIds.forEach(orderId => {
+          const orderRef = doc(db, "orders", orderId);
+          batch.update(orderRef, { order_status: "complete", complete: true });
+        });
+
+        await batch.commit();
+        fetchOrdersAgain();
+        setSelectedOrders([]);
+        setSelectMode(false);
+      } catch (error) {
+        console.error("❌ Error marking orders as complete:", error);
       }
     };
 
@@ -479,27 +498,29 @@ const orderHasBatchErrors = (order) => {
 // PACKING SLIP 
 const handlePrintClick = () => {
   const order = selectedOrder;
-
-  const customerName = order.customer_name || order.account_ID;
   const po = order.purchase_order || '—';
   const date = formatDate(order.timestamp);
+
+  const customerData = allCustomers[order.account_ID] || {};
+  const customerName = customerData.name || order.customer_name || order.account_ID;
+
   const address = [
-    order.customer_name,
-    // order.name_number,
-    // order.street,
-    // order.city,
-    // order.postcode,
+    customerName,
+    customerData.name_number,
+    customerData.street,
+    customerData.city,
+    customerData.postcode,
     'GBR'
   ].filter(Boolean).join('<br/>');
 
   let html = `
   <div style="page-break-after: always; font-family: Arial, sans-serif; font-size: 14px; padding: 40px; max-width: 700px; margin: auto;">
 
-    <div style="text-align: center; margin-bottom: 20px;">
-      <img src="/bertha_logo.png" style="max-height: 80px;" />
-    </div>
-    <h2 style=" margin-bottom: 30px;">PACKING SLIP</h2>
-
+  <div style=" margin-bottom: 20px;">
+  <img src="/bertha_logo_bw.png" style="max-height: 80px;" />
+  </div>
+  
+  <h2 style="text-align: center; margin-bottom: 30px;">PACKING SLIP</h2>
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <div style="border: 1px solid #000; padding: 10px; width: 48%;">
         <strong>Deliver to</strong><br/>
@@ -553,12 +574,32 @@ const handlePrintClick = () => {
       </table>
     </div>`;
 
-    const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+    printWindow.onload = () => {
+    const logoImg = printWindow.document.querySelector('img');
+    
+    if (logoImg) {
+      logoImg.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      };
+      // Fallback in case onload never fires (e.g., cached images)
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }, 1000);
+    } else {
+      // No image? Just print
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
 };
 
 
@@ -589,8 +630,12 @@ const handlePrintClick = () => {
             Generate Packing List
           </button>
           {/* mark as packed */}
-          <button className="button" onClick={markSelectedAsPacked}>
+          <button className="button" onClick={() => markSelectedAsPacked()}>
             Mark as Packed
+          </button>
+          {/* mark as complete */}
+          <button className="button" onClick={() => markSelectedAsComplete()}>
+            Mark as complete
           </button>
         </div>
       )}
