@@ -8,6 +8,7 @@ import {faPrint} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
+import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -33,6 +34,13 @@ function Orders() {
   const ordersPerPage = 20;
 
   const [packingHtml, setPackingHtml] = useState('');
+
+  // format batchcode into a date as it appears on the sleeves
+const formatBatchCode = (code) => {
+  const parsed = dayjs(code, 'YYYYMMDD', true);
+  return parsed.isValid() ? parsed.format('DD.MM.YYYY') : code;
+};
+
 
 
 
@@ -834,6 +842,7 @@ const handlePrintClick = () => {
                     batch.pizza_numbers_complete === true
                   );
                 })
+                .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
                 .map((batch, i) => {
                   const isSelected = pizzaData.batchesUsed.some(b => b.batch_number === batch.batch_code);
                   const selectedBatch = pizzaData.batchesUsed.find(b => b.batch_number === batch.batch_code);
@@ -850,7 +859,7 @@ const handlePrintClick = () => {
                       onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
                     >
                       <div className="batchLabel">
-                        {batch.batch_code} <br /> ({available} available)
+                        {formatBatchCode(batch.batch_code)} <br /> ({available} available)
                       </div>
 
                       {isSplitChecked && isSelected && (
