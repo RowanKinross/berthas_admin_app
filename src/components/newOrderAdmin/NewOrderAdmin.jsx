@@ -1,9 +1,10 @@
-import './newOrder.css'
+import './newOrderAdmin.css'
 import { useState, useEffect } from 'react';
 import Button from 'react-bootstrap/Button';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
+import Dropdown from 'react-bootstrap/Dropdown';
 import dayjs from 'dayjs';
 import { app, db } from '../firebase/firebase';
 import { addDoc, getDocs, collection, serverTimestamp, updateDoc, doc} from '@firebase/firestore';
@@ -12,7 +13,7 @@ import { faEdit } from '@fortawesome/free-solid-svg-icons';
 
 
 // Hook customer name and account ID
-function  NewOrder({customerName, accountID}) {
+function  NewOrderAdmin({customerName, accountID}) {
 
 const [pizzaQuantities, setPizzaQuantities] = useState({});
 const [totalPizzas, setTotalPizzas] = useState(0)
@@ -20,7 +21,7 @@ const [additionalNotes, setAdditionalNotes] = useState("...");
 const [pizzaData, setPizzaData] = useState([]);
 const [filterCriteria, setFilterCriteria] = useState("withSleeve");
 const [customDeliveryWeek, setCustomDeliveryWeek] = useState("");
-const [customerData, setCustomerData] = useState("");
+const [customerData, setCustomerData] = useState([]);
 const [customerAddress, setCustomerAddress] = useState("");
 const [customerEmail, setCustomerEmail] = useState("");
 const [editableEmail, setEditableEmail] = useState("");
@@ -28,8 +29,11 @@ const [editingEmail, setEditingEmail] = useState(false);
 const [stock, setStock] = useState([])
 const [submitting, setSubmitting] = useState(false);
 const [purchaseOrder, setPurchaseOrder] = useState('');
-
 const [selectedCustomerId, setSelectedCustomerId] = useState(accountID || "");
+const [customerSearch, setCustomerSearch] = useState("");
+const [dropdownOpen, setDropdownOpen] = useState(false);
+
+
 
 const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
@@ -110,19 +114,21 @@ useEffect(() => {
   }, []);
 
 
-  useEffect(() => {
-    if (customerData) {
-      const customer = customerData.find(cust => cust.account_ID === accountID);
-      if (customer) {
-        setCustomerAddress(`${customer.name_number} ${customer.street}, ${customer.city}, ${customer.postcode}`);
-        setFilterCriteria(customer.default_pizza_view || "withSleeve");
-        setEditableEmail(customer.email);
-      } else {
-        setCustomerAddress("");
-        setFilterCriteria("withSleeve");
-      }
+
+useEffect(() => {
+  if (customerData && selectedCustomerId) {
+    const customer = customerData.find(c => c.account_ID === selectedCustomerId);
+    if (customer) {
+      setCustomerAddress(`${customer.name_number} ${customer.street}, ${customer.city}, ${customer.postcode}`);
+      setEditableEmail(customer.email);
+      setFilterCriteria(customer.default_pizza_view || "withSleeve");
+    } else {
+      setCustomerAddress("");
+      setEditableEmail("");
+      setFilterCriteria("withSleeve");
     }
-  }, [accountID, customerData]);
+  }
+}, [selectedCustomerId, customerData]);
 
 
 
@@ -261,8 +267,8 @@ const handleSubmit = async (event) => {
       order_placed_timestamp: dayjs().format('YYYY-MM-DD, HH:mm'),
       delivery_week: deliveryOption === 'other' ? customDeliveryWeek : deliveryOption,
       delivery_day: "tbc",
-      account_ID: accountID,
-      customer_name: customerName,
+      account_ID: selectedCustomerId,
+      customer_name: customerData.find(c => c.account_ID === selectedCustomerId)?.name || "",
       customer_email: editableEmail,
       purchase_order: finalPO,
       pizzas: pizzas,
@@ -282,6 +288,7 @@ const handleSubmit = async (event) => {
 
 
 
+
 // export default NewOrder
 return (
   <div className='newOrder'>
@@ -290,10 +297,52 @@ return (
     </div>
 
     <Form noValidate validated={validated} onSubmit={handleSubmit} className='newOrderForm'>
+    <Form.Group as={Row} className="mb-3">
+      <Form.Label column sm={3}><h5>Select Customer:</h5></Form.Label>
+      <Col sm={9}>
+        <Dropdown show={dropdownOpen} onToggle={() => setDropdownOpen(!dropdownOpen)}>
+          <Dropdown.Toggle className='button selectCustomerButton' variant="outline-primary" id="dropdown-customer-select">
+            {customerData.find(c => c.account_ID === selectedCustomerId)?.customer || "Select Customer"}
+          </Dropdown.Toggle>
 
-      <h4 className='orderFormFor'>Customer Name: {customerName} </h4> 
+          <Dropdown.Menu style={{ maxHeight: '250px', overflowY: 'auto' }}>
+            <Form.Control
+              type="text"
+              placeholder="Search Customers"
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              className="mx-3 my-2 w-auto"
+            />
+
+            <div className='customersScroll'>
+              {customerData
+                .filter(customer =>
+                  (customer.name || "").toLowerCase().includes(customerSearch.toLowerCase()) ||
+                  (customer.account_ID || "").toLowerCase().includes(customerSearch.toLowerCase())
+                )
+                .map((customer, index) => (
+                  <Dropdown.Item
+                    key={customer.id || index}
+                    onClick={() => {
+                      setSelectedCustomerId(customer.account_ID);
+                      setDropdownOpen(false);
+                      setCustomerSearch("");
+                    }}
+                  >
+                    {customer.customer || customer.account_ID}
+                  </Dropdown.Item>
+                ))}
+            </div>
+          </Dropdown.Menu>
+        </Dropdown>
+      </Col>
+    </Form.Group>
+
+      <h4 className='orderFormFor'>
+        Customer Name: {customerData.find(c => c.account_customer === selectedCustomerId)?.name || "—"}
+      </h4>
       <p className='today'>{today}</p>
-      <p>Account ID: {accountID} </p>
+      <p>Account ID: {selectedCustomerId || "—"}</p>
       <p>Address: {customerAddress} </p>
       <div className='email'>
         {editingEmail ? (
@@ -479,4 +528,4 @@ return (
 }
 
 
-export default NewOrder;
+export default NewOrderAdmin;
