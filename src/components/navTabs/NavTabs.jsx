@@ -128,6 +128,24 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
     fetchCustomers();
   }, []);
 
+// reset form on modal open & close
+  useEffect(() => {
+  if (addCustomer) {
+    resetCustomerForm(); // clear fields every time modal opens
+  }
+}, [addCustomer]);
+const resetCustomerForm = () => {
+  setName("");
+  setNameNumber("");
+  setStreet("");
+  setCity("");
+  setPostcode("");
+  setPhoneNumber("");
+  setEmail("");
+  setCurrentRegion("");
+  setNewRegion("");
+  setCustomerSearch("");
+};
 
   
 const generateAccountID = ({ name, postcode }) => {

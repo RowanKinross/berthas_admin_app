@@ -16,7 +16,7 @@ function  NewOrder({customerName, accountID}) {
 
 const [pizzaQuantities, setPizzaQuantities] = useState({});
 const [totalPizzas, setTotalPizzas] = useState(0)
-const [additionalNotes, setAdditionalNotes] = useState("...");
+const [additionalNotes, setAdditionalNotes] = useState("");
 const [pizzaData, setPizzaData] = useState([]);
 const [filterCriteria, setFilterCriteria] = useState("withSleeve");
 const [customDeliveryWeek, setCustomDeliveryWeek] = useState("");
