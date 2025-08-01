@@ -1,0 +1,39 @@
+.summaryContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 600px;
+    margin: 1%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 2px 4px var(--boxShadow);
+}
+
+
+
+/* Stock table CSS */
+.stock-table {
+  width: 96%;
+  align-self: center;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  /* border: solid var(--darkLight) 2px; */
+}
+.stock-table th,
+.stock-table td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  text-align: left;
+  border-radius: 0;
+}
+.sleeve-gap-row td {
+  border: none;
+  border-top: solid var(--darkLight) 2px;
+}
+.pizzaTitle {
+  color: var(--dark);
+  font-weight: bold;
+}
