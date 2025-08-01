@@ -891,17 +891,24 @@ const handlePrintClick = () => {
               <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
             </button>
             {!selectedOrder.complete && selectedOrder.order_status !== "order placed" && (
-              <button
-                className='button'
-                onClick={
-                  selectedOrder.order_status === "ready to pack"
-                    ? () => markSelectedAsPacked([selectedOrder.id]) // Pass single ID
-                    : handleComplete
-                }
-              >
-                {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
-              </button>
-            )}
+            <button
+              className="button"
+              onClick={
+                selectedOrder.order_status === "ready to pack"
+                  ? () => {
+                      markSelectedAsPacked([selectedOrder.id]); // ✅ update DB
+                      setSelectedOrder(prev => ({
+                        ...prev,
+                        order_status: "packed" // ✅ update local state
+                      }));
+                    }
+                  : handleComplete
+              }
+            >
+              {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
+            </button>
+          )}
+
           </div>
         </div>
         </div>
