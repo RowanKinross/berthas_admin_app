@@ -1,0 +1,40 @@
+.newOrder {
+  text-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.today {
+  font-size: large;
+}
+.newOrderForm {
+  border: solid 1px var(--dark);
+  width: 60%;
+  background-color: var(--bertha);
+  padding: 20px;
+}
+.email {
+  display: flex;
+  align-items: start;
+  justify-content: flex-start;
+}
+.emailBox {
+  width: 100%;
+}
+.editIcon {
+  padding: 0.5%;
+}
+.selectCustomerButton {
+  width: 100%;
+  text-align: left;
+}
+.customersScroll {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+@media (max-width: 530px) {
+  .newOrderForm {
+    width: 90vw;
+  }
+}

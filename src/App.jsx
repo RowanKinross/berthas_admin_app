@@ -13,6 +13,7 @@ import Archive from './components/archive/Archive'
 import Summary from './components/summary/Summary'
 import BatchCodes from './components/batchCodes/BatchCodes'
 import Auth from './components/auth/Auth';
+import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
 
 
 function App() {
@@ -38,6 +39,7 @@ return (
             <Route path="orderHistory" element={<OrderHistory customerName={customerName} accountID={accountID}/>} />
             <Route path="account" element={<Account customerName={customerName} accountID={accountID}/>} />
             <Route path="orders" element={<Orders />} />
+            <Route path="newOrderAdmin" element={<NewOrderAdmin/>} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="archive" element={<Archive />} />
             <Route path="summary" element={<Summary/>}/>

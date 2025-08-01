@@ -198,6 +198,10 @@ const generateAccountID = ({ name, postcode }) => {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ORDERS</h3>
           </NavLink>
+          <NavLink to="/newOrderAdmin" className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'}>
+            <h3 className="navTab">NEW ORDER</h3>
+          </NavLink>
           <NavLink to="/inventory" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">INVENTORY</h3>
