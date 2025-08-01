@@ -691,7 +691,7 @@ const handlePrintClick = () => {
               onClick={() => handleOrderClick(order)}
               
               >
-            <div>{order.customer_name}</div>
+            <div title={order.additional_notes && order.additional_notes !== '...' ? order.additional_notes : ''}>{order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
             <div className='orderStatus'>{order.order_status}</div>
             <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>

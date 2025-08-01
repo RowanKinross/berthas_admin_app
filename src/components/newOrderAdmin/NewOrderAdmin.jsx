@@ -43,6 +43,9 @@ const handleFilterChange = (event) => {
 };
 
 
+
+
+
 // fetch stock data e.g what pizzas are in stock & their batches
 const fetchStock = async () => {
   try {
@@ -268,7 +271,7 @@ const handleSubmit = async (event) => {
       delivery_week: deliveryOption === 'other' ? customDeliveryWeek : deliveryOption,
       delivery_day: "tbc",
       account_ID: selectedCustomerId,
-      customer_name: customerData.find(c => c.account_ID === selectedCustomerId)?.name || "",
+      customer_name: customerData.find(c => c.account_ID === selectedCustomerId)?.customer || "",
       customer_email: editableEmail,
       purchase_order: finalPO,
       pizzas: pizzas,
