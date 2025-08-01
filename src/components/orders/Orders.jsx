@@ -745,6 +745,7 @@ const handlePrintClick = () => {
               <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
             </div>
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
+            <p><strong>Delivery Notes: </strong> {selectedOrder.additional_notes}</p>
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <div className='flexRow'>
               <strong className='space'>Delivery Day:</strong>{" "}
