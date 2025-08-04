@@ -37,3 +37,12 @@
   color: var(--dark);
   font-weight: bold;
 }
+
+.summary-grid {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+.demandSummaryFlex {
+  display: flex;
+}
