@@ -324,26 +324,36 @@ return (
               }
             }}
           >
-            <div className="modalContent archiveModal"
+            <div className="modalContent"
               style={{
                 backgroundColor: pizzaData.find(p => p.id === selectedPizzaId)?.hex_colour || '#fff',
-                padding: '20px',
-                borderRadius: '10px'
               }}
             >
               <h3>{selectedPizzaId} : batch {selectedBatch.batch_code}</h3>
-              <h5><strong>Allocations: </strong></h5>
+              <div className='allocationsKey'>
+                <h5><strong>Allocations: </strong></h5>
+                <div>
+                  <p className='packed key'> packed </p>
+                  <p className='notPacked key'> not yet packed</p>
+                </div>
+              </div>
+              <div className='archiveModal'>
               {(selectedBatch.pizza_allocations || [])
                 .filter(a => a.pizzaId === selectedPizzaId)
                 .map((a, i) => {
                   const linkedOrder = orders.find(o => o.id === a.orderId);
                   const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
                   return (
-                    <p key={i}>
+                    <p
+                      key={i}
+                      className={linkedOrder?.order_status === 'ready to pack' ? 'notPacked' : 'packed' }
+                       >
                       {accountName}: {a.quantity}
                     </p>
+
                   );
                 })}
+                </div>
               <div style={{ marginTop: '1rem' }}>
                 <div className='availableControls'>
                   <p className='available'><strong>Archived:</strong> {completed} of {total}</p>

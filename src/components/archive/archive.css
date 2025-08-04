@@ -77,50 +77,6 @@
 
 
 
-/* add pizza '+' square */
-  .addPizza {
-    background-color: var(--light);
-    font-size: xx-large;
-    align-items: center;
-    justify-content: center;
-    border: dotted 1px var(--darkLight);
-  }
-  .plus{
-    border-radius: 10px;
-    font-weight: bolder;
-  }
-
-
-
-/* new pizza form */
-  .modal {
-    padding: 20%;
-  }
-  .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: end;
-  }
-  .inputBox {
-    font-size: small;
-    margin-bottom: 3px !important;
-    width: 100%;
-  }
-  .addIngredient {
-    margin-bottom: 13px;
-  }
-  .ingredientList {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--darkLight);
-    margin: 0 30px 20px 30px;
-    font-style: italic;
-  }
-  .sleeve {
-    display: flex;
-    justify-content: center;
-  }
 
   /* plus minus on the available */
   .availableControls {
@@ -150,6 +106,26 @@
     color: var(--dark);
     border: dashed 1px var(--dark);
   }
+
+  .archiveModal {
+    padding: 20px;
+    border-radius: 10px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .notPacked {
+    opacity: 0.5;
+    font-style: italic;
+  }
+  .key {
+    font-size: 12px !important;
+  }
+  .allocationsKey {
+    display: flex;
+    justify-content: space-between;
+    text-align: right;
+  }
+
 
 /* ingredients list */
 .listContainer {
