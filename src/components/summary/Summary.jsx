@@ -85,7 +85,7 @@ const getStockSummary = () => {
     const sleeveTotal = sleeveTypeTotals[item.sleeveType] || 1;
     return {
       ...item,
-      ratio: (item.total / sleeveTotal).toFixed(2)
+      ratio: ((item.total / sleeveTotal).toFixed(2))*100
     };
   });
 
