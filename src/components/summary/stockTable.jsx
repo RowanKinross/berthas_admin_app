@@ -39,7 +39,7 @@ function StockTable({ data }) {
           <td>{item.id}</td>
           <td>{item.available}</td>
           <td>{item.onOrder}</td>
-          <td>{item.ratio}</td>
+          <td>{typeof item.ratio === 'number' ? `${item.ratio}%` : ''}</td>
           <td>TBC</td>
         </tr>
           );

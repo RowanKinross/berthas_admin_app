@@ -56,7 +56,12 @@ const getStockSummary = () => {
       const available = total - onOrder;
 
       if (total > 0) {
-        const sleeveType = pizza.id.endsWith('1') ? '1' : '0';
+        let sleeveType;
+          if (pizza.id === 'TOM_A0') {
+            sleeveType = 'base';  // New category
+          } else {
+            sleeveType = pizza.id.endsWith('1') ? '1' : '0';
+          }
         const pizzaDetails = pizzas.find(p => p.id === pizza.id);
         const pizzaName = pizzaDetails?.pizza_title || "Unnamed Pizza";
 
@@ -76,16 +81,22 @@ const getStockSummary = () => {
         totals[pizza.id].onOrder += onOrder;
         totals[pizza.id].available += available;
 
-        sleeveTypeTotals[sleeveType] += total;
+        if (sleeveType !== 'base') {
+          sleeveTypeTotals[sleeveType] += total;
+        }
       }
     });
   });
 
   const summary = Object.values(totals).map(item => {
+    if (item.sleeveType === 'base') {
+      return { ...item }; // no ratio field at all
+    }
+
     const sleeveTotal = sleeveTypeTotals[item.sleeveType] || 1;
     return {
       ...item,
-      ratio: (item.total / sleeveTotal).toFixed(2)
+      ratio: Math.round((item.total / sleeveTotal) * 100)
     };
   });
 
