@@ -4,6 +4,8 @@ import {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
 import { collection, addDoc, getDocs, doc, getDoc, updateDoc} from '@firebase/firestore'; 
 
+
+
 function Archive() {
   // pizzas
   const [pizzaData, setPizzaData] = useState([]); // pizza data from storage
@@ -343,14 +345,24 @@ return (
                 .map((a, i) => {
                   const linkedOrder = orders.find(o => o.id === a.orderId);
                   const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  const deliveryDay = linkedOrder?.delivery_day
+                    ? new Date(linkedOrder.delivery_day).toLocaleDateString('en-GB')
+                    .replace(/\//g, '.')
+                    : '';
                   return (
+                  <div className='onOrderFlex'>
                     <p
                       key={i}
                       className={linkedOrder?.order_status === 'ready to pack' ? 'notPacked' : 'packed' }
-                       >
+                      >
                       {accountName}: {a.quantity}
                     </p>
-
+                    <p 
+                      className={linkedOrder?.order_status === 'ready to pack' ? 'notPacked' : 'packed' }
+                      >
+                      {deliveryDay}
+                    </p>
+                  </div>
                   );
                 })}
                 </div>

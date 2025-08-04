@@ -125,6 +125,10 @@
     justify-content: space-between;
     text-align: right;
   }
+  .onOrderFlex {
+    display: flex;
+    justify-content: space-between;
+  }
 
 
 /* ingredients list */
