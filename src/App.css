@@ -65,8 +65,14 @@
   font-weight: bold
 }
 
+@media (max-width: 1024px) {
+  .navContent{
+    min-height: 115dvh;
+  }
+}
 @media (max-width: 530px) {
   .body {
     padding: 5% 0 5% 0
   }
 }
+

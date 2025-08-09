@@ -7,7 +7,6 @@
     background-size: cover;
     background-repeat: no-repeat;
     box-sizing: border-box;
-    overflow: hidden;
     position: relative;
     box-shadow: 0 2px 4px var(--boxShadow);
 }
@@ -19,24 +18,46 @@
   width: 96%;
   align-self: center;
   border-collapse: collapse;
-  margin-top: 1rem;
+  margin: 1rem;
   /* border: solid var(--darkLight) 2px; */
 }
 .stock-table th,
 .stock-table td {
   border: 1px solid #ccc;
-  padding: 8px 12px;
-  text-align: left;
+  padding: 5px 8px;
   border-radius: 0;
+  font-size: 12px;
+}
+.stock-table td {
+  padding-top: 25px;
+  text-align: right;
 }
 .sleeve-gap-row td {
   border: none;
   border-top: solid var(--darkLight) 2px;
 }
-.pizzaTitle {
+.pizza-id-cell {
+  position: relative;
+  text-align: center !important;
+}
+
+/* Badge styling */
+.pizzaBadge {
   color: var(--dark);
   font-weight: bold;
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
 }
+
+
 
 .summary-grid {
   display: flex;
@@ -45,4 +66,14 @@
 }
 .demandSummaryFlex {
   display: flex;
+}
+
+@media (max-width: 1024px) {
+  /* tablet size */
+  .demandSummaryFlex {
+    flex-direction: column;
+  }
+  .summaryContainer {
+    max-width: 100%;
+  }
 }

@@ -10,12 +10,12 @@ function PlannedTable({ data }) {
     <table className="stock-table planned-table">
       <thead>
         <tr>
-          <th>Pizza</th>
-          <th>Pizza ID</th>
-          <th>Planned Stock</th>
-          {/* <th>On Order</th> */}
-          <th>New Ratio</th>
-          {/* <th>Stock Status</th> */}
+          <th></th>
+          <th>Current</th>
+          <th>1 Week</th>
+          <th>2 Weeks</th>
+          <th>3 Weeks</th>
+          <th>Goal</th>
         </tr>
       </thead>
       <tbody>
@@ -27,23 +27,25 @@ function PlannedTable({ data }) {
               </tr>
             );
           }
-
           return (
-            <tr
-              key={i}
-              style={{ backgroundColor: `${item.color}30` }}
-            >
-              <td 
-                style={{ backgroundColor: `${item.color}70` }}
-                className='pizzaTitle'
-              >
-                {item.name}
+            <tr key={i} style={{ backgroundColor: `${item.color}30` }}>
+              <td className="pizza-id-cell">
+                <span className="pizzaBadge" title={item.name} style={{ backgroundColor: `${item.color}70`}}>
+                  {item.name}
+                </span>
+                {item.id}
               </td>
-              <td>{item.id}</td>
-              <td>{item.available}</td>
-              {/* <td>{item.onOrder}</td> */}
-              <td>{typeof item.ratio === 'number' ? `${item.ratio}%` : ''}</td>
-              {/* <td>Planned</td> */}
+              <td>{item.ratios?.current ?? ''}%</td>
+              <td>{item.ratios?.w1 ?? ''}%</td>
+              <td>{item.ratios?.w2 ?? ''}%</td>
+              <td>{item.ratios?.w3 ?? ''}%</td>
+              <td
+                className={
+                  item.goal == null ? '' : item.meetsGoal ? 'ok' : 'warn'
+                }
+              >
+                {item.goal != null ? `${item.goal}%` : ''}
+              </td>
             </tr>
           );
         })}

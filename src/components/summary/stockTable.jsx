@@ -9,12 +9,11 @@ function StockTable({ data }) {
     <table className="stock-table">
       <thead>
         <tr>
-          <th>Pizza</th>
-          <th>Pizza ID</th>
-          <th>Available Stock</th>
-          <th>On Order</th>
+          <th></th>
+          <th>Stock</th>
+          <th>Ordered</th>
           <th>Ratio</th>
-          <th>Stock Status</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -28,15 +27,13 @@ function StockTable({ data }) {
           }
 
   return (
-        <tr
-          key={i}
-          style={{ backgroundColor: `${item.color}30` }}
-        >
-          <td 
-            style={{ backgroundColor: `${item.color}70`}}
-            className='pizzaTitle'
-          >{item.name}</td>
-          <td>{item.id}</td>
+        <tr key={i} style={{ backgroundColor: `${item.color}30` }}>
+          <td className="pizza-id-cell" >
+            <span className="pizzaBadge" title={item.name} style={{ backgroundColor: `${item.color}70`}}>
+              {item.name}
+            </span>
+            {item.id}
+          </td>
           <td>{item.available}</td>
           <td>{item.onOrder}</td>
           <td>{typeof item.ratio === 'number' ? `${item.ratio}%` : ''}</td>
