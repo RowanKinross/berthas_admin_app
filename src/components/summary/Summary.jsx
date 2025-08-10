@@ -271,7 +271,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
       <h2>DEMAND SUMMARY</h2>
       <div className='demandSummaryFlex'>
         <div className='summaryContainer'>
-          <h3>Current Freezer Stock Levels</h3>
+          <h3>Current Stock</h3>
           <StockTable data={stockSummary} />
         </div>
         <div className='summaryContainer'>

@@ -9,23 +9,23 @@
     box-sizing: border-box;
     position: relative;
     box-shadow: 0 2px 4px var(--boxShadow);
+    padding-top: 30px;
 }
 
 
 
 /* Stock table CSS */
 .stock-table {
-  width: 96%;
+  width: 90%;
   align-self: center;
   border-collapse: collapse;
   margin: 1rem;
-  /* border: solid var(--darkLight) 2px; */
 }
 .stock-table th,
 .stock-table td {
-  border: 1px solid #ccc;
+  border: 2px solid var(--pale);
   padding: 5px 8px;
-  border-radius: 0;
+  border-radius: 5px;
   font-size: 12px;
 }
 .stock-table td {
@@ -65,6 +65,7 @@
   align-items: flex-start;
 }
 .demandSummaryFlex {
+  padding-top: 50px;
   display: flex;
 }
 
