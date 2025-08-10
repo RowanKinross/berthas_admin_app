@@ -23,7 +23,7 @@ function PlannedTable({ data }) {
           if (item.isGap) {
             return (
               <tr key={`gap-${i}`} className="sleeve-gap-row">
-                <td colSpan="6" style={{ height: '1rem' }}></td>
+                <td className="sleeve-gap-row"></td>
               </tr>
             );
           }
@@ -33,7 +33,7 @@ function PlannedTable({ data }) {
                 <span className="pizzaBadge" title={item.name} style={{ backgroundColor: `${item.color}70`}}>
                   {item.name}
                 </span>
-                {item.id}
+                {/* {item.id} */}
               </td>
               <td>{item.ratios?.current ?? ''}%</td>
               <td>{item.ratios?.w1 ?? ''}%</td>
