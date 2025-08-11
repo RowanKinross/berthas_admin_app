@@ -34,7 +34,6 @@
   text-align: right;
 }
 
-
 /* Badge styling */
 .pizzaBadge {
   color: var(--dark);
@@ -58,8 +57,15 @@
   padding-top: 50px;
   display: flex;
 }
+.th-short { display: none; }
 
-@media (max-width: 1024px) {
+@media (max-width: 600px) {
+  .th-full { display: none; }
+  .th-short { display: inline; }
+}
+/* ...existing code... */
+
+@media (max-width: 1160px) {
   /* tablet size */
   .demandSummaryFlex {
     flex-direction: column;

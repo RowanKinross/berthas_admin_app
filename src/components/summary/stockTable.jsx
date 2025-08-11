@@ -10,10 +10,10 @@ function StockTable({ data }) {
       <thead>
         <tr>
           <th></th>
-          <th>Stock</th>
-          <th>Ordered</th>
-          <th>Ratio</th>
-          <th>Status</th>
+          <th title='Current Stock'>Stock</th>
+          <th title='Quantity currently on order'>Ordered</th>
+          <th title='Ratio of of pizza type by total pizzas in stock'>Ratio</th>
+          <th title=''>Status</th>
         </tr>
       </thead>
       <tbody>

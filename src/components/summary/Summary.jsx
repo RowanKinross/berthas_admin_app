@@ -10,17 +10,7 @@ function Summary() {
   const [pizzas, setPizzas] = useState([]);
 
 
-  const daysBetween = (a, b) => Math.floor((a - b) / (1000 * 60 * 60 * 24));
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
-  const getWeekOffset = (dateLike) => {
-    const d = toDate(dateLike);
-    if (isNaN(d)) return Infinity;
-    const diff = daysBetween(d, new Date());
-    if (diff <= 7) return 1;
-    if (diff <= 14) return 2;
-    if (diff <= 21) return 3;
-    return Infinity; // ignore 3+ weeks for these columns
-  };
 
     const PIZZA_GOALS = {
     'MAR_A1': 31,
@@ -86,7 +76,11 @@ const getStockSummary = (stock, pizzas) => {
             sleeveType = pizza.id.endsWith('1') ? '1' : '0';
           }
         const pizzaDetails = pizzas.find(p => p.id === pizza.id);
-        const pizzaName = pizzaDetails?.pizza_title || "Unnamed Pizza";
+        const isSmallScreen = window.matchMedia("(max-width: 600px)").matches;
+
+        const pizzaName = isSmallScreen
+          ? pizzaDetails?.title_shortened || "Unnamed Pizza"
+          : pizzaDetails?.pizza_title || "Unnamed Pizza";
 
         if (!totals[pizza.id]) {
           totals[pizza.id] = {
@@ -160,8 +154,33 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   stock.forEach(batch => {
     if (batch.completed) return;
     const allocations = batch.pizza_allocations || [];
+
+    
+    // Returns ISO week number and year
+    function getISOWeekYear(date) {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      // Set to nearest Thursday: current date + 4 - current day number
+      d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+      return { week: weekNo, year: d.getUTCFullYear() };
+    }
+    
+    const getWeekOffset = (dateLike) => {
+      const d = toDate(dateLike);
+      if (isNaN(d)) return Infinity;
+      const now = new Date();
+      const { week: thisWeek, year: thisYear } = getISOWeekYear(now);
+      const { week: targetWeek, year: targetYear } = getISOWeekYear(d);
+    
+      const weekDiff = (targetYear - thisYear) * 52 + (targetWeek - thisWeek);
+      if (weekDiff === 0) return 1; // This week (Mon–Sun)
+      if (weekDiff === 1) return 2; // Next week
+      if (weekDiff === 2) return 3; // Week after next
+      return Infinity; // ignore 3+ weeks
+    };
     const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
-    if (![1,2,3].includes(week)) return; // ignore 3+ weeks
+  if (![1,2,3].includes(week)) return; // ignore 3+ weeks
 
     batch.pizzas.forEach(pizza => {
       const completed = allocations
