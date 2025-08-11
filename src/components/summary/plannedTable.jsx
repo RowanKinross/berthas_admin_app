@@ -11,10 +11,13 @@ function PlannedTable({ data, showPercent = true }) {
       <thead>
         <tr>
           <th></th>
-          <th title='Current Stock Ratio'>
-            <span className="th-full">Current</span>
-            <span className="th-short">Cur</span>
-          </th>
+          <th title='Current Stock'>Stock</th>
+          <th colSpan={3} title='Quantity currently on order'>Planned</th>
+          <th title=''>Aim</th>
+        </tr>
+        <tr>
+          <th></th>
+          <th></th>
           <th title='1 Week Planned Stock Ratio'>
             <span className="th-full">1 Week</span>
             <span className="th-short">1wk</span>
@@ -27,9 +30,7 @@ function PlannedTable({ data, showPercent = true }) {
             <span className="th-full">3 Weeks</span>
             <span className="th-short">3wks</span>
           </th>
-          <th title='Planned Stock Goal'>
-            Aim
-          </th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -56,17 +57,17 @@ function PlannedTable({ data, showPercent = true }) {
               <td>
                 {showPercent
                   ? (item.ratios?.w1 ?? '') + '%'
-                  : (item.stockNumbers?.w1 ?? '')}
+                  : (item.stockNumbers?.w1 ?? 0)}
               </td>
               <td>
                 {showPercent
                   ? (item.ratios?.w2 ?? '') + '%'
-                  : (item.stockNumbers?.w2 ?? '')}
+                  : (item.stockNumbers?.w2 ?? 0)}
               </td>
               <td>
                 {showPercent
                   ? (item.ratios?.w3 ?? '') + '%'
-                  : (item.stockNumbers?.w3 ?? '')}
+                  : (item.stockNumbers?.w3 ?? 0)}
               </td>
               <td
                 className={

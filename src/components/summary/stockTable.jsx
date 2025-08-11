@@ -17,9 +17,18 @@ function StockTable({ data, showPercent = true }) {
         <tr>
           <th></th>
           <th></th>
-          <th title="On order for 1 week">1wk</th>
-          <th title="On order for 2 weeks">2wk</th>
-          <th title="On order for 3 weeks">3wk</th>
+          <th title='1 Week Planned Stock Ratio'>
+            <span className="th-full">1 Week</span>
+            <span className="th-short">1wk</span>
+          </th>
+          <th title='2 Weeks Planned Stock Ratio'>
+            <span className="th-full">2 Weeks</span>
+            <span className="th-short">2wks</span>
+          </th>
+          <th title='3 Weeks Planned Stock Ratio'>
+            <span className="th-full">3 Weeks</span>
+            <span className="th-short">3wks</span>
+          </th>
           <th></th>
         </tr>
       </thead>

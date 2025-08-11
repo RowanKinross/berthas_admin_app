@@ -283,9 +283,9 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
 
   const stockNumbers = {
     current: item.total,
-    w1: cumulative.w1,
-    w2: cumulative.w2,
-    w3: cumulative.w3,
+    w1: pPlanned[1] || 0,
+    w2: pPlanned[2] || 0,
+    w3: pPlanned[3] || 0,
   };
 
   return {
