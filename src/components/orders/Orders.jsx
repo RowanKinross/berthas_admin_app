@@ -74,7 +74,6 @@ useEffect(() => {
 
 
 
-
 const sortOrders = (orders) => {
   return [...orders].sort((a, b) => {
     const aDate = a.delivery_day === 'tbc' ? null : new Date(a.delivery_day);
@@ -110,10 +109,20 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
   if (index === -1) return;
 
+  // Update the changed batch's quantity
   batches[index].quantity = newQuantity;
   order.pizzas[pizzaId].batchesUsed = batches;
+
+  // Update the pizza's total quantity based on split mode
+  if (isSplitChecked) {
+    order.pizzas[pizzaId].quantity = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
+  } else {
+    order.pizzas[pizzaId].quantity = newQuantity;
+  }
+
   setSelectedOrder(order);
 
+  // Update the allocation in the batch
   await syncPizzaAllocation({
     pizzaId,
     batchCode,
@@ -123,10 +132,12 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   try {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaId}.batchesUsed`]: batches,
+      [`pizzas.${pizzaId}.quantity`]: order.pizzas[pizzaId].quantity,
     });
   } catch (error) {
     console.error("Error updating batch quantities in Firestore:", error);
   }
+
   validateAndUpdateOrderStatus(order);
 };
 

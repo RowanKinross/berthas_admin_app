@@ -81,15 +81,19 @@ const getStockSummary = (stock, pizzas) => {
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
-      const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
-      allocations
+      const onOrder = allocations
         .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
-        .forEach(a => {
-          const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
-          if ([1,2,3].includes(week)) {
-            onOrderByWeek[week] += a.quantity;
-          }
-        });
+        .reduce((sum, a) => sum + a.quantity, 0);
+
+      const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
+      // allocations
+      //   .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
+      //   .forEach(a => {
+      //     const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
+      //     if ([1,2,3].includes(week)) {
+      //       onOrderByWeek[week] += a.quantity;
+      //     }
+      //   });
 
       const total = pizza.quantity - completed;
       const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
@@ -124,7 +128,7 @@ const getStockSummary = (stock, pizzas) => {
         }
 
         totals[pizza.id].total += total;
-        totals[pizza.id].onOrder1 += onOrderByWeek[1];
+        totals[pizza.id].onOrder1 += onOrder;
         totals[pizza.id].onOrder2 += onOrderByWeek[2];
         totals[pizza.id].onOrder3 += onOrderByWeek[3];
         totals[pizza.id].available += available;
@@ -283,9 +287,9 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
 
   const stockNumbers = {
     current: item.total,
-    w1: cumulative.w1,
-    w2: cumulative.w2,
-    w3: cumulative.w3,
+    w1: pPlanned[1] || 0,
+    w2: pPlanned[2] || 0,
+    w3: pPlanned[3] || 0,
   };
 
   return {

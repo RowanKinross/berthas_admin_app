@@ -40,6 +40,8 @@ function Inventory() {
 
 
 
+
+
   // FETCHES
   // fetch pizza data e.g what pizzas we offer & their hex codes
   const fetchPizzaData = async () => {
