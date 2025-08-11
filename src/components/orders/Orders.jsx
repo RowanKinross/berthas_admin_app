@@ -127,7 +127,7 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   } catch (error) {
     console.error("Error updating batch quantities in Firestore:", error);
   }
-  validateAndUpdateOrderStatus(updatedOrder)
+  validateAndUpdateOrderStatus(order);
 };
 
 
@@ -357,7 +357,9 @@ const updateDeliveryDate = async (orderId, newDate) => {
     } catch (error) {
       console.error("Error updating batch assignment:", error);
     }
-    validateAndUpdateOrderStatus(updatedOrder)
+    if (!selectedOrder.complete) {
+      validateAndUpdateOrderStatus(updatedOrder);
+    }
   };
 
 
