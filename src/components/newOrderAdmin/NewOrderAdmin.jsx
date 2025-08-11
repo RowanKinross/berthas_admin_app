@@ -169,6 +169,25 @@ useEffect(() => {
   };
 
 
+  useEffect(() => {
+  // Reset all form fields when customer changes
+  setPizzaQuantities(pizzaData.reduce((acc, pizza) => {
+    acc[pizza.id] = 0;
+    return acc;
+  }, {}));
+  setTotalPizzas(0);
+  setAdditionalNotes("...");
+  setValidated(false);
+  setSubmitting(false);
+  setPurchaseOrder('');
+  setCustomDeliveryDate('');
+  setCustomDeliveryWeek('');
+  setDeliveryOption("asap");
+  // Optionally reset email if you want
+  // setEditableEmail(customerData.find(c => c.account_ID === selectedCustomerId)?.email || "");
+}, [selectedCustomerId, pizzaData]);
+
+
 
   const filteredPizzaData = pizzaData.filter(pizza => {
     if (filterCriteria === "withSleeve") {
@@ -524,7 +543,6 @@ return (
     <Button type="submit" className='button' disabled={submitting}>
       Submit
     </Button>
-    <Button className='button' onClick={() =>window.location.reload()}>clear fields</Button>
   </Form>
 </div>
 );
