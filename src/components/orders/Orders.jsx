@@ -805,7 +805,13 @@ const handlePrintClick = () => {
                 <span className="slider round"></span>
               </label>
             </div>
-            {Object.entries(selectedOrder.pizzas).map(([pizzaName, pizzaData], index) => (
+            {Object.entries(selectedOrder.pizzas)
+              .sort(([a], [b]) => {
+                const nameA = pizzaTitles[a] || a;
+                const nameB = pizzaTitles[b] || b;
+                return nameA.localeCompare(nameB);
+              })
+              .map(([pizzaName, pizzaData], index) => (
             <div key={index} className='pizzasOrdered'>
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
