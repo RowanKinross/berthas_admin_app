@@ -11,11 +11,25 @@ function PlannedTable({ data }) {
       <thead>
         <tr>
           <th></th>
-          <th>Current</th>
-          <th>1 Week</th>
-          <th>2 Weeks</th>
-          <th>3 Weeks</th>
-          <th>Goal</th>
+          <th title='Current Stock Ratio'>
+            <span className="th-full">Current</span>
+            <span className="th-short">Cur</span>
+          </th>
+          <th title='1 Week Planned Stock Ratio'>
+            <span className="th-full">1 Week</span>
+            <span className="th-short">1wk</span>
+          </th>
+          <th title='2 Weeks Planned Stock Ratio'>
+            <span className="th-full">2 Weeks</span>
+            <span className="th-short">2wks</span>
+          </th>
+          <th title='3 Weeks Planned Stock Ratio'>
+            <span className="th-full">3 Weeks</span>
+            <span className="th-short">3wks</span>
+          </th>
+          <th title='Planned Stock Goal'>
+            Aim
+          </th>
         </tr>
       </thead>
       <tbody>
