@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
@@ -29,6 +29,7 @@ function Orders() {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [batchErrors, setBatchErrors] = useState({});
   const [isSplitChecked, setIsSplitChecked] = useState(false);
+  const [editQuantities, setEditQuantities] = useState(false);
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 20;
@@ -41,6 +42,11 @@ const formatBatchCode = (code) => {
   return parsed.isValid() ? parsed.format('DD.MM.YYYY') : code;
 };
 
+
+// recalc totals if quantities are altered
+function calculatePizzaTotal(pizzas) {
+  return Object.values(pizzas).reduce((sum, p) => sum + (parseInt(p.quantity, 10) || 0), 0);
+}
 
 
 
@@ -781,6 +787,13 @@ const handlePrintClick = () => {
             </div>
             <div className='split'>
             <strong>Pizzas Ordered:</strong>
+              <FontAwesomeIcon
+                icon={faPencilAlt}
+                className="icon clickable"
+                title="Edit quantities"
+                style={{ marginLeft: 8 }}
+                onClick={() => setEditQuantities(q => !q)}
+              />
               <label className="switch" title='split over multiple batch codes?'>
                 <input 
                   type="checkbox"
@@ -795,7 +808,51 @@ const handlePrintClick = () => {
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
                 <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
-                <p>{pizzaData.quantity} </p>
+                {editQuantities ? (
+                  <input
+                    type="number"
+                    min={1}
+                    value={pizzaData.quantity}
+                    onChange={async (e) => {
+                      const newQty = parseInt(e.target.value, 10) || 0;
+                      // Save original_quantity if not already present
+                      if (!pizzaData.original_quantity) {
+                        await updateDoc(doc(db, "orders", selectedOrder.id), {
+                          [`pizzas.${pizzaName}.original_quantity`]: pizzaData.quantity,
+                        });
+                      }
+                      const updatedPizzas = {
+                        ...selectedOrder.pizzas,
+                        [pizzaName]: {
+                          ...selectedOrder.pizzas[pizzaName],
+                          quantity: newQty,
+                          original_quantity: pizzaData.original_quantity || pizzaData.quantity,
+                        }
+                      };
+                      const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
+                      await updateDoc(doc(db, "orders", selectedOrder.id), {
+                        [`pizzas.${pizzaName}.quantity`]: newQty,
+                        pizzaTotal: newPizzaTotal,
+                      });
+                      // Update local state
+                      setSelectedOrder(prev => ({
+                        ...prev,
+                        pizzas: {
+                          ...prev.pizzas,
+                          [pizzaName]: {
+                            ...prev.pizzas[pizzaName],
+                            quantity: newQty,
+                            original_quantity: prev.pizzas[pizzaName].original_quantity || prev.pizzas[pizzaName].quantity,
+                          }
+                        },
+                        pizzaTotal: newPizzaTotal,
+                      }));
+                    }}
+                    style={{ width: 60 }}
+                  />
+                ) : (
+                  <p>{pizzaData.quantity}</p>
+                )}
               </div>    
               {(() => {
                 const totalOrdered = pizzaData.quantity;
@@ -883,6 +940,60 @@ const handlePrintClick = () => {
 
             </div>
           ))}
+          {editQuantities && (() => {
+            //pizza IDs for customer's default view
+            const allPossiblePizzas = Object.keys(pizzaTitles).filter(id => {
+              if (customerInfo?.default_pizza_view === "withSleeve") return id.endsWith("1");
+              if (customerInfo?.default_pizza_view === "noSleeve") return id.endsWith("0");
+              return true;
+            });
+            const pizzasInOrder = Object.keys(selectedOrder.pizzas);
+            const missingPizzas = allPossiblePizzas.filter(id => !pizzasInOrder.includes(id));
+
+            if (missingPizzas.length === 0) return null;
+            return (
+              <div className="missingPizzas">
+                {missingPizzas.map((pizzaId) => (
+                  <div key={pizzaId} className="flexRow">
+                    <p className="space">{pizzaTitles[pizzaId] || pizzaId}:</p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={0}
+                      onChange={async (e) => {
+                        const newQty = parseInt(e.target.value, 10) || 0;
+                        if (newQty > 0) {
+                          const updatedPizzas = {
+                            ...selectedOrder.pizzas,
+                            [pizzaId]: {
+                              quantity: newQty,
+                              batchesUsed: [],
+                            }
+                          };
+                          const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
+                          // Add pizza to order in Firestore
+                          await updateDoc(doc(db, "orders", selectedOrder.id), {
+                            [`pizzas.${pizzaId}`]: {
+                              quantity: newQty,
+                              batchesUsed: [],
+                            },
+                            pizzaTotal: newPizzaTotal,
+                          });
+                          // Update local state
+                          setSelectedOrder(prev => ({
+                            ...prev,
+                            pizzas: updatedPizzas,
+                            pizzaTotal: newPizzaTotal,
+                          }));
+                        }
+                      }}
+                      style={{ width: 60 }}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
@@ -897,10 +1008,10 @@ const handlePrintClick = () => {
               onClick={
                 selectedOrder.order_status === "ready to pack"
                   ? () => {
-                      markSelectedAsPacked([selectedOrder.id]); // ✅ update DB
+                      markSelectedAsPacked([selectedOrder.id]); 
                       setSelectedOrder(prev => ({
                         ...prev,
-                        order_status: "packed" // ✅ update local state
+                        order_status: "packed" 
                       }));
                     }
                   : handleComplete

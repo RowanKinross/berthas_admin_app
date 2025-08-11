@@ -1,7 +1,7 @@
 import React from 'react';
 import './summary.css'; // Assuming shared styles
 
-function PlannedTable({ data }) {
+function PlannedTable({ data, showPercent = true }) {
   if (!data || data.length === 0) {
     return <p>Loading or no planned stock.</p>;
   }
@@ -47,12 +47,27 @@ function PlannedTable({ data }) {
                 <span className="pizzaBadge" title={item.name} style={{ backgroundColor: `${item.color}70`}}>
                   {item.name}
                 </span>
-                {/* {item.id} */}
               </td>
-              <td>{item.ratios?.current ?? ''}%</td>
-              <td>{item.ratios?.w1 ?? ''}%</td>
-              <td>{item.ratios?.w2 ?? ''}%</td>
-              <td>{item.ratios?.w3 ?? ''}%</td>
+              <td>
+                {showPercent
+                  ? (item.ratios?.current ?? '') + '%'
+                  : (item.stockNumbers?.current ?? '')}
+              </td>
+              <td>
+                {showPercent
+                  ? (item.ratios?.w1 ?? '') + '%'
+                  : (item.stockNumbers?.w1 ?? '')}
+              </td>
+              <td>
+                {showPercent
+                  ? (item.ratios?.w2 ?? '') + '%'
+                  : (item.stockNumbers?.w2 ?? '')}
+              </td>
+              <td>
+                {showPercent
+                  ? (item.ratios?.w3 ?? '') + '%'
+                  : (item.stockNumbers?.w3 ?? '')}
+              </td>
               <td
                 className={
                   item.goal == null ? '' : item.meetsGoal ? 'ok' : 'warn'

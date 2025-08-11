@@ -8,11 +8,11 @@ import './summary.css';
 function Summary() {
   const [stock, setStock] = useState([]);
   const [pizzas, setPizzas] = useState([]);
-
+  const [showPercent, setShowPercent] = useState(true);
 
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
-    const PIZZA_GOALS = {
+  const PIZZA_GOALS = {
     'MAR_A1': 31,
     'MEA_A1': 27,
     'HAM_A1': 22,
@@ -51,6 +51,26 @@ const getStockSummary = (stock, pizzas) => {
   const totals = {};
   const sleeveTypeTotals = { '0': 0, '1': 0 };
 
+  function getISOWeekYear(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    return { week: weekNo, year: d.getUTCFullYear() };
+  }
+  const getWeekOffset = (dateLike) => {
+    const d = toDate(dateLike);
+    if (isNaN(d)) return Infinity;
+    const now = new Date();
+    const { week: thisWeek, year: thisYear } = getISOWeekYear(now);
+    const { week: targetWeek, year: targetYear } = getISOWeekYear(d);
+    const weekDiff = (targetYear - thisYear) * 52 + (targetWeek - thisWeek);
+    if (weekDiff === 0) return 1;
+    if (weekDiff === 1) return 2;
+    if (weekDiff === 2) return 3;
+    return Infinity;
+  };
+
   stock.forEach(batch => {
     if (!batch.completed) return;
 
@@ -61,12 +81,18 @@ const getStockSummary = (stock, pizzas) => {
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
-      const onOrder = allocations
+      const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
+      allocations
         .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
+        .forEach(a => {
+          const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
+          if ([1,2,3].includes(week)) {
+            onOrderByWeek[week] += a.quantity;
+          }
+        });
 
       const total = pizza.quantity - completed;
-      const available = total - onOrder;
+      const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
 
       if (total > 0) {
         let sleeveType;
@@ -88,6 +114,9 @@ const getStockSummary = (stock, pizzas) => {
             name: pizzaName,
             total: 0,
             onOrder: 0,
+            onOrder1: 0,
+            onOrder2: 0,
+            onOrder3: 0,
             available: 0,
             sleeveType,
             color: pizzaDetails?.hex_colour || "#ffffff"
@@ -95,7 +124,9 @@ const getStockSummary = (stock, pizzas) => {
         }
 
         totals[pizza.id].total += total;
-        totals[pizza.id].onOrder += onOrder;
+        totals[pizza.id].onOrder1 += onOrderByWeek[1];
+        totals[pizza.id].onOrder2 += onOrderByWeek[2];
+        totals[pizza.id].onOrder3 += onOrderByWeek[3];
         totals[pizza.id].available += available;
 
         if (sleeveType !== 'base') {
@@ -250,9 +281,17 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   const meetsGoal = goal != null ? ratios.w3 >= goal : undefined;
   const gapToGoal = goal != null ? goal - ratios.w3 : undefined; // positive = shortfall
 
+  const stockNumbers = {
+    current: item.total,
+    w1: cumulative.w1,
+    w2: cumulative.w2,
+    w3: cumulative.w3,
+  };
+
   return {
     ...item,
     ratios,
+    stockNumbers,
     goal,
     meetsGoal,
     gapToGoal,
@@ -291,11 +330,19 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
       <div className='demandSummaryFlex'>
         <div className='summaryContainer'>
           <h3>Current Stock</h3>
-          <StockTable data={stockSummary} />
+          <StockTable data={stockSummary} showPercent={showPercent} />
         </div>
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
-          <PlannedTable data={plannedSummary}/>
+          <label className="switch" title="Show as percent">
+            <input
+              type="checkbox"
+              checked={showPercent}
+              onChange={e => setShowPercent(e.target.checked)}
+            />
+            <span className="slider round"></span>
+          </label>
+          <PlannedTable data={plannedSummary} showPercent={showPercent}/>
         </div>
       </div>
     </div>
