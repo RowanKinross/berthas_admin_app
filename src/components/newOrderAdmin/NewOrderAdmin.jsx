@@ -32,6 +32,7 @@ const [purchaseOrder, setPurchaseOrder] = useState('');
 const [selectedCustomerId, setSelectedCustomerId] = useState(accountID || "");
 const [customerSearch, setCustomerSearch] = useState("");
 const [dropdownOpen, setDropdownOpen] = useState(false);
+const [deliveryDay, setDeliveryDay] = useState("");
 
 
 
@@ -169,6 +170,26 @@ useEffect(() => {
   };
 
 
+  // Clear fields when a different customer is selected
+  useEffect(() => {
+    setPizzaQuantities(pizzaData.reduce((acc, pizza) => {
+      acc[pizza.id] = 0;
+      return acc;
+    }, {}));
+    setTotalPizzas(0);
+    setAdditionalNotes("...");
+    setValidated(false);
+    setSubmitting(false);
+    setPurchaseOrder('');
+    setCustomDeliveryDate('');
+    setCustomDeliveryWeek('');
+    setDeliveryDay('');
+    setDeliveryOption("asap");
+    // Reset editable email to the selected customer's email
+    setEditableEmail(customerData.find(c => c.account_ID === selectedCustomerId)?.email || "");
+}, [selectedCustomerId, pizzaData]);
+
+
 
   const filteredPizzaData = pizzaData.filter(pizza => {
     if (filterCriteria === "withSleeve") {
@@ -269,7 +290,7 @@ const handleSubmit = async (event) => {
       timestamp: serverTimestamp(),
       order_placed_timestamp: dayjs().format('YYYY-MM-DD, HH:mm'),
       delivery_week: deliveryOption === 'other' ? customDeliveryWeek : deliveryOption,
-      delivery_day: "tbc",
+      delivery_day: deliveryDay,
       account_ID: selectedCustomerId,
       customer_name: customerData.find(c => c.account_ID === selectedCustomerId)?.customer || "",
       customer_email: editableEmail,
@@ -426,6 +447,18 @@ return (
         )}
         </Col>
       </Form.Group>
+      <Form.Group as={Row} className="mb-3" controlId="deliveryDay">
+        <Form.Label column sm={3}>
+          <h5>Delivery Day:</h5>
+        </Form.Label>
+        <Col sm={9}>
+          <Form.Control
+            type="date"
+            value={deliveryDay}
+            onChange={e => setDeliveryDay(e.target.value)}
+          />
+        </Col>
+      </Form.Group>
     </fieldset>
     <Form.Group as={Row} className="mb-3" controlId="purchaseOrder">
       <Form.Label column sm={3}>
@@ -524,7 +557,6 @@ return (
     <Button type="submit" className='button' disabled={submitting}>
       Submit
     </Button>
-    <Button className='button' onClick={() =>window.location.reload()}>clear fields</Button>
   </Form>
 </div>
 );
