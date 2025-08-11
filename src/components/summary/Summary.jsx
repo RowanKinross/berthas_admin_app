@@ -179,7 +179,8 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
       if (weekDiff === 2) return 3; // Week after next
       return Infinity; // ignore 3+ weeks
     };
-    if (![1,2,3].includes(week)) return; // ignore 3+ weeks
+    const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
+  if (![1,2,3].includes(week)) return; // ignore 3+ weeks
 
     batch.pizzas.forEach(pizza => {
       const completed = allocations
