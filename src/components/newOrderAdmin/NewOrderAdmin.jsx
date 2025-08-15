@@ -305,7 +305,7 @@ const handleSubmit = async (event) => {
       additional_notes: document.getElementById('additonalNotes').value,
       order_status: "order placed",
       complete: false,
-      ...(selectedCustomerId === "SAMPLES/6UGM" && { sample_customer_name: sampleCustomerName }),
+      ...(selectedCustomerId === "SAMPLES/6UGM" || "WEDDINGSPRIVATEEVENTS" && { sample_customer_name: sampleCustomerName }),
     });
 
     console.log("Document written with ID: ", docRef.id);
@@ -367,7 +367,7 @@ return (
         </Dropdown>
       </Col>
     </Form.Group>
-      {selectedCustomerId != "SAMPLES/6UGM" && (
+      {selectedCustomerId != "SAMPLES/6UGM" || "WEDDINGSPRIVATEEVENTS" && (
       <>
         <h4 className='orderFormFor'>
           Customer Name: {customerData.find(c => c.account_customer === selectedCustomerId)?.name || "—"}
@@ -377,7 +377,7 @@ return (
       </>
       )}
 
-      {selectedCustomerId === "SAMPLES/6UGM" && (
+      {selectedCustomerId === "SAMPLES/6UGM" ||"WEDDINGSPRIVATEEVENTS" && (
         <Form.Group as={Row} className="orderFormFor" controlId="sampleCustomerName">
           <Form.Label column sm={3}>
             <h4>Customer:</h4>
@@ -385,7 +385,7 @@ return (
           <Col sm={9}>
             <Form.Control
               type="text"
-              placeholder="Enter sample customer name"
+              placeholder="Enter customer name"
               value={sampleCustomerName}
               onChange={e => setSampleCustomerName(e.target.value)}
             />
@@ -393,7 +393,7 @@ return (
         </Form.Group>
       )}
       <Form.Group className='customerDetails'>
-        {selectedCustomerId != "SAMPLES/6UGM" && (
+        {selectedCustomerId != "SAMPLES/6UGM" || "WEDDINGSPRIVATEEVENTS" && (
         <p>Address: {customerAddress} </p>
         )}
 
