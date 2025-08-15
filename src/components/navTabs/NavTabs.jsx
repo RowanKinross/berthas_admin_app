@@ -504,7 +504,8 @@ useEffect(() => {
                 <div className='customersScroll'>
                   {customersData
                     .filter((customer) =>
-                      customer.customer.toLowerCase().includes(customerSearch.toLowerCase())
+                      customer.customer.toLowerCase().includes(customerSearch.toLowerCase()) &&
+                      !customer.account_ID.startsWith("SAMPLES")
                     )
                     .map((customer, index) => (
                       <Dropdown.Item
