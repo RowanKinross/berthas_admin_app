@@ -263,6 +263,7 @@ const handleSubmit = async (event) => {
   }
   if (
     selectedCustomerId !== "SAMPLES/6UGM" &&
+    selectedCustomerId !== "WEDDINGSPRIVATEEVENTS" &&
     (!editableEmail || !editableEmail.includes('@'))
   ) {
     alert("Please enter a valid email address.");
@@ -271,7 +272,15 @@ const handleSubmit = async (event) => {
   }
   setValidated(true);
   setSubmitting(true); // ✅ prevent further submissions
-  
+
+  if (selectedCustomerId && filterCriteria) {
+  const customerDoc = customerData.find(c => c.account_ID === selectedCustomerId);
+  if (customerDoc && customerDoc.id) {
+    await updateDoc(doc(db, "customers", customerDoc.id), {
+      default_pizza_view: filterCriteria
+    });
+  }
+}
   // Your pizza and stock logic...
   const pizzas = filteredPizzaData.reduce((acc, pizza) => {
     const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
@@ -514,7 +523,6 @@ return (
             label="With Sleeve" 
             value="withSleeve" 
             checked={filterCriteria === "withSleeve"} 
-            disabled = {filterCriteria !== "withSleeve"}
             onChange={handleFilterChange} 
             inline 
           />
@@ -523,7 +531,6 @@ return (
             label="Without Sleeve" 
             value="withoutSleeve" 
             checked={filterCriteria === "withoutSleeve"} 
-            disabled = {filterCriteria !== "withoutSleeve"}
             onChange={handleFilterChange} 
             inline 
           />
@@ -532,7 +539,6 @@ return (
             label="All Pizzas" 
             value="all" 
             checked={filterCriteria === "all"}
-            disabled = {filterCriteria !== "all"} 
             onChange={handleFilterChange} 
             inline 
           />
