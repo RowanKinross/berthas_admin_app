@@ -1,10 +1,10 @@
 // import berthasLogo from './bertha_logo'
 import './orders.css'
 import { app, db } from '../firebase/firebase';
-import { collection, getDocs, getDoc, doc, updateDoc, writeBatch } from '@firebase/firestore';
+import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt, faTrash} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
@@ -147,6 +147,25 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   validateAndUpdateOrderStatus(order);
 };
 
+// delete order?
+const handleOrderDelete = async () => {
+  if (!selectedOrder) return;
+  const pizzaTotal = selectedOrder.pizzaTotal || 0;
+  const confirmDelete = window.confirm(
+    `Are you sure you want to delete ${selectedOrder.customer_name} ${selectedOrder.sample_customer_name|| ''}: ${pizzaTotal} pizzas?`
+  );
+  if (!confirmDelete) return;
+
+  try {
+    await deleteDoc(doc(db, "orders", selectedOrder.id));
+    setSelectedOrder(null);
+    setViewModal(false);
+    fetchOrdersAgain();
+  } catch (error) {
+    alert("Error deleting order: " + error.message);
+    console.error("Error deleting order:", error);
+  }
+};
 
 
 
@@ -861,7 +880,7 @@ const handlePrintClick = () => {
                 </span>
               )}
             </p>
-            
+
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <div className='flexRow'>
               <strong className='space'>Delivery Day:</strong>{" "}
@@ -904,7 +923,7 @@ const handlePrintClick = () => {
                 style={{ marginLeft: 8 }}
                 onClick={() => setEditQuantities(q => !q)}
               />
-              <label className="switch" title='split over multiple batch codes?'>
+              <label className="switch" title='fulfil with multiple batch codes?'>
                 <input 
                   type="checkbox"
                   checked={isSplitChecked}
@@ -1114,7 +1133,8 @@ const handlePrintClick = () => {
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
-          <div>
+          <div className='modalFooter'>
+            <div>
             <button className='button' onClick={handlePrintClick}>
               <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
             </button>
@@ -1135,7 +1155,15 @@ const handlePrintClick = () => {
             >
               {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
             </button>
+
           )}
+          </div>
+          <button 
+            className='button'
+            onClick={handleOrderDelete}
+          >
+            <FontAwesomeIcon icon = {faTrash}/>
+          </button>
 
           </div>
         </div>
