@@ -1,10 +1,10 @@
 // import berthasLogo from './bertha_logo'
 import './orders.css'
 import { app, db } from '../firebase/firebase';
-import { collection, getDocs, getDoc, doc, updateDoc, writeBatch } from '@firebase/firestore';
+import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt, faTrash} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
@@ -19,8 +19,14 @@ function Orders() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [pizzaTitles, setPizzaTitles] = useState({});
   const [batches, setBatches] = useState({});
+  // inline edits
   const [editingDeliveryDate, setEditingDeliveryDate] = useState(false);
   const [deliveryDateInput, setDeliveryDateInput] = useState('');
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [notesInput, setNotesInput] = useState('');
+  // 
   const modalRef = useRef(null)
   const [customerInfo, setCustomerInfo] = useState(null);
   const [allCustomers, setAllCustomers] = useState({})
@@ -141,6 +147,25 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   validateAndUpdateOrderStatus(order);
 };
 
+// delete order?
+const handleOrderDelete = async () => {
+  if (!selectedOrder) return;
+  const pizzaTotal = selectedOrder.pizzaTotal || 0;
+  const confirmDelete = window.confirm(
+    `Are you sure you want to delete ${selectedOrder.customer_name} ${selectedOrder.sample_customer_name|| ''}: ${pizzaTotal} pizzas?`
+  );
+  if (!confirmDelete) return;
+
+  try {
+    await deleteDoc(doc(db, "orders", selectedOrder.id));
+    setSelectedOrder(null);
+    setViewModal(false);
+    fetchOrdersAgain();
+  } catch (error) {
+    alert("Error deleting order: " + error.message);
+    console.error("Error deleting order:", error);
+  }
+};
 
 
 
@@ -710,7 +735,7 @@ const handlePrintClick = () => {
               onClick={() => handleOrderClick(order)}
               
               >
-            <div title={order.additional_notes && order.additional_notes !== '...' ? order.additional_notes : ''}>{order.customer_name}</div>
+            <div>{order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
             <div className='orderStatus'>{order.order_status}</div>
             <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
@@ -739,32 +764,123 @@ const handlePrintClick = () => {
         <div className='modal'>
           <div className='modalContent orderModal' ref={modalRef}>
           <div>
-            <div>Order Details</div>
+            <div>- Order Details -</div>
           </div>
           <div>
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
-            <p><strong>Account Name:  </strong> {customerInfo?.customer || 'N/A'}</p>
-            <div><p><strong>Address:</strong></p><br />
-                  <div className='displayAddress'>
-                    {customerInfo?.customer || 'N/A'} <br/>
-                    {customerInfo?.name_number && (
-                      <>{customerInfo.name_number}<br/></>
-                    )}                    
-                    {customerInfo?.street && (
-                      <>{customerInfo.street}<br/></>
-                    )}
-                    {customerInfo?.city && (
-                      <>{customerInfo.city}<br/></>
-                    )}
-                    {customerInfo?.postcode && (
-                      <>{customerInfo.postcode}<br/></>
-                    )}
-                  </div>
-              <p><strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}</p>
-              <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
-            </div>
+            <p><strong>Customer:  </strong> {selectedOrder.customer_name === 'SAMPLES' ? `SAMPLE: ${selectedOrder. sample_customer_name}` :  selectedOrder.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${selectedOrder.sample_customer_name}`: selectedOrder.customer_name}</p>
+
+            {selectedOrder.account_ID !== "SAMPLES/6UGM" && selectedOrder.account_ID !== "WEDDINGSPRIVATEEVENTS" &&
+              <div><p><strong>Address:</strong></p><br />
+                    <div className='displayAddress'>
+                      {customerInfo?.customer || 'N/A'} <br/>
+                      {customerInfo?.name_number && (
+                        <>{customerInfo.name_number}<br/></>
+                      )}                    
+                      {customerInfo?.street && (
+                        <>{customerInfo.street}<br/></>
+                      )}
+                      {customerInfo?.city && (
+                        <>{customerInfo.city}<br/></>
+                      )}
+                      {customerInfo?.postcode && (
+                        <>{customerInfo.postcode}<br/></>
+                      )}
+                    </div>
+                <p><strong>Region:</strong> {customerInfo?.delivery_region|| 'N/A'}</p>
+                <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
+              </div>
+            }
+            <p><strong>Email: </strong>
+              {editingEmail ? (
+                <input
+                  type="email"
+                  value={emailInput}
+                  autoFocus
+                  onChange={e => setEmailInput(e.target.value)}
+                  onBlur={async () => {
+                    await updateDoc(doc(db, "orders", selectedOrder.id), {
+                      email: emailInput
+                    });
+                    setSelectedOrder(prev => ({
+                      ...prev,
+                      email: emailInput
+                    }));
+                    setEditingEmail(false);
+                  }}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter") {
+                      await updateDoc(doc(db, "orders", selectedOrder.id), {
+                        email: emailInput
+                      });
+                      setSelectedOrder(prev => ({
+                        ...prev,
+                        email: emailInput
+                      }));
+                      setEditingEmail(false);
+                    }
+                  }}
+                  style={{ width: 250 }}
+                />
+              ) : (
+                <span
+                  className="clickable"
+                  onClick={() => {
+                    setEmailInput(selectedOrder.email || '');
+                    setEditingEmail(true);
+                  }}
+                >
+                  {selectedOrder.email || 'N/A'}
+                </span>
+              )}
+            </p>
+
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
-            <p><strong>Delivery Notes: </strong> {selectedOrder.additional_notes}</p>
+
+            <p><strong>Delivery Notes: </strong>
+              {editingNotes ? (
+                <input
+                  type="text"
+                  value={notesInput}
+                  autoFocus
+                  onChange={e => setNotesInput(e.target.value)}
+                  onBlur={async () => {
+                    await updateDoc(doc(db, "orders", selectedOrder.id), {
+                      additional_notes: notesInput
+                    });
+                    setSelectedOrder(prev => ({
+                      ...prev,
+                      additional_notes: notesInput
+                    }));
+                    setEditingNotes(false);
+                  }}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter") {
+                      await updateDoc(doc(db, "orders", selectedOrder.id), {
+                        additional_notes: notesInput
+                      });
+                      setSelectedOrder(prev => ({
+                        ...prev,
+                        additional_notes: notesInput
+                      }));
+                      setEditingNotes(false);
+                    }
+                  }}
+                  style={{ width: 250 }}
+                />
+              ) : (
+                <span
+                  className="clickable"
+                  onClick={() => {
+                    setNotesInput(selectedOrder.additional_notes || '');
+                    setEditingNotes(true);
+                  }}
+                >
+                  {selectedOrder.additional_notes || 'N/A'}
+                </span>
+              )}
+            </p>
+
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <div className='flexRow'>
               <strong className='space'>Delivery Day:</strong>{" "}
@@ -807,7 +923,7 @@ const handlePrintClick = () => {
                 style={{ marginLeft: 8 }}
                 onClick={() => setEditQuantities(q => !q)}
               />
-              <label className="switch" title='split over multiple batch codes?'>
+              <label className="switch" title='fulfil with multiple batch codes?'>
                 <input 
                   type="checkbox"
                   checked={isSplitChecked}
@@ -1017,7 +1133,8 @@ const handlePrintClick = () => {
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
-          <div>
+          <div className='modalFooter'>
+            <div>
             <button className='button' onClick={handlePrintClick}>
               <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
             </button>
@@ -1038,7 +1155,15 @@ const handlePrintClick = () => {
             >
               {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
             </button>
+
           )}
+          </div>
+          <button 
+            className='button'
+            onClick={handleOrderDelete}
+          >
+            <FontAwesomeIcon icon = {faTrash}/>
+          </button>
 
           </div>
         </div>

@@ -34,6 +34,8 @@ const [customerSearch, setCustomerSearch] = useState("");
 const [dropdownOpen, setDropdownOpen] = useState(false);
 const [deliveryDay, setDeliveryDay] = useState("");
 
+const [sampleCustomerName, setSampleCustomerName] = useState("");
+
 
 
 const capitalizeWords = (str) => {
@@ -259,14 +261,26 @@ const handleSubmit = async (event) => {
     event.stopPropagation();
     return;
   }
-  if (!editableEmail || !editableEmail.includes('@')) {
+  if (
+    selectedCustomerId !== "SAMPLES/6UGM" &&
+    selectedCustomerId !== "WEDDINGSPRIVATEEVENTS" &&
+    (!editableEmail || !editableEmail.includes('@'))
+  ) {
     alert("Please enter a valid email address.");
     setSubmitting(false);
     return;
   }
   setValidated(true);
   setSubmitting(true); // ✅ prevent further submissions
-  
+
+  if (selectedCustomerId && filterCriteria) {
+  const customerDoc = customerData.find(c => c.account_ID === selectedCustomerId);
+  if (customerDoc && customerDoc.id) {
+    await updateDoc(doc(db, "customers", customerDoc.id), {
+      default_pizza_view: filterCriteria
+    });
+  }
+}
   // Your pizza and stock logic...
   const pizzas = filteredPizzaData.reduce((acc, pizza) => {
     const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
@@ -300,6 +314,7 @@ const handleSubmit = async (event) => {
       additional_notes: document.getElementById('additonalNotes').value,
       order_status: "order placed",
       complete: false,
+      ...((selectedCustomerId === "SAMPLES/6UGM" || selectedCustomerId === "WEDDINGSPRIVATEEVENTS") && { sample_customer_name: sampleCustomerName }),
     });
 
     console.log("Document written with ID: ", docRef.id);
@@ -361,36 +376,58 @@ return (
         </Dropdown>
       </Col>
     </Form.Group>
-
-      <h4 className='orderFormFor'>
-        Customer Name: {customerData.find(c => c.account_customer === selectedCustomerId)?.name || "—"}
-      </h4>
-      <p className='today'>{today}</p>
-      <p>Account ID: {selectedCustomerId || "—"}</p>
-      <p>Address: {customerAddress} </p>
-      <div className='email'>
-        {editingEmail ? (
-        <>
-          <input
-            type='email'
-            className='emailBox'
-            value={editableEmail}
-            onChange={(e) => setEditableEmail(e.target.value)}
-            onBlur={handleSaveEmail}
-            autoFocus
-          />
-        </>
-      ) : (
-        <>
-          <p>Email: {editableEmail}</p>
-          <FontAwesomeIcon
-            icon={faEdit}
-            className='icon editIcon'
-            onClick={() => setEditingEmail(true)}
-          />
-        </>
+      {(selectedCustomerId !== "SAMPLES/6UGM" || selectedCustomerId !== "WEDDINGSPRIVATEEVENTS") && (
+      <>
+        <p className='today'>{today}</p>
+        <p>Account ID: {selectedCustomerId || "—"}</p>
+      </>
       )}
-      </div>
+
+      {(selectedCustomerId === "SAMPLES/6UGM" || selectedCustomerId === "WEDDINGSPRIVATEEVENTS") && (
+        <Form.Group as={Row} className="orderFormFor" controlId="sampleCustomerName">
+          <Form.Label column sm={3}>
+            <h4>Customer:</h4>
+          </Form.Label>
+          <Col sm={9}>
+            <Form.Control
+              type="text"
+              placeholder="Enter customer name"
+              value={sampleCustomerName}
+              onChange={e => setSampleCustomerName(e.target.value)}
+            />
+          </Col>
+        </Form.Group>
+      )}
+      <Form.Group className='customerDetails'>
+        {(selectedCustomerId !== "SAMPLES/6UGM" && selectedCustomerId !== "WEDDINGSPRIVATEEVENTS") && (
+        <p>Address: {customerAddress} </p>
+        )}
+
+        <div className='email'>
+          {editingEmail ? (
+            <>
+            <input
+              type='email'
+              className='emailBox'
+              value={editableEmail}
+              onChange={(e) => setEditableEmail(e.target.value)}
+              onBlur={handleSaveEmail}
+              autoFocus
+            />
+          </>
+        ) : (
+          <>
+            <div>Email: {editableEmail}</div>
+            <FontAwesomeIcon
+              icon={faEdit}
+              className='icon editIcon'
+              onClick={() => setEditingEmail(true)}
+              />
+          </>
+        )}
+        </div>
+      </Form.Group>
+      
 
       <fieldset>
       <Form.Group as={Row} className="mb-3">
@@ -483,7 +520,6 @@ return (
             label="With Sleeve" 
             value="withSleeve" 
             checked={filterCriteria === "withSleeve"} 
-            disabled = {filterCriteria !== "withSleeve"}
             onChange={handleFilterChange} 
             inline 
           />
@@ -492,7 +528,6 @@ return (
             label="Without Sleeve" 
             value="withoutSleeve" 
             checked={filterCriteria === "withoutSleeve"} 
-            disabled = {filterCriteria !== "withoutSleeve"}
             onChange={handleFilterChange} 
             inline 
           />
@@ -501,7 +536,6 @@ return (
             label="All Pizzas" 
             value="all" 
             checked={filterCriteria === "all"}
-            disabled = {filterCriteria !== "all"} 
             onChange={handleFilterChange} 
             inline 
           />
@@ -524,7 +558,6 @@ return (
           </Col>
         </Form.Group>
       ))}
-      Total Pizzas: {totalPizzas}
       </fieldset>
 
 
@@ -545,7 +578,10 @@ return (
       </Col>
     </Form.Group>
     </fieldset>
-    
+    <fieldset>
+      <p>Total Pizzas: {totalPizzas}</p>
+    </fieldset>
+
     <Form.Group className="mb-3">
       <Form.Check
         required
