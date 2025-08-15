@@ -524,7 +524,6 @@ return (
           </Col>
         </Form.Group>
       ))}
-      Total Pizzas: {totalPizzas}
       </fieldset>
 
 
@@ -545,7 +544,10 @@ return (
       </Col>
     </Form.Group>
     </fieldset>
-    
+    <fieldset>
+      <p>Total Pizzas: {totalPizzas}</p>
+    </fieldset>
+
     <Form.Group className="mb-3">
       <Form.Check
         required
