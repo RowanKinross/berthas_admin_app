@@ -18,6 +18,9 @@
   align-items: start;
   justify-content: flex-start;
 }
+.customerDetails {
+  padding-bottom: 15px;
+}
 .emailBox {
   width: 100%;
 }

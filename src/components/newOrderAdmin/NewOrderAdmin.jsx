@@ -34,6 +34,8 @@ const [customerSearch, setCustomerSearch] = useState("");
 const [dropdownOpen, setDropdownOpen] = useState(false);
 const [deliveryDay, setDeliveryDay] = useState("");
 
+const [sampleCustomerName, setSampleCustomerName] = useState("");
+
 
 
 const capitalizeWords = (str) => {
@@ -361,36 +363,61 @@ return (
         </Dropdown>
       </Col>
     </Form.Group>
-
-      <h4 className='orderFormFor'>
-        Customer Name: {customerData.find(c => c.account_customer === selectedCustomerId)?.name || "—"}
-      </h4>
-      <p className='today'>{today}</p>
-      <p>Account ID: {selectedCustomerId || "—"}</p>
-      <p>Address: {customerAddress} </p>
-      <div className='email'>
-        {editingEmail ? (
-        <>
-          <input
-            type='email'
-            className='emailBox'
-            value={editableEmail}
-            onChange={(e) => setEditableEmail(e.target.value)}
-            onBlur={handleSaveEmail}
-            autoFocus
-          />
-        </>
-      ) : (
-        <>
-          <p>Email: {editableEmail}</p>
-          <FontAwesomeIcon
-            icon={faEdit}
-            className='icon editIcon'
-            onClick={() => setEditingEmail(true)}
-          />
-        </>
+      {selectedCustomerId != "SAMPLES/6UGM" && (
+      <>
+        <h4 className='orderFormFor'>
+          Customer Name: {customerData.find(c => c.account_customer === selectedCustomerId)?.name || "—"}
+        </h4>
+        <p className='today'>{today}</p>
+        <p>Account ID: {selectedCustomerId || "—"}</p>
+      </>
       )}
-      </div>
+
+      {selectedCustomerId === "SAMPLES/6UGM" && (
+        <Form.Group as={Row} className="orderFormFor" controlId="sampleCustomerName">
+          <Form.Label column sm={3}>
+            <h4>Customer:</h4>
+          </Form.Label>
+          <Col sm={9}>
+            <Form.Control
+              type="text"
+              placeholder="Enter sample customer name"
+              value={sampleCustomerName}
+              onChange={e => setSampleCustomerName(e.target.value)}
+            />
+          </Col>
+        </Form.Group>
+      )}
+      <Form.Group className='customerDetails'>
+        {selectedCustomerId != "SAMPLES/6UGM" && (
+        <p>Address: {customerAddress} </p>
+        )}
+
+        <div className='email'>
+          {editingEmail ? (
+            <>
+            <input
+              type='email'
+              className='emailBox'
+              value={editableEmail}
+              onChange={(e) => setEditableEmail(e.target.value)}
+              onBlur={handleSaveEmail}
+              autoFocus
+            />
+          </>
+        ) : (
+          <>
+            <div>Email: {editableEmail}</div>
+            <FontAwesomeIcon
+              icon={faEdit}
+              className='icon editIcon'
+              onClick={() => setEditingEmail(true)}
+              />
+          </>
+        )}
+        </div>
+      </Form.Group>
+      
 
       <fieldset>
       <Form.Group as={Row} className="mb-3">
