@@ -261,7 +261,10 @@ const handleSubmit = async (event) => {
     event.stopPropagation();
     return;
   }
-  if (!editableEmail || !editableEmail.includes('@')) {
+  if (
+    selectedCustomerId !== "SAMPLES/6UGM" &&
+    (!editableEmail || !editableEmail.includes('@'))
+  ) {
     alert("Please enter a valid email address.");
     setSubmitting(false);
     return;
@@ -302,6 +305,7 @@ const handleSubmit = async (event) => {
       additional_notes: document.getElementById('additonalNotes').value,
       order_status: "order placed",
       complete: false,
+      ...(selectedCustomerId === "SAMPLES/6UGM" && { sample_customer_name: sampleCustomerName }),
     });
 
     console.log("Document written with ID: ", docRef.id);
