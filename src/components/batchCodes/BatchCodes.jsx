@@ -29,6 +29,10 @@ function BatchCodes() {
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
+  //pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const batchesPerPage = 10;
+
 
   // Sort ingredients specifically:-
   const INGREDIENT_ORDER = [
@@ -175,7 +179,7 @@ const formatDateDisplay = (dateStr) => {
     });
     setBatchCodeSuggestions(mapAsArrays);
 
-    setBatchCodeSuggestions(Array.from(seenCodes));
+    // setBatchCodeSuggestions(Array.from(seenCodes));
   }, (error) => {
     console.error("Error listening to batches:", error);
   });
@@ -641,16 +645,18 @@ const formatDateDisplay = (dateStr) => {
   return (
     <div className='batchCodes navContent'>
       <h2>BATCH CODES</h2>
-      
-      <div 
-        className="alignRight">
-        <input
-          type="text"
-          placeholder="Search batch codes..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          />
-      </div>
+      {/* only show batch search if sufficient internet connection */}
+      {filteredBatches.length > 0 && (
+        <div 
+          className="alignRight">
+          <input
+            type="text"
+            placeholder="Search batch dates..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+      )}
       <button className='button' onClick={handleAddClick}>+</button>
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
@@ -660,7 +666,7 @@ const formatDateDisplay = (dateStr) => {
           </div>
           <div >
             <p><strong>Batch Date:</strong> {formatDateDisplay(viewingBatch.batch_date)}</p>
-            <p>
+            <div>
             <div className='dateLabelContainer'>
               <strong>Date Label:</strong>
               <div className='dateLabelContent'>
@@ -669,26 +675,21 @@ const formatDateDisplay = (dateStr) => {
               </div>
             </div>
               <strong>Ingredients Ordered:</strong>{" "}
-              {editingField === "ingredients_ordered" ? (
-                <input
-                  type="checkbox"
-                  checked={editingValue}
-                  autoFocus
-                  onChange={(e) => setEditingValue(e.target.checked)}
-                  onBlur={() => handleInlineSave("batch", null, "ingredients_ordered", editingValue)}
-                />
-              ) : (
-                <span
-                  onClick={() => {
-                    setEditingField("ingredients_ordered");
-                    setEditingValue(viewingBatch.ingredients_ordered || false);
-                  }}
-                  style={{ cursor: "pointer" }}
-                >
-                  {viewingBatch.ingredients_ordered ? "✓" : "✘"}
-                </span>
-              )}
-            </p>
+              <input
+                type="checkbox"
+                checked={ingredientsOrdered || false}
+                name='ingredients_ordered'
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  try {
+                    await handleInlineSave("batch", null, "ingredients_ordered", newValue);
+                    setIngredientsOrdered(newValue);
+                  } catch (error) {
+                    console.error("Error updating checkbox:", error);
+                  }
+                }}
+              />
+            </div>
 
           </div>
           <div className='pizzaDisplayTitles'> 
@@ -1046,14 +1047,18 @@ const formatDateDisplay = (dateStr) => {
         </form>
       )}
   
-      <div className='batchHeader container'>
-        <p>Batch Date:</p>
-        <p>Pizzas:</p>
-        <p>Ingredients Ordered?</p>
-      </div>
+      {filteredBatches.length > 0 && (
+        <div className='batchHeader container'>
+          <p>Batch Date:</p>
+          <p>Pizzas:</p>
+          <p>Ingredients Ordered?</p>
+        </div>
+      )}
+
       {filteredBatches.length > 0 ? (
         filteredBatches
         .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+        .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
         .map(batch => (
           <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
             <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
@@ -1066,6 +1071,17 @@ const formatDateDisplay = (dateStr) => {
       ) : (
         <p className='py-3'>Loading batches...</p>
       )}
+      <div className="pagination">
+        {Array.from({ length: Math.ceil(filteredBatches.length / batchesPerPage) }, (_, index) => (
+          <button
+            key={index + 1}
+            className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
+            onClick={() => setCurrentPage(index + 1)}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
     </div>
   );
   

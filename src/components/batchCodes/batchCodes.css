@@ -68,6 +68,7 @@
 
 .pizzaDisplayTitles{
   display: flex;
+  margin-top: 25px;
 }
 .pizzaWeightsOuter {
   width: 50%;
