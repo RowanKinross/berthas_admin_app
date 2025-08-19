@@ -78,6 +78,16 @@
   justify-content: space-between;
 }
 
+.dateLabelContainer {
+  display:flex;
+}
+.dateLabelContent {
+  margin-left: 10px;
+  border: solid 1px var(--darkLight);
+  border-radius: 5px;
+  padding: 0 4px;
+}
+
 
 .center {
   justify-content: center;
