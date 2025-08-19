@@ -318,6 +318,19 @@ const updateDeliveryDate = async (orderId, newDate) => {
     };
 
 
+    // revert order status
+    const updateOrderStatus = async (orderId, newStatus) => {
+      try {
+        await updateDoc(doc(db, "orders", orderId), {
+          order_status: newStatus,
+          complete: newStatus === "complete"
+        });
+      } catch (error) {
+        alert("Failed to update order status: " + error.message);
+      }
+    };
+
+    // mark bulk orders as packed
     const markSelectedAsPacked = async (orderIds = selectedOrders) => {
       try {
         console.log(orderIds)
@@ -335,7 +348,7 @@ const updateDeliveryDate = async (orderId, newDate) => {
       }
     };
 
-
+    // mark selected orders as complete
     const markSelectedAsComplete = async (orderIds = selectedOrders) => {
       try {
         const batch = writeBatch(db);
@@ -351,6 +364,14 @@ const updateDeliveryDate = async (orderId, newDate) => {
       } catch (error) {
         console.error("❌ Error marking orders as complete:", error);
       }
+    };
+
+    const updateOrderInList = (orderId, updates) => {
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === orderId ? { ...order, ...updates } : order
+        )
+      );
     };
 
 
@@ -763,10 +784,13 @@ const handlePrintClick = () => {
     {selectedOrder && (
         <div className='modal'>
           <div className='modalContent orderModal' ref={modalRef}>
-          <div>
+          <div className='orderDetailsAndSlip'>
             <div>- Order Details -</div>
+            <button className='button packButton' onClick={handlePrintClick}>
+              <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
+            </button>
           </div>
-          <div>
+          <div className='orderContent'>
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
             <p><strong>Customer:  </strong> {selectedOrder.customer_name === 'SAMPLES' ? `SAMPLE: ${selectedOrder. sample_customer_name}` :  selectedOrder.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${selectedOrder.sample_customer_name}`: selectedOrder.customer_name}</p>
 
@@ -1135,9 +1159,7 @@ const handlePrintClick = () => {
           </div>
           <div className='modalFooter'>
             <div>
-            <button className='button' onClick={handlePrintClick}>
-              <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
-            </button>
+            
             {!selectedOrder.complete && selectedOrder.order_status !== "order placed" && (
             <button
               className="button"
@@ -1155,7 +1177,40 @@ const handlePrintClick = () => {
             >
               {selectedOrder.order_status === "ready to pack" ? "Mark as Packed" : "Order Complete"}
             </button>
+          )}
+          {selectedOrder.order_status === "packed" && !selectedOrder.complete && (
+            <button
+              className="button button-secondary"
+              onClick={() => {
+                // Revert to "ready to pack"
+                updateOrderStatus(selectedOrder.id, "ready to pack");
+                setSelectedOrder(prev => ({
+                  ...prev,
+                  order_status: "ready to pack"
+                }));
+                updateOrderInList(selectedOrder.id, { order_status: "ready to pack", complete: false });
+              }}
+            >
+              Revert to "Ready to Pack"
+            </button>
+          )}
 
+          {selectedOrder.order_status === "complete" && (
+            <button
+              className="button button-secondary"
+              onClick={() => {
+                // Revert to "packed"
+                updateOrderStatus(selectedOrder.id, "packed");
+                setSelectedOrder(prev => ({
+                  ...prev,
+                  order_status: "packed",
+                  complete: false
+                }));
+                updateOrderInList(selectedOrder.id, { order_status: "packed", complete: false });
+              }}
+            >
+              Revert to "Packed"
+            </button>
           )}
           </div>
           <button 
