@@ -254,6 +254,28 @@ function BatchCodes() {
     });
 
     setConsolidatedIngredients(consolidated);
+
+    // ingredients order = [
+    //   Flour,
+    //   Salt,
+    // [ Prep ahead:
+    //   Alphabetical,
+    // ]
+    //   Tomatoes,
+    //   Rapeseed Oil,
+    //   Ham,
+    //   Vegan Mozz,
+    //   Mozz
+    // ]
+
+    // pizzas order = [
+    // Vegan,
+    // Vegan No Sleeve,
+    // Vegetarian & Vegetarian No sleeve alphabetical
+    // Meat & Meat No Sleeve alphabetical
+    // ]
+
+
   };
   
 
@@ -527,7 +549,7 @@ function BatchCodes() {
 
   
   return (
-    <div className='batchCodes'>
+    <div className='batchCodes navContent'>
       <h2>BATCH CODES</h2>
       
       <div 

@@ -197,7 +197,7 @@ const adjustArchive = async (delta) => {
 
 
   return (
-    <div className='inventory'>
+    <div className='inventory navContent'>
       <h2>ARCHIVE</h2>
         <div className='archiveBox' id='totals'>
           <p>Total: {totalStockOverall}</p>

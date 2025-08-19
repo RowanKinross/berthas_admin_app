@@ -12,6 +12,7 @@ import Inventory from './components/inventory/Inventory'
 import Archive from './components/archive/Archive'
 import Summary from './components/summary/Summary'
 import BatchCodes from './components/batchCodes/BatchCodes'
+import Prep from './components/prep/Prep'
 import Auth from './components/auth/Auth';
 import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
 
@@ -32,7 +33,7 @@ return (
           <NavTabs customerName={customerName} setCustomerName={setCustomerName} accountID={accountID} setAccountID={setAccountID}/>
       </header>
       <div className='body'>
-        <div className='navContent'>
+        <div >
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="newOrder" element={<NewOrder customerName={customerName} accountID={accountID}/>} />
@@ -44,6 +45,7 @@ return (
             <Route path="archive" element={<Archive />} />
             <Route path="summary" element={<Summary/>}/>
             <Route path="batchCodes" element={<BatchCodes/>}/>
+            <Route path="prep" element={<Prep/>}/>
           </Routes>
         </div>
       </div>

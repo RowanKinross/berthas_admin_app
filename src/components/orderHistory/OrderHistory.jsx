@@ -164,7 +164,7 @@ const OrderHistory = ({ accountID }) => {
   };
 
   return (
-    <div className="orders">
+    <div className="orders navContent">
       <h2>ORDER HISTORY</h2>
       <div className="ordersList">
         <div className="orderButton orderHeaders orderHistoryHeaders">

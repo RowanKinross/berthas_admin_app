@@ -241,7 +241,11 @@ const generateAccountID = ({ name, postcode }) => {
     } else if (userRole === "unit") {
       return (
         <>
-         <NavLink to="/batchCodes" className={({ isActive }) =>
+          {/* <NavLink to="/prep" className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'}>
+            <h3 className="navTab">PREP</h3>
+          </NavLink> */}
+          <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCH CODES</h3>
           </NavLink>

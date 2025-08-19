@@ -330,7 +330,7 @@ const handleSubmit = async (event) => {
 
 // export default NewOrder
 return (
-  <div className='newOrder'>
+  <div className='newOrder navContent'>
     <div>
       <h2>Place a new order:</h2>
     </div>
