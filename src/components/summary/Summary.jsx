@@ -329,7 +329,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
 
 
   return (
-    <div className='demandSummary'>
+    <div className='demandSummary navContent'>
       <h2>DEMAND SUMMARY</h2>
       <div className='demandSummaryFlex'>
         <div className='summaryContainer'>

@@ -32,7 +32,7 @@ return (
           <NavTabs customerName={customerName} setCustomerName={setCustomerName} accountID={accountID} setAccountID={setAccountID}/>
       </header>
       <div className='body'>
-        <div className='navContent'>
+        <div >
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="newOrder" element={<NewOrder customerName={customerName} accountID={accountID}/>} />

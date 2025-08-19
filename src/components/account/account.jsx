@@ -73,7 +73,7 @@ const Account = ({ accountID }) => {
   };
 
   return (
-<div className='account'>
+<div className='account navContent'>
       <h2>ACCOUNT INFORMATION</h2>
       {accounts
         .filter(account => account.account_ID === accountID)

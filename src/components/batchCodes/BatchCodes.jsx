@@ -527,7 +527,7 @@ function BatchCodes() {
 
   
   return (
-    <div className='batchCodes'>
+    <div className='batchCodes navContent'>
       <h2>BATCH CODES</h2>
       
       <div 

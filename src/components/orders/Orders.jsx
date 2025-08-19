@@ -682,7 +682,7 @@ const handlePrintClick = () => {
 
   
   return (
-  <div className='orders'>
+  <div className='orders navContent'>
     <h2>ORDERS</h2>
     <div style={{ marginBottom: '1rem' }}>
       <button
