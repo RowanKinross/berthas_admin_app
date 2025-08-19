@@ -30,8 +30,80 @@ function BatchCodes() {
   const [searchTerm, setSearchTerm] = useState("");
 
 
+  // Sort ingredients specifically:-
+  const INGREDIENT_ORDER = [
+    "Flour (Caputo Red)",
+    "Salt",
+    // The rest will be handled alphabetically except for these at the end:
+    "Tomato",
+    "Ham",
+    "Rapeseed Oil",
+    "Vegan Mozzarella",
+    "Mozzarella"
+  ];
+  const sortIngredients = (ingredients) => {
+    // Ingredients to always put at the end (except Flour, Salt, which are at the start)
+    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella"]);
+    const startSet = new Set(["Flour (Caputo Red)", "Salt"]);
+    // Split into start, middle (alphabetical), and end
+    const start = [];
+    const end = [];
+    const middle = [];
+    ingredients.forEach(ing => {
+      if (startSet.has(ing.name)) start.push(ing);
+      else if (endSet.has(ing.name)) end.push(ing);
+      else middle.push(ing);
+    });
+    // Alphabetically sort the middle
+    middle.sort((a, b) => a.name.localeCompare(b.name));
+    // Order the end according to INGREDIENT_ORDER
+    end.sort((a, b) => INGREDIENT_ORDER.indexOf(a.name) - INGREDIENT_ORDER.indexOf(b.name));
+    // Start + middle + end
+    return [
+      ...start,
+      ...middle,
+      ...end
+    ];
+  }
 
-  const formatDateDisplay = (dateStr) => {
+
+
+  const PIZZA_ORDER = [
+    "ROS_B1",
+    "ROS_B0",
+    "MAR_B0",
+    "ROS_A0",
+    "MAR_A1",
+    "MAR_A0",
+    "NAP_A1",
+    "NAP_A0",
+    "HAM_A1",
+    "HAM_A0",
+    "MEA_A1",
+    "MEA_A0"
+  ]
+  const sortPizzas = (pizzas) => {
+  const startSet = new Set(PIZZA_ORDER);
+  const start = [];
+  const end = [];
+  pizzas.forEach(pizza => {
+    if (startSet.has(pizza.id)) start.push(pizza);
+    else end.push(pizza);
+  });
+  // Alphabetically sort the end set by pizza_title
+  end.sort((a, b) => a.pizza_title.localeCompare(b.pizza_title));
+  // Order the start according to PIZZA_ORDER
+  start.sort((a, b) => PIZZA_ORDER.indexOf(a.id) - PIZZA_ORDER.indexOf(b.id));
+  // Start + end
+  return [
+    ...start,
+    ...end
+  ];
+};
+
+
+// format batch date
+const formatDateDisplay = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-GB", {
@@ -40,6 +112,39 @@ function BatchCodes() {
       year: "numeric"
     });
   };
+
+
+  // format batchDate for labelling 
+  const getBatchDate = (batchDateStr) => {
+    if (!batchDateStr) return "";
+    const [year, month, day] = batchDateStr.split("-").map(Number);
+    const batchDate = new Date(year, month - 1, day); // JS months are 0-based
+    // Format as DD.MM.YY
+    return batchDate.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit"
+    }).replace(/\//g, ".");
+  }
+  // format best before date for labelling
+  const getBestBeforeDate = (batchDateStr) => {
+  if (!batchDateStr) return "";
+  const [year, month, day] = batchDateStr.split("-").map(Number);
+  // JS months are 0-based
+  let bestBefore = new Date(year, month - 1 + 9, day);
+
+  // If the day rolled over to the next month, set to 1st of following month
+  if (bestBefore.getDate() !== day) {
+    // Move to 1st of the next month
+    bestBefore = new Date(bestBefore.getFullYear(), bestBefore.getMonth() + 1, 1);
+  }
+  // Format as DD.MM.YY
+  return bestBefore.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit"
+    }).replace(/\//g, ".");
+  }
 
 
   // display all batches
@@ -254,28 +359,6 @@ function BatchCodes() {
     });
 
     setConsolidatedIngredients(consolidated);
-
-    // ingredients order = [
-    //   Flour,
-    //   Salt,
-    // [ Prep ahead:
-    //   Alphabetical,
-    // ]
-    //   Tomatoes,
-    //   Rapeseed Oil,
-    //   Ham,
-    //   Vegan Mozz,
-    //   Mozz
-    // ]
-
-    // pizzas order = [
-    // Vegan,
-    // Vegan No Sleeve,
-    // Vegetarian & Vegetarian No sleeve alphabetical
-    // Meat & Meat No Sleeve alphabetical
-    // ]
-
-
   };
   
 
@@ -571,6 +654,13 @@ function BatchCodes() {
           <div >
             <p><strong>Batch Date:</strong> {formatDateDisplay(viewingBatch.batch_date)}</p>
             <p>
+            <div className='dateLabelContainer'>
+              <strong>Date Label:</strong>
+              <div className='dateLabelContent'>
+                <div>{getBatchDate(viewingBatch.batch_date)}</div>
+                <div>{getBestBeforeDate(viewingBatch.batch_date)}</div>
+              </div>
+            </div>
               <strong>Ingredients Ordered:</strong>{" "}
               {editingField === "ingredients_ordered" ? (
                 <input
@@ -598,7 +688,7 @@ function BatchCodes() {
             <h4 className='pizzaWeightsOuter'>Pizzas:</h4>
             <h6 className='pizzaWeightsOuter pizzaWeights'>Pizza Weights:</h6>
           </div>
-          {viewingBatch.pizzas.filter(pizza => pizza.quantity > 0).map(pizza => (
+          {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (
   <div key={pizza.id} className='pizzaDetails'>
   <p>
     <strong>{pizza.pizza_title}</strong>:{" "}
@@ -739,8 +829,9 @@ function BatchCodes() {
     onBlur={() => setShowPizzaPicker(false)} // hide dropdown if user clicks away
   >
     <option value="">Select pizza...</option>
-    {pizzas
-      .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id))
+    {sortPizzas(
+    pizzas
+      .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id)))
       .map(pizza => (
         <option key={pizza.id} value={pizza.id}>
           {pizza.pizza_title}
@@ -770,9 +861,11 @@ function BatchCodes() {
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
           <h4>Batch Codes:</h4>
           <div className='ingredientBatchcodeBox'>
-          {ingredients
-            .filter(ingredient => viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name)))
-            .map(ingredient => {
+          {sortIngredients(
+            ingredients.filter(ingredient =>
+              viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
+            )
+          ).map(ingredient => {
               const batchCode = viewingBatch.pizzas
                 .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
                 .find(code => code);
@@ -895,7 +988,7 @@ function BatchCodes() {
           </div>
           <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
           <Col>
-          {pizzas.map((pizza) => (
+          {sortPizzas(pizzas).map((pizza) => (
           <div key={pizza.id} className='pizzaDetails'>
             <div className="pizza-info">
               <strong>{pizza.pizza_title}</strong>
