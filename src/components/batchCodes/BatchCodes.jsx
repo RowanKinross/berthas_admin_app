@@ -156,17 +156,24 @@ const formatDateDisplay = (dateStr) => {
     }));
     setBatches(batchesData);
 
-    // Build batchCodeSuggestions from live data
-    const seenCodes = new Set();
+    // Build ingredient-specific batch code suggestions from live data
+    const ingredientCodeMap = {};
     batchesData.forEach(batch => {
       batch.pizzas?.forEach(pizza => {
-        Object.values(pizza.ingredientBatchCodes || {}).forEach(code => {
+        Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
           if (code?.trim()) {
-            seenCodes.add(code.trim());
+            if (!ingredientCodeMap[ingredient]) ingredientCodeMap[ingredient] = new Set();
+            ingredientCodeMap[ingredient].add(code.trim());
           }
         });
       });
     });
+    // Convert sets to arrays for easier use in JSX
+    const mapAsArrays = {};
+    Object.entries(ingredientCodeMap).forEach(([ingredient, codes]) => {
+      mapAsArrays[ingredient] = Array.from(codes);
+    });
+    setBatchCodeSuggestions(mapAsArrays);
 
     setBatchCodeSuggestions(Array.from(seenCodes));
   }, (error) => {
@@ -881,7 +888,7 @@ const formatDateDisplay = (dateStr) => {
                     <div>
                     <input
                       type="text"
-                      list='batch-code-suggestions'
+                      list={`batch-code-suggestions-${ingredient.name}`}
                       value={editingValue}
                       autoFocus
                       onChange={(e) => setEditingValue(e.target.value)}
@@ -889,11 +896,18 @@ const formatDateDisplay = (dateStr) => {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleInlineSave("ingredient", ingredient.name, null, editingValue);
                       }}
-                    />
-                    <datalist id="batch-code-suggestions">
-                    {batchCodeSuggestions.map((code) => (
-                      <option key={code} value={code} />
-                    ))}
+                      />
+                  <datalist id={`batch-code-suggestions-${ingredient.name}`}>
+                    {(batchCodeSuggestions[ingredient.name] || [])
+                      .filter(code =>
+                        editingValue
+                          ? code.toLowerCase().includes(editingValue.toLowerCase())
+                          : true
+                      )
+                      .slice(0, 3) // Limit to 3 suggestions
+                      .map(code => (
+                        <option key={code} value={code} />
+                      ))}
                   </datalist>
                   </div>
                   ) : (
