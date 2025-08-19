@@ -334,11 +334,19 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
       <div className='demandSummaryFlex'>
         <div className='summaryContainer'>
           <h3>Current Stock</h3>
+          <label className="switch percentNumberSlider" title="Show as percent">
+            <input
+              type="checkbox"
+              checked={showPercent}
+              onChange={e => setShowPercent(e.target.checked)}
+            />
+            <span className="slider round"></span>
+          </label>
           <StockTable data={stockSummary} showPercent={showPercent} />
         </div>
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
-          <label className="switch" title="Show as percent">
+          <label className="switch percentNumberSlider" title="Show as percent">
             <input
               type="checkbox"
               checked={showPercent}

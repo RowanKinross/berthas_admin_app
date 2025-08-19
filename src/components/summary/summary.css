@@ -59,6 +59,12 @@
 }
 .th-short { display: none; }
 
+
+.percentNumberSlider {
+  margin: 20px;
+}
+
+
 @media (max-width: 600px) {
   .th-full { display: none; }
   .th-short { display: inline; }
