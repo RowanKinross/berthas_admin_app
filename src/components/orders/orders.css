@@ -312,7 +312,12 @@ input:checked + .slider:before {
   .modal {
     width: 95%;
   }
-  .orderStatus {
+  .deliveryToday {
+    padding: 0;
+    border: none;
+    font-weight: 900;
+  }
+  .orderStatus, .region {
     display: none;
   }
 }

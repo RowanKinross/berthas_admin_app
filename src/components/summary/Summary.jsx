@@ -371,7 +371,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       <div className='demandSummaryFlex'>
         <div className='summaryContainer'>
           <h3>Current Stock</h3>
-          <label className="switch percentNumberSlider" title="Switch between percent & value">
+          <label className="switch percentNumberSlider" title="Switch between percent & quantity">
             <input
               type="checkbox"
               checked={showPercentStock}
@@ -388,7 +388,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
         </div>
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
-          <label className="switch percentNumberSlider" title="Switch between percent & value">
+          <label className="switch percentNumberSlider" title="Switch between percent & quantity">
             <input
               type="checkbox"
               checked={showPercentPlanned}

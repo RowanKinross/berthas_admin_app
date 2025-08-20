@@ -819,8 +819,8 @@ const handlePrintClick = () => {
             {sortField === "pizzaTotal" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
-        <div className='orderHeadersAndFilters'>
-          <div className='orderHeader orderStatus'>Order Status:</div>
+        <div className='orderHeadersAndFilters  orderStatus'>
+          <div className='orderHeader'>Order Status:</div>
           <div className='filter' onClick={() => handleSort("order_status")}>
             <FontAwesomeIcon icon={faSort} />
             {sortField === "order_status" && (sortDirection === "asc" ? "▲" : "▼")}
@@ -833,10 +833,10 @@ const handlePrintClick = () => {
             {sortField === "delivery_day" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
-        <div className='orderHeadersAndFilters'>
+        <div className='orderHeadersAndFilters  region'>
           <div className='orderHeader'>Region:</div>
           <div className='filter' onClick={() => handleSort("region")}>
-            <FontAwesomeIcon icon={faSort} />
+            <FontAwesomeIcon icon={faSort}/>
             {sortField === "region" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
@@ -895,7 +895,7 @@ const handlePrintClick = () => {
                 : formatDeliveryDay(order.delivery_day)}
                 </span>
             </div>
-            <div>{orderCustomer?.delivery_region || '—'}</div>
+            <div className='region'>{orderCustomer?.delivery_region || '—'}</div>
           </button>
         </div>
         )})
