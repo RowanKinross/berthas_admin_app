@@ -62,18 +62,31 @@ const getStockSummary = (stock, pizzas) => {
     const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
     return { week: weekNo, year: d.getUTCFullYear() };
   }
+
   const getWeekOffset = (dateLike) => {
     const d = toDate(dateLike);
     if (isNaN(d)) return Infinity;
     const now = new Date();
-    const { week: thisWeek, year: thisYear } = getISOWeekYear(now);
-    const { week: targetWeek, year: targetYear } = getISOWeekYear(d);
-    const weekDiff = (targetYear - thisYear) * 52 + (targetWeek - thisWeek);
-    if (weekDiff === 0) return 1;
-    if (weekDiff === 1) return 2;
-    if (weekDiff === 2) return 3;
+    // Set now to this week's Monday
+    now.setHours(0,0,0,0);
+    const dayOfWeek = now.getDay() || 7; // Sunday is 0, so set to 7
+    const thisMonday = new Date(now);
+    thisMonday.setDate(now.getDate() - dayOfWeek + 1);
+
+    // Get next Monday
+    const nextMonday = new Date(thisMonday);
+    nextMonday.setDate(thisMonday.getDate() + 7);
+
+    // Get week after next Monday
+    const weekAfterNextMonday = new Date(thisMonday);
+    weekAfterNextMonday.setDate(thisMonday.getDate() + 14);
+
+    if (d >= thisMonday && d < nextMonday) return 1; // This week
+    if (d >= nextMonday && d < weekAfterNextMonday) return 2; // Next week
+    if (d >= weekAfterNextMonday && d < new Date(weekAfterNextMonday.getTime() + 7 * 24 * 60 * 60 * 1000)) return 3; // Week after next
     return Infinity;
   };
+
 
   stock.forEach(batch => {
     if (!batch.completed) return;
@@ -90,14 +103,6 @@ const getStockSummary = (stock, pizzas) => {
         .reduce((sum, a) => sum + a.quantity, 0);
 
       const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
-      // allocations
-      //   .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
-      //   .forEach(a => {
-      //     const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
-      //     if ([1,2,3].includes(week)) {
-      //       onOrderByWeek[week] += a.quantity;
-      //     }
-      //   });
 
       const total = pizza.quantity - completed;
       const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
@@ -218,7 +223,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
       if (weekDiff === 2) return 3; // Week after next
       return Infinity; // ignore 3+ weeks
     };
-    const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
+    const week = getWeekOffset(batch.batch_date);
   if (![1,2,3].includes(week)) return; // ignore 3+ weeks
 
     batch.pizzas.forEach(pizza => {
