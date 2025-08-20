@@ -2,7 +2,7 @@ import React from 'react';
 
 function StockTable({ data, showPercent = true }) {
   if (!data || data.length === 0) {
-    return <p>Loading or no stock available.</p>;
+    return <p>Loading stock...</p>;
   }
 
   return (

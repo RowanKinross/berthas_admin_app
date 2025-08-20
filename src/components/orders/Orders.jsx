@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt, faTrash} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt, faTrash, faSort} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot } from 'firebase/firestore';
@@ -39,6 +39,9 @@ function Orders() {
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 20;
+  // sort filter
+  const [sortField, setSortField] = useState("delivery_day");
+  const [sortDirection, setSortDirection] = useState("asc");
 
   const [packingHtml, setPackingHtml] = useState('');
 
@@ -82,18 +85,32 @@ useEffect(() => {
 
 const sortOrders = (orders) => {
   return [...orders].sort((a, b) => {
-    const aDate = a.delivery_day === 'tbc' ? null : new Date(a.delivery_day);
-    const bDate = b.delivery_day === 'tbc' ? null : new Date(b.delivery_day);
-
-    if (!aDate && !bDate) {
-      return b.timestamp?.toDate() - a.timestamp?.toDate();
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+    // Special handling for delivery_day (tbc at top)
+    if (sortField === "delivery_day") {
+      const aDate = aValue === 'tbc' ? null : new Date(aValue);
+      const bDate = bValue === 'tbc' ? null : new Date(bValue);
+      if (!aDate && !bDate) return 0;
+      if (!aDate) return -1;
+      if (!bDate) return 1;
+      return sortDirection === "asc" ? aDate - bDate : bDate - aDate;
     }
-    //TBCs at the top
-    if (!aDate) return -1;
-    if (!bDate) return 1;
+    // For pizzaTotal, ensure numeric sort
+    if (sortField === "pizzaTotal") {
+      aValue = Number(aValue) || 0;
+      bValue = Number(bValue) || 0;
+    }
+    // Special handling for region (look up from allCustomers)
+    if (sortField === "region") {
+      aValue = allCustomers[a.account_ID]?.delivery_region || "";
+      bValue = allCustomers[b.account_ID]?.delivery_region || "";
+    }
 
-    // oldest at the bottom
-    return bDate - aDate;
+    // Default string/numeric sort
+    if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+    if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+    return 0;
   });
 };
 
@@ -437,7 +454,15 @@ const updateDeliveryDate = async (orderId, newDate) => {
     }
   };
 
-
+  // handle sorting orders
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
 
 
   const handleComplete =  useCallback(async () => {
@@ -717,11 +742,41 @@ const handlePrintClick = () => {
 
     <div className='ordersList'>
       <div className='orderButton' id='totals'>
-        <div>Account Name:</div>
-        <div>No. of Pizzas:</div>
-        <div className='orderStatus'>Order Status:</div>
-        <div>Delivery Day:</div>
-        <div>Region:</div>
+        <div className='orderHeadersAndFilters'>
+          <div className='orderHeader'>Account:</div>
+          <div className='filter' onClick={() => handleSort("customer_name")}>
+            <FontAwesomeIcon icon={faSort} />
+            {sortField === "customer_name" && (sortDirection === "asc" ? "▲" : "▼")}
+          </div>
+        </div>
+        <div className='orderHeadersAndFilters'>
+          <div className='orderHeader'>No. of Pizzas:</div>
+          <div className='filter' onClick={() => handleSort("pizzaTotal")}>
+            <FontAwesomeIcon icon={faSort} />
+            {sortField === "pizzaTotal" && (sortDirection === "asc" ? "▲" : "▼")}
+          </div>
+        </div>
+        <div className='orderHeadersAndFilters'>
+          <div className='orderHeader orderStatus'>Order Status:</div>
+          <div className='filter' onClick={() => handleSort("order_status")}>
+            <FontAwesomeIcon icon={faSort} />
+            {sortField === "order_status" && (sortDirection === "asc" ? "▲" : "▼")}
+          </div>
+        </div>
+        <div className='orderHeadersAndFilters'>
+          <div className='orderHeader'>Delivery Day:</div>
+          <div className='filter' onClick={() => handleSort("delivery_day")}>
+            <FontAwesomeIcon icon={faSort} />
+            {sortField === "delivery_day" && (sortDirection === "asc" ? "▲" : "▼")}
+          </div>
+        </div>
+        <div className='orderHeadersAndFilters'>
+          <div className='orderHeader'>Region:</div>
+          <div className='filter' onClick={() => handleSort("region")}>
+            <FontAwesomeIcon icon={faSort} />
+            {sortField === "region" && (sortDirection === "asc" ? "▲" : "▼")}
+          </div>
+        </div>
       </div>
 
     {orders.length > 0 ? (

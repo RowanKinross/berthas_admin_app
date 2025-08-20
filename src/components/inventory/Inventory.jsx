@@ -658,9 +658,10 @@ return (
                 .map((a, i) => {
                   const linkedOrder = orders.find(o => o.id === a.orderId);
                   const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  const deliveryDay = linkedOrder?.delivery_day ||  (a.orderId === 'archived' ? 'archived' : 'unknown');
                   return (
                     <p key={i}>
-                      {accountName}: {a.quantity}
+                      <strong>{accountName}: {a.quantity}</strong> {deliveryDay}
                     </p>
                   );
                 })}
