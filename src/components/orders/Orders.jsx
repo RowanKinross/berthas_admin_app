@@ -26,6 +26,7 @@ function Orders() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
+  const [draftQuantities, setDraftQuantities] = useState({});
   // 
   const modalRef = useRef(null)
   const [customerInfo, setCustomerInfo] = useState(null);
@@ -184,6 +185,26 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
   validateAndUpdateOrderStatus(order);
 };
+
+
+const removePizzaAllocationFromBatch = async ({ pizzaId, batchCode }) => {
+  const batchDoc = batches.find(b => b.batch_code === batchCode);
+  if (!batchDoc) return;
+  const allocations = batchDoc.pizza_allocations || [];
+  const orderId = selectedOrder.id;
+  const filtered = allocations.filter(
+    a => !(a.orderId === orderId && a.pizzaId === pizzaId)
+  );
+  try {
+    await updateDoc(doc(db, "batches", batchDoc.id), {
+      pizza_allocations: filtered
+    });
+  } catch (error) {
+    console.error("Error removing pizza allocation:", error);
+  }
+};
+
+
 
 // delete order?
 const handleOrderDelete = async () => {
@@ -444,6 +465,11 @@ const updateDeliveryDate = async (orderId, newDate) => {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaName}.batchesUsed`]: newBatches,
     });
+    for (const b of currentBatches) {
+      if (b.batch_number !== batchCode) {
+        await removePizzaAllocationFromBatch({ pizzaId: pizzaName, batchCode: b.batch_number });
+      }
+    }
     await syncPizzaAllocation({
       pizzaId: pizzaName,
       batchCode,
@@ -819,8 +845,8 @@ const handlePrintClick = () => {
             {sortField === "pizzaTotal" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
-        <div className='orderHeadersAndFilters'>
-          <div className='orderHeader orderStatus'>Order Status:</div>
+        <div className='orderHeadersAndFilters  orderStatus'>
+          <div className='orderHeader'>Order Status:</div>
           <div className='filter' onClick={() => handleSort("order_status")}>
             <FontAwesomeIcon icon={faSort} />
             {sortField === "order_status" && (sortDirection === "asc" ? "▲" : "▼")}
@@ -833,10 +859,10 @@ const handlePrintClick = () => {
             {sortField === "delivery_day" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
-        <div className='orderHeadersAndFilters'>
+        <div className='orderHeadersAndFilters  region'>
           <div className='orderHeader'>Region:</div>
           <div className='filter' onClick={() => handleSort("region")}>
-            <FontAwesomeIcon icon={faSort} />
+            <FontAwesomeIcon icon={faSort}/>
             {sortField === "region" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
@@ -895,7 +921,7 @@ const handlePrintClick = () => {
                 : formatDeliveryDay(order.delivery_day)}
                 </span>
             </div>
-            <div>{orderCustomer?.delivery_region || '—'}</div>
+            <div className='region'>{orderCustomer?.delivery_region || '—'}</div>
           </button>
         </div>
         )})
@@ -1104,27 +1130,20 @@ const handlePrintClick = () => {
                   <input
                     type="number"
                     min={1}
-                    value={pizzaData.quantity}
-                    onChange={async (e) => {
-                      const newQty = parseInt(e.target.value, 10) || 0;
-                      // Save original_quantity if not already present
-                      if (!pizzaData.original_quantity) {
-                        await updateDoc(doc(db, "orders", selectedOrder.id), {
-                          [`pizzas.${pizzaName}.original_quantity`]: pizzaData.quantity,
-                        });
-                      }
-                      const updatedPizzas = {
-                        ...selectedOrder.pizzas,
-                        [pizzaName]: {
-                          ...selectedOrder.pizzas[pizzaName],
-                          quantity: newQty,
-                          original_quantity: pizzaData.original_quantity || pizzaData.quantity,
-                        }
-                      };
-                      const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
+                    value={draftQuantities[pizzaName] ?? pizzaData.quantity}
+                    onChange={e => {
+                      const val = parseInt(e.target.value, 10) || 0;
+                      setDraftQuantities(prev => ({ ...prev, [pizzaName]: val }));
+                    }}
+                    onBlur={async () => {
+                      const newQty = draftQuantities[pizzaName] ?? pizzaData.quantity;
+                      // Update order in Firestore
                       await updateDoc(doc(db, "orders", selectedOrder.id), {
                         [`pizzas.${pizzaName}.quantity`]: newQty,
-                        pizzaTotal: newPizzaTotal,
+                        pizzaTotal: calculatePizzaTotal({
+                          ...selectedOrder.pizzas,
+                          [pizzaName]: { ...pizzaData, quantity: newQty }
+                        }),
                       });
                       // Update local state
                       setSelectedOrder(prev => ({
@@ -1134,11 +1153,25 @@ const handlePrintClick = () => {
                           [pizzaName]: {
                             ...prev.pizzas[pizzaName],
                             quantity: newQty,
-                            original_quantity: prev.pizzas[pizzaName].original_quantity || prev.pizzas[pizzaName].quantity,
                           }
                         },
-                        pizzaTotal: newPizzaTotal,
+                        pizzaTotal: calculatePizzaTotal({
+                          ...prev.pizzas,
+                          [pizzaName]: { ...prev.pizzas[pizzaName], quantity: newQty }
+                        }),
                       }));
+                      // Now update batch allocations for all assigned batches
+                      const batchesUsed = selectedOrder.pizzas[pizzaName].batchesUsed || [];
+                      for (const batch of batchesUsed) {
+                        await syncPizzaAllocation({
+                          pizzaId: pizzaName,
+                          batchCode: batch.batch_number,
+                          quantity: isSplitChecked ? batch.quantity : newQty
+                        });
+                      }
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") e.target.blur();
                     }}
                     style={{ width: 60 }}
                   />
@@ -1254,29 +1287,48 @@ const handlePrintClick = () => {
                       value={0}
                       onChange={async (e) => {
                         const newQty = parseInt(e.target.value, 10) || 0;
-                        if (newQty > 0) {
-                          const updatedPizzas = {
-                            ...selectedOrder.pizzas,
-                            [pizzaId]: {
-                              quantity: newQty,
-                              batchesUsed: [],
-                            }
-                          };
-                          const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
-                          // Add pizza to order in Firestore
+                        if (!pizzaData.original_quantity) {
                           await updateDoc(doc(db, "orders", selectedOrder.id), {
-                            [`pizzas.${pizzaId}`]: {
-                              quantity: newQty,
-                              batchesUsed: [],
-                            },
-                            pizzaTotal: newPizzaTotal,
+                            [`pizzas.${pizzaName}.original_quantity`]: pizzaData.quantity,
                           });
-                          // Update local state
-                          setSelectedOrder(prev => ({
-                            ...prev,
-                            pizzas: updatedPizzas,
-                            pizzaTotal: newPizzaTotal,
-                          }));
+                        }
+                        const updatedPizzas = {
+                          ...selectedOrder.pizzas,
+                          [pizzaName]: {
+                            ...selectedOrder.pizzas[pizzaName],
+                            quantity: newQty,
+                            original_quantity: pizzaData.original_quantity || pizzaData.quantity,
+                          }
+                        };
+                        const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
+                        await updateDoc(doc(db, "orders", selectedOrder.id), {
+                          [`pizzas.${pizzaName}.quantity`]: newQty,
+                          pizzaTotal: newPizzaTotal,
+                        });
+                        // Update local state
+                        setSelectedOrder(prev => ({
+                          ...prev,
+                          pizzas: {
+                            ...prev.pizzas,
+                            [pizzaName]: {
+                              ...prev.pizzas[pizzaName],
+                              quantity: newQty,
+                              original_quantity: prev.pizzas[pizzaName].original_quantity || prev.pizzas[pizzaName].quantity,
+                            }
+                          },
+                          pizzaTotal: newPizzaTotal,
+                        }));
+
+                        // --- Sync allocation(s) ---
+                        const batchesUsed = pizzaData.batchesUsed || [];
+                        if (batchesUsed.length > 0) {
+                          for (const batch of batchesUsed) {
+                            await syncPizzaAllocation({
+                              pizzaId: pizzaName,
+                              batchCode: batch.batch_number,
+                              quantity: isSplitChecked ? batch.quantity : newQty
+                            });
+                          }
                         }
                       }}
                       style={{ width: 60 }}
