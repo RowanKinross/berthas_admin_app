@@ -11,8 +11,8 @@ function Summary() {
   const [orders, setOrders] = useState([]);
 
   // slider rounder controls
-  const [showPercentStock, setShowPercentStock] = useState(true);
-  const [showPercentPlanned, setShowPercentPlanned] = useState(true);
+  const [showPercentStock, setShowPercentStock] = useState(false);
+  const [showPercentPlanned, setShowPercentPlanned] = useState(false);
 
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
