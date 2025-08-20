@@ -51,15 +51,36 @@
 }
 .page-button {
   padding: 5px 10px;
-  border: 1px solid #ccc;
-  background: #f9f9f9;
   cursor: pointer;
 }
 .page-button.active {
   font-weight: bold;
-  background: #eee;
+  border: 1px solid var(--darkLight);
+  border-radius: 5px;
 }
 
+/* sorting */
+.orderHeadersAndFilters {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.filter {
+  padding: 0%;
+  margin: 0;
+  text-align: left !important;
+  align-items: start;
+  justify-content: start;
+}
+.orderHeader {
+  text-align: right !important;
+  padding-right: 5px;
+}
+.selectOrdersAndSearchOrders {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
 
 
 .modalContent {
