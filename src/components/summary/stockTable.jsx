@@ -1,6 +1,6 @@
 import React from 'react';
 
-function StockTable({ data, showPercent = true }) {
+function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotals }) {
   if (!data || data.length === 0) {
     return <p>Loading stock...</p>;
   }
@@ -54,9 +54,26 @@ function StockTable({ data, showPercent = true }) {
                   ? `${item.ratio}%`
                   : item.total}
               </td>
-              <td>{item.onOrder1 ?? 0}</td>
-              <td>{item.onOrder2 ?? 0}</td>
-              <td>{item.onOrder3 ?? 0}</td>
+              <td>
+                {showPercent
+                  ? (sleeveOnOrderTotals[item.sleeveType]?.w1
+                      ? Math.round((item.onOrder1 / sleeveOnOrderTotals[item.sleeveType].w1) * 100) + '%'
+                      : '0%')
+                  : item.onOrder1}
+              </td>
+              <td>                {showPercent
+                  ? (sleeveOnOrderTotals[item.sleeveType]?.w2
+                      ? Math.round((item.onOrder2 / sleeveOnOrderTotals[item.sleeveType].w2) * 100) + '%'
+                      : '0%')
+                  : item.onOrder2}
+              </td>
+              <td>
+                                {showPercent
+                  ? (sleeveOnOrderTotals[item.sleeveType]?.w3
+                      ? Math.round((item.onOrder3 / sleeveOnOrderTotals[item.sleeveType].w3) * 100) + '%'
+                      : '0%')
+                  : item.onOrder3}
+              </td>
               <td>TBC</td>
             </tr>
           );

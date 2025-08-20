@@ -64,14 +64,6 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
   const totals = {};
   const sleeveTypeTotals = { '0': 0, '1': 0 };
 
-  function getISOWeekYear(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-    return { week: weekNo, year: d.getUTCFullYear() };
-  }
-
   const getWeekOffset = (dateLike) => {
     const d = toDate(dateLike);
     if (isNaN(d)) return Infinity;
@@ -165,6 +157,14 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
       }
     });
   });
+  const sleeveOnOrderTotals = { '0': {w1:0,w2:0,w3:0}, '1': {w1:0,w2:0,w3:0} };
+  Object.values(totals).forEach(item => {
+    if (item.sleeveType === '0' || item.sleeveType === '1') {
+      sleeveOnOrderTotals[item.sleeveType].w1 += item.onOrder1;
+      sleeveOnOrderTotals[item.sleeveType].w2 += item.onOrder2;
+      sleeveOnOrderTotals[item.sleeveType].w3 += item.onOrder3;
+    }
+  });
 
   const summary = Object.values(totals).map(item => {
     if (item.sleeveType === 'base') {
@@ -195,13 +195,21 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
   if (sleeve0.length) result.push(...sleeve0);
   if (tomA0) result.push({ isGap: true }, tomA0);
 
-  return result;
+  const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
+  ['0','1'].forEach(s => {
+    const cur = sleeveTypeTotals[s] || 0;
+    // For current stock, w1/w2/w3 are just the current totals (no planned batches included)
+    sleeveDenoms[s] = { current: cur || 1, w1: cur || 1, w2: cur || 1, w3: cur || 1 };
+  });
+  sleeveDenoms.base = { current: 1, w1: 1, w2: 1, w3: 1 };
+
+  return { stockSummary: result, sleeveDenoms, sleeveOnOrderTotals };
 };
 
 
 
 
-const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
+const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
   // Sleeve totals from CURRENT stock (for den base)
   const currentSleeveTotals = { '0': 0, '1': 0 };
   existingStockSummary.forEach(item => {
@@ -211,6 +219,17 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   // Planned totals by pizza & by horizon (1,2,3 weeks), and sleeve totals per horizon
   const plannedByPizza = {};  // { [pizzaId]: {1: n, 2: n, 3: n} }
   const plannedSleeveTotals = { '0': {1:0,2:0,3:0}, '1': {1:0,2:0,3:0} };
+
+  // current + <= week1, <= week2, <= week3
+  const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
+  ['0','1'].forEach(s => {
+    const cur = currentSleeveTotals[s] || 0;
+    const w1 = cur + (plannedSleeveTotals[s]?.[1] || 0);
+    const w2 = w1 + (plannedSleeveTotals[s]?.[2] || 0);
+    const w3 = w2 + (plannedSleeveTotals[s]?.[3] || 0);
+    sleeveDenoms[s] = { current: cur || 1, w1: w1 || 1, w2: w2 || 1, w3: w3 || 1 }; // avoid /0
+  });
+  sleeveDenoms.base = { current: 1, w1: 1, w2: 1, w3: 1 };
 
   stock.forEach(batch => {
     if (batch.completed) return;
@@ -263,16 +282,6 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
     });
   });
 
-  // current + <= week1, <= week2, <= week3
-  const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
-  ['0','1'].forEach(s => {
-    const cur = currentSleeveTotals[s] || 0;
-    const w1 = cur + (plannedSleeveTotals[s]?.[1] || 0);
-    const w2 = w1 + (plannedSleeveTotals[s]?.[2] || 0);
-    const w3 = w2 + (plannedSleeveTotals[s]?.[3] || 0);
-    sleeveDenoms[s] = { current: cur || 1, w1: w1 || 1, w2: w2 || 1, w3: w3 || 1 }; // avoid /0
-  });
-  sleeveDenoms.base = { current: 1, w1: 1, w2: 1, w3: 1 };
 
   // Each existing item with per-horizon ratios
   const withRatios = existingStockSummary.map(item => {
@@ -337,15 +346,18 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   if (sleeve0.length) result.push(...sleeve0);
   if (tomA0) result.push({ isGap: true }, tomA0);
 
-  return result;
-};
+  
+  return { plannedSummary: result, sleeveDenoms };
+  };
 
-  const stockSummary = useMemo(
+
+  const { stockSummary, sleeveDenoms: stockSleeveDenoms, sleeveOnOrderTotals} = useMemo(
     () => getStockSummary(stock, pizzas, orders, orderDeliveryDayMap),
     [stock, pizzas, orders, orderDeliveryDayMap]
   );
-  const plannedSummary = useMemo(
-    () => getPlannedSummaryMulti(stock, pizzas, stockSummary),
+
+  const { plannedSummary, sleeveDenoms: plannedSleeveDenoms } = useMemo(
+    () => getPlannedSummaryMulti(stock, pizzas, stockSummary || []),
     [stock, pizzas, stockSummary]
   );
 
@@ -367,7 +379,12 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
             />
             <span className="slider round"></span>
           </label>
-          <StockTable data={stockSummary} showPercent={showPercentStock} />
+          <StockTable 
+          data={stockSummary} 
+          showPercent={showPercentStock}
+          sleeveDenoms={stockSleeveDenoms}
+          sleeveOnOrderTotals={sleeveOnOrderTotals} 
+          />
         </div>
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
@@ -379,7 +396,11 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
             />
             <span className="slider round"></span>
           </label>
-          <PlannedTable data={plannedSummary} showPercent={showPercentPlanned}/>
+          <PlannedTable 
+          data={plannedSummary} 
+          showPercent={showPercentPlanned}
+          sleeveDenoms={plannedSleeveDenoms}
+          />
         </div>
       </div>
     </div>
