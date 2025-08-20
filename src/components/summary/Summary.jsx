@@ -10,6 +10,10 @@ function Summary() {
   const [pizzas, setPizzas] = useState([]);
   const [showPercent, setShowPercent] = useState(true);
 
+  // slider rounder controls
+  const [showPercentStock, setShowPercentStock] = useState(true);
+  const [showPercentPlanned, setShowPercentPlanned] = useState(true);
+
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
   const PIZZA_GOALS = {
@@ -337,24 +341,24 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
           <label className="switch percentNumberSlider" title="Switch between percent & value">
             <input
               type="checkbox"
-              checked={showPercent}
-              onChange={e => setShowPercent(e.target.checked)}
+              checked={showPercentStock}
+              onChange={e => setShowPercentStock(e.target.checked)}
             />
             <span className="slider round"></span>
           </label>
-          <StockTable data={stockSummary} showPercent={showPercent} />
+          <StockTable data={stockSummary} showPercent={showPercentStock} />
         </div>
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
           <label className="switch percentNumberSlider" title="Switch between percent & value">
             <input
               type="checkbox"
-              checked={showPercent}
-              onChange={e => setShowPercent(e.target.checked)}
+              checked={showPercentPlanned}
+              onChange={e => setShowPercentPlanned(e.target.checked)}
             />
             <span className="slider round"></span>
           </label>
-          <PlannedTable data={plannedSummary} showPercent={showPercent}/>
+          <PlannedTable data={plannedSummary} showPercent={showPercentPlanned}/>
         </div>
       </div>
     </div>
