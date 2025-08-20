@@ -24,6 +24,22 @@ function Summary() {
     'ROS_B1': 5
   };
 
+  const AVERAGE_ORDERING = {
+    'MAR_A1': 167,
+    'MEA_A1': 126,
+    'HAM_A1': 85,
+    'NAP_A1': 81,
+    'ROS_B1': 38,
+    
+    'HAM_A0': 5,
+    'MAR_A0': 51,
+    'MAR_B0': 3,
+    'MEA_A0': 50,
+    'NAP_A0': 8,
+    'ROS_B0': 4,
+    'ROS_A0': 19,
+  };
+
 // stock data
 useEffect(() => {
   const fetchData = async () => {
@@ -172,9 +188,29 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     }
 
     const sleeveTotal = sleeveTypeTotals[item.sleeveType] || 1;
+
+    // set status
+    const orderedW1 = item.onOrder1 || 0;
+    const orderedW2 = item.onOrder2 || 0;
+    const orderedW3 = item.onOrder3 || 0;
+    const currentStock = item.total || 0;
+    const avgOrder = AVERAGE_ORDERING[item.id] || 0;
+    let status = "";
+    if (orderedW1 > currentStock) {
+      status = "Short - Urgent!";
+    } else if ((orderedW1 + orderedW2) > currentStock) {
+      status = "Low";
+    } else if ((orderedW1 + orderedW2) <= currentStock) {
+      status = "Available";
+    }
+    if ((currentStock - (orderedW1 + orderedW2 + orderedW3)) > (3 * avgOrder)) {
+      status = "Overstocked";
+    }
+
     return {
       ...item,
-      ratio: Math.round((item.total / sleeveTotal) * 100)
+      ratio: Math.round((item.total / sleeveTotal) * 100),
+      status
     };
   });
 

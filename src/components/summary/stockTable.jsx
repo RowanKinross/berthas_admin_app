@@ -74,7 +74,7 @@ function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotal
                       : '0%')
                   : item.onOrder3}
               </td>
-              <td>TBC</td>
+              <td>{item.status}</td>
             </tr>
           );
         })}
