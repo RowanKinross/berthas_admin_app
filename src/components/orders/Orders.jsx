@@ -42,6 +42,7 @@ function Orders() {
   // sort filter
   const [sortField, setSortField] = useState("delivery_day");
   const [sortDirection, setSortDirection] = useState("asc");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [packingHtml, setPackingHtml] = useState('');
 
@@ -544,7 +545,19 @@ const orderHasBatchErrors = (order) => {
   });
 };
 
-  const sortedOrders = sortOrders(orders);
+  const filteredOrders = orders.filter(order => {
+  const customer = allCustomers[order.account_ID] || {};
+  const search = searchTerm.toLowerCase();
+    return (
+      order.customer_name?.toLowerCase().includes(search) ||
+      order.sample_customer_name?.toLowerCase().includes(search) ||
+      order.order_status?.toLowerCase().includes(search) ||
+      order.delivery_day?.toLowerCase().includes(search) ||
+      customer.delivery_region?.toLowerCase().includes(search) ||
+      order.account_ID?.toLowerCase().includes(search)
+    );
+  });
+  const sortedOrders = sortOrders(filteredOrders);
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
   const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
@@ -709,7 +722,7 @@ const handlePrintClick = () => {
   return (
   <div className='orders navContent'>
     <h2>ORDERS</h2>
-    <div style={{ marginBottom: '1rem' }}>
+    <div className='selectOrdersAndSearchOrders'>
       <button
         className='button'
         onClick={() => {
@@ -721,6 +734,13 @@ const handlePrintClick = () => {
       >
         {selectMode ? "Cancel Selection" : "Select Orders"}
       </button>
+      <input
+        type="text"
+        placeholder="Search orders..."
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        style={{ marginRight: 8 }}
+      />
       {selectedOrders.length > 0 && (
         <div className="bulk-actions">
           {/* generate Packing list button */}

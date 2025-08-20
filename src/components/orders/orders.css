@@ -76,6 +76,11 @@
   text-align: right !important;
   padding-right: 5px;
 }
+.selectOrdersAndSearchOrders {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
 
 
 .modalContent {
