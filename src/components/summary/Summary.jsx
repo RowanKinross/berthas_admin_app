@@ -8,7 +8,7 @@ import './summary.css';
 function Summary() {
   const [stock, setStock] = useState([]);
   const [pizzas, setPizzas] = useState([]);
-  const [showPercent, setShowPercent] = useState(true);
+  const [orders, setOrders] = useState([]);
 
   // slider rounder controls
   const [showPercentStock, setShowPercentStock] = useState(true);
@@ -30,13 +30,16 @@ useEffect(() => {
     try {
       const batchSnapshot = await getDocs(collection(db, 'batches'));
       const pizzaSnapshot = await getDocs(collection(db, 'pizzas'));
-
       const batchData = batchSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const pizzaData = pizzaSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+      const ordersSnapshot = await getDocs(collection(db, 'orders'));
+      const ordersData = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
       setStock(batchData);
       setPizzas(pizzaData);
-
+      setOrders(ordersData);
+      
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -48,10 +51,16 @@ useEffect(() => {
 
 
 
+const orderDeliveryDayMap = useMemo(() => {
+  const map = {};
+  orders.forEach(order => {
+    map[order.id] = order.delivery_day;
+  });
+  return map;
+}, [orders]);
 
 
-
-const getStockSummary = (stock, pizzas) => {
+const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
   const totals = {};
   const sleeveTypeTotals = { '0': 0, '1': 0 };
 
@@ -98,11 +107,19 @@ const getStockSummary = (stock, pizzas) => {
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
-      const onOrder = allocations
-        .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
-
       const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
+      allocations
+      .filter(a => a.pizzaId === pizza.id)
+      .forEach(a => {
+        let deliveryDay = a.delivery_day || a.date || a.allocation_date;
+        if (!deliveryDay && a.orderId) {
+          deliveryDay = orderDeliveryDayMap[a.orderId];
+        }
+        const week = getWeekOffset(deliveryDay);
+        if ([1,2,3].includes(week)) {
+          onOrderByWeek[week] += a.quantity;
+        }
+      });
 
       const total = pizza.quantity - completed;
       const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
@@ -137,7 +154,7 @@ const getStockSummary = (stock, pizzas) => {
         }
 
         totals[pizza.id].total += total;
-        totals[pizza.id].onOrder1 += onOrder;
+        totals[pizza.id].onOrder1 += onOrderByWeek[1];
         totals[pizza.id].onOrder2 += onOrderByWeek[2];
         totals[pizza.id].onOrder3 += onOrderByWeek[3];
         totals[pizza.id].available += available;
@@ -229,10 +246,6 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
     batch.pizzas.forEach(pizza => {
       const completed = allocations
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
-
-      const onOrder = allocations
-        .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
       const total = pizza.quantity - completed;  // planned qty in this batch for this pizza
@@ -327,7 +340,10 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   return result;
 };
 
-  const stockSummary = useMemo(() => getStockSummary(stock, pizzas), [stock, pizzas]);
+  const stockSummary = useMemo(
+    () => getStockSummary(stock, pizzas, orders, orderDeliveryDayMap),
+    [stock, pizzas, orders, orderDeliveryDayMap]
+  );
   const plannedSummary = useMemo(
     () => getPlannedSummaryMulti(stock, pizzas, stockSummary),
     [stock, pizzas, stockSummary]
