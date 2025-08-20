@@ -8,7 +8,11 @@ import './summary.css';
 function Summary() {
   const [stock, setStock] = useState([]);
   const [pizzas, setPizzas] = useState([]);
-  const [showPercent, setShowPercent] = useState(true);
+  const [orders, setOrders] = useState([]);
+
+  // slider rounder controls
+  const [showPercentStock, setShowPercentStock] = useState(true);
+  const [showPercentPlanned, setShowPercentPlanned] = useState(true);
 
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
@@ -26,13 +30,16 @@ useEffect(() => {
     try {
       const batchSnapshot = await getDocs(collection(db, 'batches'));
       const pizzaSnapshot = await getDocs(collection(db, 'pizzas'));
-
       const batchData = batchSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       const pizzaData = pizzaSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+      const ordersSnapshot = await getDocs(collection(db, 'orders'));
+      const ordersData = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
       setStock(batchData);
       setPizzas(pizzaData);
-
+      setOrders(ordersData);
+      
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -44,32 +51,43 @@ useEffect(() => {
 
 
 
+const orderDeliveryDayMap = useMemo(() => {
+  const map = {};
+  orders.forEach(order => {
+    map[order.id] = order.delivery_day;
+  });
+  return map;
+}, [orders]);
 
 
-
-const getStockSummary = (stock, pizzas) => {
+const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
   const totals = {};
   const sleeveTypeTotals = { '0': 0, '1': 0 };
 
-  function getISOWeekYear(date) {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-    return { week: weekNo, year: d.getUTCFullYear() };
-  }
   const getWeekOffset = (dateLike) => {
     const d = toDate(dateLike);
     if (isNaN(d)) return Infinity;
     const now = new Date();
-    const { week: thisWeek, year: thisYear } = getISOWeekYear(now);
-    const { week: targetWeek, year: targetYear } = getISOWeekYear(d);
-    const weekDiff = (targetYear - thisYear) * 52 + (targetWeek - thisWeek);
-    if (weekDiff === 0) return 1;
-    if (weekDiff === 1) return 2;
-    if (weekDiff === 2) return 3;
+    // Set now to this week's Monday
+    now.setHours(0,0,0,0);
+    const dayOfWeek = now.getDay() || 7; // Sunday is 0, so set to 7
+    const thisMonday = new Date(now);
+    thisMonday.setDate(now.getDate() - dayOfWeek + 1);
+
+    // Get next Monday
+    const nextMonday = new Date(thisMonday);
+    nextMonday.setDate(thisMonday.getDate() + 7);
+
+    // Get week after next Monday
+    const weekAfterNextMonday = new Date(thisMonday);
+    weekAfterNextMonday.setDate(thisMonday.getDate() + 14);
+
+    if (d >= thisMonday && d < nextMonday) return 1; // This week
+    if (d >= nextMonday && d < weekAfterNextMonday) return 2; // Next week
+    if (d >= weekAfterNextMonday && d < new Date(weekAfterNextMonday.getTime() + 7 * 24 * 60 * 60 * 1000)) return 3; // Week after next
     return Infinity;
   };
+
 
   stock.forEach(batch => {
     if (!batch.completed) return;
@@ -81,19 +99,19 @@ const getStockSummary = (stock, pizzas) => {
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
-      const onOrder = allocations
-        .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
-
       const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
-      // allocations
-      //   .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
-      //   .forEach(a => {
-      //     const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
-      //     if ([1,2,3].includes(week)) {
-      //       onOrderByWeek[week] += a.quantity;
-      //     }
-      //   });
+      allocations
+      .filter(a => a.pizzaId === pizza.id)
+      .forEach(a => {
+        let deliveryDay = a.delivery_day || a.date || a.allocation_date;
+        if (!deliveryDay && a.orderId) {
+          deliveryDay = orderDeliveryDayMap[a.orderId];
+        }
+        const week = getWeekOffset(deliveryDay);
+        if ([1,2,3].includes(week)) {
+          onOrderByWeek[week] += a.quantity;
+        }
+      });
 
       const total = pizza.quantity - completed;
       const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
@@ -128,7 +146,7 @@ const getStockSummary = (stock, pizzas) => {
         }
 
         totals[pizza.id].total += total;
-        totals[pizza.id].onOrder1 += onOrder;
+        totals[pizza.id].onOrder1 += onOrderByWeek[1];
         totals[pizza.id].onOrder2 += onOrderByWeek[2];
         totals[pizza.id].onOrder3 += onOrderByWeek[3];
         totals[pizza.id].available += available;
@@ -138,6 +156,14 @@ const getStockSummary = (stock, pizzas) => {
         }
       }
     });
+  });
+  const sleeveOnOrderTotals = { '0': {w1:0,w2:0,w3:0}, '1': {w1:0,w2:0,w3:0} };
+  Object.values(totals).forEach(item => {
+    if (item.sleeveType === '0' || item.sleeveType === '1') {
+      sleeveOnOrderTotals[item.sleeveType].w1 += item.onOrder1;
+      sleeveOnOrderTotals[item.sleeveType].w2 += item.onOrder2;
+      sleeveOnOrderTotals[item.sleeveType].w3 += item.onOrder3;
+    }
   });
 
   const summary = Object.values(totals).map(item => {
@@ -169,13 +195,21 @@ const getStockSummary = (stock, pizzas) => {
   if (sleeve0.length) result.push(...sleeve0);
   if (tomA0) result.push({ isGap: true }, tomA0);
 
-  return result;
+  const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
+  ['0','1'].forEach(s => {
+    const cur = sleeveTypeTotals[s] || 0;
+    // For current stock, w1/w2/w3 are just the current totals (no planned batches included)
+    sleeveDenoms[s] = { current: cur || 1, w1: cur || 1, w2: cur || 1, w3: cur || 1 };
+  });
+  sleeveDenoms.base = { current: 1, w1: 1, w2: 1, w3: 1 };
+
+  return { stockSummary: result, sleeveDenoms, sleeveOnOrderTotals };
 };
 
 
 
 
-const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
+const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
   // Sleeve totals from CURRENT stock (for den base)
   const currentSleeveTotals = { '0': 0, '1': 0 };
   existingStockSummary.forEach(item => {
@@ -185,6 +219,17 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   // Planned totals by pizza & by horizon (1,2,3 weeks), and sleeve totals per horizon
   const plannedByPizza = {};  // { [pizzaId]: {1: n, 2: n, 3: n} }
   const plannedSleeveTotals = { '0': {1:0,2:0,3:0}, '1': {1:0,2:0,3:0} };
+
+  // current + <= week1, <= week2, <= week3
+  const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
+  ['0','1'].forEach(s => {
+    const cur = currentSleeveTotals[s] || 0;
+    const w1 = cur + (plannedSleeveTotals[s]?.[1] || 0);
+    const w2 = w1 + (plannedSleeveTotals[s]?.[2] || 0);
+    const w3 = w2 + (plannedSleeveTotals[s]?.[3] || 0);
+    sleeveDenoms[s] = { current: cur || 1, w1: w1 || 1, w2: w2 || 1, w3: w3 || 1 }; // avoid /0
+  });
+  sleeveDenoms.base = { current: 1, w1: 1, w2: 1, w3: 1 };
 
   stock.forEach(batch => {
     if (batch.completed) return;
@@ -214,16 +259,12 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
       if (weekDiff === 2) return 3; // Week after next
       return Infinity; // ignore 3+ weeks
     };
-    const week = getWeekOffset(batch.dueDate || batch.plannedDate || batch.date);
+    const week = getWeekOffset(batch.batch_date);
   if (![1,2,3].includes(week)) return; // ignore 3+ weeks
 
     batch.pizzas.forEach(pizza => {
       const completed = allocations
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
-
-      const onOrder = allocations
-        .filter(a => a.pizzaId === pizza.id && a.status !== "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
       const total = pizza.quantity - completed;  // planned qty in this batch for this pizza
@@ -241,16 +282,6 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
     });
   });
 
-  // current + <= week1, <= week2, <= week3
-  const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
-  ['0','1'].forEach(s => {
-    const cur = currentSleeveTotals[s] || 0;
-    const w1 = cur + (plannedSleeveTotals[s]?.[1] || 0);
-    const w2 = w1 + (plannedSleeveTotals[s]?.[2] || 0);
-    const w3 = w2 + (plannedSleeveTotals[s]?.[3] || 0);
-    sleeveDenoms[s] = { current: cur || 1, w1: w1 || 1, w2: w2 || 1, w3: w3 || 1 }; // avoid /0
-  });
-  sleeveDenoms.base = { current: 1, w1: 1, w2: 1, w3: 1 };
 
   // Each existing item with per-horizon ratios
   const withRatios = existingStockSummary.map(item => {
@@ -315,12 +346,18 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
   if (sleeve0.length) result.push(...sleeve0);
   if (tomA0) result.push({ isGap: true }, tomA0);
 
-  return result;
-};
+  
+  return { plannedSummary: result, sleeveDenoms };
+  };
 
-  const stockSummary = useMemo(() => getStockSummary(stock, pizzas), [stock, pizzas]);
-  const plannedSummary = useMemo(
-    () => getPlannedSummaryMulti(stock, pizzas, stockSummary),
+
+  const { stockSummary, sleeveDenoms: stockSleeveDenoms, sleeveOnOrderTotals} = useMemo(
+    () => getStockSummary(stock, pizzas, orders, orderDeliveryDayMap),
+    [stock, pizzas, orders, orderDeliveryDayMap]
+  );
+
+  const { plannedSummary, sleeveDenoms: plannedSleeveDenoms } = useMemo(
+    () => getPlannedSummaryMulti(stock, pizzas, stockSummary || []),
     [stock, pizzas, stockSummary]
   );
 
@@ -337,24 +374,33 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary) => {
           <label className="switch percentNumberSlider" title="Switch between percent & value">
             <input
               type="checkbox"
-              checked={showPercent}
-              onChange={e => setShowPercent(e.target.checked)}
+              checked={showPercentStock}
+              onChange={e => setShowPercentStock(e.target.checked)}
             />
             <span className="slider round"></span>
           </label>
-          <StockTable data={stockSummary} showPercent={showPercent} />
+          <StockTable 
+          data={stockSummary} 
+          showPercent={showPercentStock}
+          sleeveDenoms={stockSleeveDenoms}
+          sleeveOnOrderTotals={sleeveOnOrderTotals} 
+          />
         </div>
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
           <label className="switch percentNumberSlider" title="Switch between percent & value">
             <input
               type="checkbox"
-              checked={showPercent}
-              onChange={e => setShowPercent(e.target.checked)}
+              checked={showPercentPlanned}
+              onChange={e => setShowPercentPlanned(e.target.checked)}
             />
             <span className="slider round"></span>
           </label>
-          <PlannedTable data={plannedSummary} showPercent={showPercent}/>
+          <PlannedTable 
+          data={plannedSummary} 
+          showPercent={showPercentPlanned}
+          sleeveDenoms={plannedSleeveDenoms}
+          />
         </div>
       </div>
     </div>
