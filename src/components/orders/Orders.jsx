@@ -40,9 +40,10 @@ function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 20;
   // sort filter
-  const [sortField, setSortField] = useState("delivery_day");
+  const [sortField, setSortField] = useState("order_status");
   const [sortDirection, setSortDirection] = useState("asc");
   const [searchTerm, setSearchTerm] = useState("");
+  const STATUS_ORDER = ["order placed", "ready to pack", "packed", "complete"];
 
   const [packingHtml, setPackingHtml] = useState('');
 
@@ -88,6 +89,25 @@ const sortOrders = (orders) => {
   return [...orders].sort((a, b) => {
     let aValue = a[sortField];
     let bValue = b[sortField];
+
+    if (sortField === "order_status") {
+      // Use reversed status order if descending
+      const statusOrder = sortDirection === "asc"
+        ? STATUS_ORDER
+        : [...STATUS_ORDER].reverse();
+      const statusA = statusOrder.indexOf(a.order_status);
+      const statusB = statusOrder.indexOf(b.order_status);
+      if (statusA !== statusB) return statusA - statusB;
+
+      // Within status, sort by delivery_day ("tbc" at the top)
+      const aDate = a.delivery_day === 'tbc' ? null : new Date(a.delivery_day);
+      const bDate = b.delivery_day === 'tbc' ? null : new Date(b.delivery_day);
+      if (!aDate && !bDate) return 0;
+      if (!aDate) return -1;
+      if (!bDate) return 1;
+      return  bDate - aDate;
+    }
+
     // Special handling for delivery_day (tbc at top)
     if (sortField === "delivery_day") {
       const aDate = aValue === 'tbc' ? null : new Date(aValue);
@@ -548,11 +568,33 @@ const orderHasBatchErrors = (order) => {
   const filteredOrders = orders.filter(order => {
   const customer = allCustomers[order.account_ID] || {};
   const search = searchTerm.toLowerCase();
+
+    // Format delivery day for searching
+  let formattedDeliveryDay = "";
+  if (order.delivery_day && order.delivery_day !== "tbc") {
+    formattedDeliveryDay = dayjs(order.delivery_day).format("DD/MM/YYYY");
+  }
+    // Normalize for flexible search
+  const normalize = str => str.replace(/[\s\-\/\.]/g, '').toLowerCase();
+
+  const deliveryDayVariants = [
+    order.delivery_day || "",
+    formattedDeliveryDay,
+    dayjs(order.delivery_day).format("DD.MM.YYYY"),
+    dayjs(order.delivery_day).format("DD-MM-YYYY"),
+    dayjs(order.delivery_day).format("YYYY-MM-DD"),
+    dayjs(order.delivery_day).format("YYYY/MM/DD"),
+    dayjs(order.delivery_day).format("YYYY.MM.DD"),
+  ];
+
+  const matchesDeliveryDay = deliveryDayVariants.some(variant =>
+    normalize(variant).includes(normalize(search))
+  );
     return (
       order.customer_name?.toLowerCase().includes(search) ||
       order.sample_customer_name?.toLowerCase().includes(search) ||
       order.order_status?.toLowerCase().includes(search) ||
-      order.delivery_day?.toLowerCase().includes(search) ||
+      matchesDeliveryDay ||
       customer.delivery_region?.toLowerCase().includes(search) ||
       order.account_ID?.toLowerCase().includes(search)
     );
@@ -722,6 +764,7 @@ const handlePrintClick = () => {
   return (
   <div className='orders navContent'>
     <h2>ORDERS</h2>
+    <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
       <button
         className='button'
@@ -802,6 +845,11 @@ const handlePrintClick = () => {
     {orders.length > 0 ? (
       
       currentOrders.map(order => { 
+        const isToday =
+          order.delivery_day &&
+          order.delivery_day !== 'tbc' &&
+          dayjs(order.delivery_day).isSame(dayjs(), 'day');
+        
         const orderCustomer = allCustomers[order.account_ID];
       return(
           <div className="orderRow" key={order.id}>
@@ -834,8 +882,18 @@ const handlePrintClick = () => {
             <div>{order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
             <div className='orderStatus'>{order.order_status}</div>
-            <div className={`${order.delivery_day === 'tbc' ? 'tbc' : ''}`}>
-              {order.delivery_day === 'tbc' ? 'tbc' : formatDeliveryDay(order.delivery_day)}
+            <div
+              className={`
+                ${order.delivery_day === 'tbc' ? 'tbc' : ''}
+                `
+              }
+            >
+              <span className={isToday ? 'deliveryToday' : ''}>
+
+              {order.delivery_day === 'tbc'
+                ? 'tbc'
+                : formatDeliveryDay(order.delivery_day)}
+                </span>
             </div>
             <div>{orderCustomer?.delivery_region || '—'}</div>
           </button>
