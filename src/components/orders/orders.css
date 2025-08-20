@@ -71,6 +71,7 @@
   text-align: left !important;
   align-items: start;
   justify-content: start;
+  cursor: pointer;
 }
 .orderHeader {
   text-align: right !important;
