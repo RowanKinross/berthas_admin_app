@@ -169,7 +169,10 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         totals[pizza.id].onOrder3 += onOrderByWeek[3];
         totals[pizza.id].available += available;
 
-        if (sleeveType !== 'base') {
+        if (
+          sleeveType !== 'base' &&
+          pizza.id !== 'DOU_A1' &&
+          pizza.id !== 'DOU_A0') {
           sleeveTypeTotals[sleeveType] += total;
         }
       }
@@ -321,12 +324,15 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const pizzaDetails = pizzas.find(p => p.id === pizza.id);
       const sleeveType = (pizza.id === 'TOM_A0') ? 'base' : (pizza.id.endsWith('1') ? '1' : '0');
 
-      if (sleeveType === 'base') return; // TOM_A0 has no ratio; skip its contribution to sleeves
+      if (sleeveType === 'base') return; // TOM_A0 and dough balls have no ratio; skip their contribution to sleeves
 
       if (!plannedByPizza[pizza.id]) plannedByPizza[pizza.id] = {1:0,2:0,3:0};
       plannedByPizza[pizza.id][week] += total;
 
-      plannedSleeveTotals[sleeveType][week] += total;
+      // Exclude dough balls from sleeve totals
+      if (pizza.id !== 'DOU_A1' && pizza.id !== 'DOU_A0') {
+        plannedSleeveTotals[sleeveType][week] += total;
+      }
     });
   });
 

@@ -50,9 +50,11 @@ function PlannedTable({ data, showPercent = true }) {
                 </span>
               </td>
               <td>
-                {showPercent
-                  ? (item.ratios?.current ?? '') + '%'
-                  : (item.stockNumbers?.current ?? '')}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? item.total
+                  : (showPercent && item.ratio != null
+                      ? `${item.ratio}%`
+                      : item.total)}
               </td>
               <td>
                 {showPercent

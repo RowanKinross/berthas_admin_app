@@ -60,9 +60,11 @@ function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotal
                 </span>
               </td>
               <td>
-                {showPercent && item.ratio != null
-                  ? `${item.ratio}%`
-                  : item.total}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? item.total
+                  : (showPercent && item.ratio != null
+                      ? `${item.ratio}%`
+                      : item.total)}
               </td>
               <td>
                 {showPercent
