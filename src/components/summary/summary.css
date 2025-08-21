@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 600px;
+    max-width: 520px;
     margin: 1%;
     background-size: cover;
     background-repeat: no-repeat;
@@ -15,21 +15,21 @@
 
 
 /* Stock table CSS */
-.stock-table {
+.stockTable {
   width: 90%;
   align-self: center;
   border-collapse: collapse;
   margin: 1rem;
 }
-.stock-table th,
-.stock-table td {
+.stockTable th,
+.stockTable td {
   border: 2px solid var(--pale);
   padding: 5px 8px;
   border-radius: 5px;
   font-size: 12px;
   white-space: nowrap;
 }
-.stock-table td {
+.stockTable td {
   /* padding-top: 25px; */
   text-align: right;
 }
@@ -56,18 +56,19 @@
 .demandSummaryFlex {
   padding-top: 50px;
   display: flex;
+  flex-wrap: wrap;
 }
-.th-short { display: none; }
-
+.th-full { display: none; }
 
 .percentNumberSlider {
   margin: 20px;
 }
+.statusShort {display: none;}
 
 
 @media (max-width: 600px) {
-  .th-full { display: none; }
-  .th-short { display: inline; }
+  .statusFull { display: none; }
+  .statusShort { display: inline; }
 }
 /* ...existing code... */
 

@@ -7,7 +7,7 @@ function PlannedTable({ data, showPercent = true }) {
   }
 
   return (
-    <table className="stock-table planned-table">
+    <table className="stockTable plannedTable">
       <thead>
         <tr>
           <th></th>

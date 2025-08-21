@@ -3,6 +3,7 @@ import { getDocs, collection } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import StockTable from './stockTable';
 import PlannedTable from './plannedTable';
+import OrderingHabitsTable from './orderingHabitsTable';
 import './summary.css';
 
 function Summary() {
@@ -13,6 +14,7 @@ function Summary() {
   // slider rounder controls
   const [showPercentStock, setShowPercentStock] = useState(false);
   const [showPercentPlanned, setShowPercentPlanned] = useState(false);
+  const [showPercentOrdered, setShowPercentOrdered] = useState(false);
 
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
@@ -405,6 +407,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
     <div className='demandSummary navContent'>
       <h2>DEMAND SUMMARY</h2>
       <div className='demandSummaryFlex'>
+
         <div className='summaryContainer'>
           <h3>Current Stock</h3>
           <label className="switch percentNumberSlider" title="Switch between percent & quantity">
@@ -422,6 +425,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
           sleeveOnOrderTotals={sleeveOnOrderTotals} 
           />
         </div>
+
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
           <label className="switch percentNumberSlider" title="Switch between percent & quantity">
@@ -436,6 +440,24 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
           data={plannedSummary} 
           showPercent={showPercentPlanned}
           sleeveDenoms={plannedSleeveDenoms}
+          />
+        </div>
+
+        <div className='summaryContainer'>
+          <h3>Ordering Habits</h3>
+          <label className="switch percentNumberSlider" title="Switch between percent & quantity">
+            <input
+              type="checkbox"
+              checked={showPercentOrdered}
+              onChange={e => setShowPercentOrdered(e.target.checked)}
+            />
+            <span className="slider round"></span>
+          </label>
+          <OrderingHabitsTable
+            pizzas={pizzas}
+            orders={orders}
+            summaryOrder={stockSummary}
+            showPercent={showPercentOrdered}
           />
         </div>
       </div>
