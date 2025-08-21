@@ -5,8 +5,18 @@ function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotal
     return <p>Loading stock...</p>;
   }
 
+  const getShortStatus = (status) => {
+  switch (status) {
+    case "Short - Urgent!": return "Short";
+    case "Low": return "Low";
+    case "Available": return "Avail";
+    case "Overstocked": return "Over";
+    default: return status;
+  }
+};
+
   return (
-    <table className="stock-table">
+    <table className="stockTable">
       <thead>
         <tr>
           <th></th>
@@ -18,15 +28,15 @@ function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotal
           <th></th>
           <th></th>
           <th title='1 Week Planned Stock Ratio'>
-            <span className="th-full">1 Week</span>
+            {/* <span className="th-full">1 Week</span> */}
             <span className="th-short">1wk</span>
           </th>
           <th title='2 Weeks Planned Stock Ratio'>
-            <span className="th-full">2 Weeks</span>
+            {/* <span className="th-full">2 Weeks</span> */}
             <span className="th-short">2wks</span>
           </th>
           <th title='3 Weeks Planned Stock Ratio'>
-            <span className="th-full">3 Weeks</span>
+            {/* <span className="th-full">3 Weeks</span> */}
             <span className="th-short">3wks</span>
           </th>
           <th></th>
@@ -50,9 +60,11 @@ function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotal
                 </span>
               </td>
               <td>
-                {showPercent && item.ratio != null
-                  ? `${item.ratio}%`
-                  : item.total}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? item.total
+                  : (showPercent && item.ratio != null
+                      ? `${item.ratio}%`
+                      : item.total)}
               </td>
               <td>
                 {showPercent
@@ -74,7 +86,10 @@ function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotal
                       : '0%')
                   : item.onOrder3}
               </td>
-              <td>{item.status}</td>
+              <td className="statusCell">
+                <span className="statusFull">{item.status}</span>
+                <span className="statusShort">{getShortStatus(item.status)}</span>
+              </td>
             </tr>
           );
         })}

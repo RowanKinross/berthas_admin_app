@@ -3,6 +3,7 @@ import { getDocs, collection } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import StockTable from './stockTable';
 import PlannedTable from './plannedTable';
+import OrderingHabitsTable from './orderingHabitsTable';
 import './summary.css';
 
 function Summary() {
@@ -13,6 +14,7 @@ function Summary() {
   // slider rounder controls
   const [showPercentStock, setShowPercentStock] = useState(false);
   const [showPercentPlanned, setShowPercentPlanned] = useState(false);
+  const [showPercentOrdered, setShowPercentOrdered] = useState(false);
 
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
@@ -167,7 +169,10 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         totals[pizza.id].onOrder3 += onOrderByWeek[3];
         totals[pizza.id].available += available;
 
-        if (sleeveType !== 'base') {
+        if (
+          sleeveType !== 'base' &&
+          pizza.id !== 'DOU_A1' &&
+          pizza.id !== 'DOU_A0') {
           sleeveTypeTotals[sleeveType] += total;
         }
       }
@@ -225,11 +230,21 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     .filter(item => item.sleeveType === '0')
     .sort((a, b) => a.id.localeCompare(b.id));
 
-  const result = [];
+  const douA1 = sleeve1.find(item => item.id === 'DOU_A1') || sleeve0.find(item => item.id === 'DOU_A1');
+  const douA0 = sleeve0.find(item => item.id === 'DOU_A0') || sleeve1.find(item => item.id === 'DOU_A0');
 
-  if (sleeve1.length) result.push(...sleeve1, { isGap: true });
-  if (sleeve0.length) result.push(...sleeve0);
-  if (tomA0) result.push({ isGap: true }, tomA0);
+  // Remove DOU_A1 and DOU_A0 from both arrays, just in case
+  const sleeve1Filtered = sleeve1.filter(item => item.id !== 'DOU_A1' && item.id !== 'DOU_A0');
+  const sleeve0Filtered = sleeve0.filter(item => item.id !== 'DOU_A0' && item.id !== 'DOU_A1');
+
+  const result = [];
+  if (sleeve1Filtered.length) result.push(...sleeve1Filtered);
+  result.push({ isGap: true });
+  if (sleeve0Filtered.length) result.push(...sleeve0Filtered);
+  result.push({ isGap: true });
+  if (tomA0) result.push(tomA0);
+  if (douA1) result.push(douA1);
+  if (douA0) result.push(douA0);
 
   const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
   ['0','1'].forEach(s => {
@@ -309,12 +324,15 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const pizzaDetails = pizzas.find(p => p.id === pizza.id);
       const sleeveType = (pizza.id === 'TOM_A0') ? 'base' : (pizza.id.endsWith('1') ? '1' : '0');
 
-      if (sleeveType === 'base') return; // TOM_A0 has no ratio; skip its contribution to sleeves
+      if (sleeveType === 'base') return; // TOM_A0 and dough balls have no ratio; skip their contribution to sleeves
 
       if (!plannedByPizza[pizza.id]) plannedByPizza[pizza.id] = {1:0,2:0,3:0};
       plannedByPizza[pizza.id][week] += total;
 
-      plannedSleeveTotals[sleeveType][week] += total;
+      // Exclude dough balls from sleeve totals
+      if (pizza.id !== 'DOU_A1' && pizza.id !== 'DOU_A0') {
+        plannedSleeveTotals[sleeveType][week] += total;
+      }
     });
   });
 
@@ -326,6 +344,12 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       ...item,
       goal: PIZZA_GOALS[item.id],
       ratios: { current: undefined, w1: undefined, w2: undefined, w3: undefined },
+      stockNumbers: {
+        current: item.total,
+        w1: undefined,
+        w2: undefined,
+        w3: undefined,
+      },
       meetsGoal: undefined,
       gapToGoal: undefined,
     };
@@ -377,14 +401,24 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
   const sleeve1 = others.filter(i => i.sleeveType === '1').sort((a, b) => a.id.localeCompare(b.id));
   const sleeve0 = others.filter(i => i.sleeveType === '0').sort((a, b) => a.id.localeCompare(b.id));
 
-  const result = [];
-  if (sleeve1.length) result.push(...sleeve1, { isGap: true });
-  if (sleeve0.length) result.push(...sleeve0);
-  if (tomA0) result.push({ isGap: true }, tomA0);
+  const douA1 = sleeve1.find(item => item.id === 'DOU_A1') || sleeve0.find(item => item.id === 'DOU_A1');
+  const douA0 = sleeve0.find(item => item.id === 'DOU_A0') || sleeve1.find(item => item.id === 'DOU_A0');
 
-  
+  // Remove DOU_A1 and DOU_A0 from both arrays, just in case
+  const sleeve1Filtered = sleeve1.filter(item => item.id !== 'DOU_A1' && item.id !== 'DOU_A0');
+  const sleeve0Filtered = sleeve0.filter(item => item.id !== 'DOU_A0' && item.id !== 'DOU_A1');
+
+  const result = [];
+  if (sleeve1Filtered.length) result.push(...sleeve1Filtered);
+  result.push({ isGap: true });
+  if (sleeve0Filtered.length) result.push(...sleeve0Filtered);
+  result.push({ isGap: true });
+  if (tomA0) result.push(tomA0);
+  if (douA1) result.push(douA1);
+  if (douA0) result.push(douA0);
+
   return { plannedSummary: result, sleeveDenoms };
-  };
+};
 
 
   const { stockSummary, sleeveDenoms: stockSleeveDenoms, sleeveOnOrderTotals} = useMemo(
@@ -405,6 +439,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
     <div className='demandSummary navContent'>
       <h2>DEMAND SUMMARY</h2>
       <div className='demandSummaryFlex'>
+
         <div className='summaryContainer'>
           <h3>Current Stock</h3>
           <label className="switch percentNumberSlider" title="Switch between percent & quantity">
@@ -422,6 +457,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
           sleeveOnOrderTotals={sleeveOnOrderTotals} 
           />
         </div>
+
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
           <label className="switch percentNumberSlider" title="Switch between percent & quantity">
@@ -436,6 +472,24 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
           data={plannedSummary} 
           showPercent={showPercentPlanned}
           sleeveDenoms={plannedSleeveDenoms}
+          />
+        </div>
+
+        <div className='summaryContainer'>
+          <h3>Ordering Habits</h3>
+          <label className="switch percentNumberSlider" title="Switch between percent & quantity">
+            <input
+              type="checkbox"
+              checked={showPercentOrdered}
+              onChange={e => setShowPercentOrdered(e.target.checked)}
+            />
+            <span className="slider round"></span>
+          </label>
+          <OrderingHabitsTable
+            pizzas={pizzas}
+            orders={orders}
+            summaryOrder={stockSummary}
+            showPercent={showPercentOrdered}
           />
         </div>
       </div>
