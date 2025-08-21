@@ -227,11 +227,21 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     .filter(item => item.sleeveType === '0')
     .sort((a, b) => a.id.localeCompare(b.id));
 
-  const result = [];
+  const douA1 = sleeve1.find(item => item.id === 'DOU_A1') || sleeve0.find(item => item.id === 'DOU_A1');
+  const douA0 = sleeve0.find(item => item.id === 'DOU_A0') || sleeve1.find(item => item.id === 'DOU_A0');
 
-  if (sleeve1.length) result.push(...sleeve1, { isGap: true });
-  if (sleeve0.length) result.push(...sleeve0);
-  if (tomA0) result.push({ isGap: true }, tomA0);
+  // Remove DOU_A1 and DOU_A0 from both arrays, just in case
+  const sleeve1Filtered = sleeve1.filter(item => item.id !== 'DOU_A1' && item.id !== 'DOU_A0');
+  const sleeve0Filtered = sleeve0.filter(item => item.id !== 'DOU_A0' && item.id !== 'DOU_A1');
+
+  const result = [];
+  if (sleeve1Filtered.length) result.push(...sleeve1Filtered);
+  result.push({ isGap: true });
+  if (sleeve0Filtered.length) result.push(...sleeve0Filtered);
+  result.push({ isGap: true });
+  if (tomA0) result.push(tomA0);
+  if (douA1) result.push(douA1);
+  if (douA0) result.push(douA0);
 
   const sleeveDenoms = { '0': {current:0,w1:0,w2:0,w3:0}, '1': {current:0,w1:0,w2:0,w3:0} };
   ['0','1'].forEach(s => {
@@ -328,6 +338,12 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       ...item,
       goal: PIZZA_GOALS[item.id],
       ratios: { current: undefined, w1: undefined, w2: undefined, w3: undefined },
+      stockNumbers: {
+        current: item.total,
+        w1: undefined,
+        w2: undefined,
+        w3: undefined,
+      },
       meetsGoal: undefined,
       gapToGoal: undefined,
     };
@@ -379,14 +395,24 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
   const sleeve1 = others.filter(i => i.sleeveType === '1').sort((a, b) => a.id.localeCompare(b.id));
   const sleeve0 = others.filter(i => i.sleeveType === '0').sort((a, b) => a.id.localeCompare(b.id));
 
-  const result = [];
-  if (sleeve1.length) result.push(...sleeve1, { isGap: true });
-  if (sleeve0.length) result.push(...sleeve0);
-  if (tomA0) result.push({ isGap: true }, tomA0);
+  const douA1 = sleeve1.find(item => item.id === 'DOU_A1') || sleeve0.find(item => item.id === 'DOU_A1');
+  const douA0 = sleeve0.find(item => item.id === 'DOU_A0') || sleeve1.find(item => item.id === 'DOU_A0');
 
-  
+  // Remove DOU_A1 and DOU_A0 from both arrays, just in case
+  const sleeve1Filtered = sleeve1.filter(item => item.id !== 'DOU_A1' && item.id !== 'DOU_A0');
+  const sleeve0Filtered = sleeve0.filter(item => item.id !== 'DOU_A0' && item.id !== 'DOU_A1');
+
+  const result = [];
+  if (sleeve1Filtered.length) result.push(...sleeve1Filtered);
+  result.push({ isGap: true });
+  if (sleeve0Filtered.length) result.push(...sleeve0Filtered);
+  result.push({ isGap: true });
+  if (tomA0) result.push(tomA0);
+  if (douA1) result.push(douA1);
+  if (douA0) result.push(douA0);
+
   return { plannedSummary: result, sleeveDenoms };
-  };
+};
 
 
   const { stockSummary, sleeveDenoms: stockSleeveDenoms, sleeveOnOrderTotals} = useMemo(
