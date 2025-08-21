@@ -68,6 +68,7 @@
 @media (max-width: 1024px) {
   .navContent{
     min-height: 115dvh;
+    padding-bottom: 150px;
   }
 }
 @media (max-width: 530px) {

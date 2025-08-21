@@ -32,7 +32,23 @@ function BatchCodes() {
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
   const batchesPerPage = 10;
-
+  function getPagination(currentPage, totalPages) {
+  const pages = [];
+  if (totalPages <= 7) {
+    // Show all pages if not too many
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    // Always show first, last, current, and neighbors
+    pages.push(1);
+    if (currentPage > 4) pages.push('...');
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (i !== 1 && i !== totalPages) pages.push(i);
+    }
+    if (currentPage < totalPages - 3) pages.push('...');
+    pages.push(totalPages);
+  }
+  return pages;
+}
 
   // Sort ingredients specifically:-
   const INGREDIENT_ORDER = [
@@ -1072,15 +1088,19 @@ const formatDateDisplay = (dateStr) => {
         <p className='py-3'>Loading batches...</p>
       )}
       <div className="pagination">
-        {Array.from({ length: Math.ceil(filteredBatches.length / batchesPerPage) }, (_, index) => (
-          <button
-            key={index + 1}
-            className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
-            onClick={() => setCurrentPage(index + 1)}
-          >
-            {index + 1}
-          </button>
-        ))}
+        {getPagination(currentPage, Math.ceil(filteredBatches.length / batchesPerPage)).map((page, idx) =>
+          page === '...' ? (
+            <span key={`ellipsis-${idx}`} className="page-ellipsis">...</span>
+          ) : (
+            <button
+              key={page}
+              className={`page-button ${currentPage === page ? 'active' : ''}`}
+              onClick={() => setCurrentPage(page)}
+            >
+              {page}
+            </button>
+          )
+        )}
       </div>
     </div>
   );
