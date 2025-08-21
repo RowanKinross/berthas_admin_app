@@ -207,7 +207,21 @@ const adjustArchive = async (delta) => {
       </div>
       {pizzaData.length > 0 ? (
         <div className='inventoryContainer'>
-          {pizzaData.map((pizza, pizzaIndex) => {
+          {pizzaData
+            .slice() // make a copy so you don't mutate state
+            .sort((a, b) => {
+              // Sleeved first, then sleeveless
+              if (a.sleeve !== b.sleeve) return b.sleeve - a.sleeve;
+              // For sleeved, put DOU_A1 last
+              if (a.sleeve && a.id === "DOU_A1") return 1;
+              if (b.sleeve && b.id === "DOU_A1") return -1;
+              // For sleeveless, put DOU_A0 last
+              if (!a.sleeve && a.id === "DOU_A0") return 1;
+              if (!b.sleeve && b.id === "DOU_A0") return -1;
+              // Otherwise, alphabetical
+              return a.id.localeCompare(b.id);
+            })
+            .map((pizza, pizzaIndex) => {
             let totalStock = 0;
 
 
