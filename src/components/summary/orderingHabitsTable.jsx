@@ -101,18 +101,22 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
                   </span>
                 </td>
                 <td>
-                  {showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
-                    ? sleeveTotals[item.sleeveType]
-                      ? Math.round((pizzaStats[item.id].lastWeek / sleeveTotals[item.sleeveType]) * 100) + '%'
-                      : '0%'
-                    : pizzaStats[item.id].lastWeek}
+                  {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                    ? pizzaStats[item.id].lastWeek
+                    : (showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
+                        ? (sleeveTotals[item.sleeveType]
+                            ? Math.round((pizzaStats[item.id].lastWeek / sleeveTotals[item.sleeveType]) * 100) + '%'
+                            : '0%')
+                        : pizzaStats[item.id].lastWeek)}
                 </td>
                 <td>
-                  {showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
-                    ? sleeveTotals[item.sleeveType]
-                      ? Math.round(((pizzaStats[item.id].fourWeekTotal / 4) / sleeveTotals[item.sleeveType]) * 100) + '%'
-                      : '0%'
-                    : Math.round(pizzaStats[item.id].fourWeekTotal / 4)}
+                  {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                    ? Math.round(pizzaStats[item.id].fourWeekTotal / 4)
+                    : (showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
+                        ? (sleeveTotals[item.sleeveType]
+                            ? Math.round(((pizzaStats[item.id].fourWeekTotal / 4) / sleeveTotals[item.sleeveType]) * 100) + '%'
+                            : '0%')
+                        : Math.round(pizzaStats[item.id].fourWeekTotal / 4))}
                 </td>
               </tr>
             );
