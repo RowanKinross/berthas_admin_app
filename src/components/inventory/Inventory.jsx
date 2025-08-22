@@ -669,16 +669,20 @@ return (
               <h5><strong>Allocations: </strong></h5>
               {(selectedBatch.pizza_allocations || [])
                 .filter(a => a.pizzaId === selectedPizzaId)
-                .map((a, i) => {
+                .map(a => {
                   const linkedOrder = orders.find(o => o.id === a.orderId);
-                  const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
-                  const deliveryDay = linkedOrder?.delivery_day ||  (a.orderId === 'archived' ? 'archived' : 'unknown');
-                  return (
-                    <p key={i}>
-                      <strong>{accountName}: {a.quantity}</strong> {deliveryDay}
-                    </p>
-                  );
-                })}
+                  return {
+                    ...a,
+                    accountName: linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown'),
+                    deliveryDay: linkedOrder?.delivery_day || (a.orderId === 'archived' ? 'archived' : 'unknown')
+                  };
+                })
+                .sort((a, b) => a.accountName.localeCompare(b.accountName))
+                .map((a, i) => (
+                  <p key={i}>
+                    <strong>{a.accountName}: {a.quantity}</strong> {a.deliveryDay}
+                  </p>
+                ))}
               <div style={{ marginTop: '1rem' }}>
                 <p><strong>Total:</strong> {effective}</p>
                 <p><strong>On order:</strong> {active}</p>
