@@ -87,19 +87,25 @@ function PlannedTable({ data, showPercent = true }) {
                       : item.total)}
               </td>
               <td>
-                {showPercent
-                  ? (item.ratios?.w1 ?? '') + '%'
-                  : (item.stockNumbers?.w1 ?? 0)}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? (item.stockNumbers?.w1 ?? 0)
+                  : (showPercent
+                      ? (item.ratios?.w1 ?? '') + '%'
+                      : (item.stockNumbers?.w1 ?? 0))}
               </td>
               <td>
-                {showPercent
-                  ? (item.ratios?.w2 ?? '') + '%'
-                  : (item.stockNumbers?.w2 ?? 0)}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? (item.stockNumbers?.w2 ?? 0)
+                  : (showPercent
+                      ? (item.ratios?.w2 ?? '') + '%'
+                      : (item.stockNumbers?.w2 ?? 0))}
               </td>
               <td>
-                {showPercent
-                  ? (item.ratios?.w3 ?? '') + '%'
-                  : (item.stockNumbers?.w3 ?? 0)}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? (item.stockNumbers?.w3 ?? 0)
+                  : (showPercent
+                      ? (item.ratios?.w3 ?? '') + '%'
+                      : (item.stockNumbers?.w3 ?? 0))}
               </td>
               <td
                 className={
