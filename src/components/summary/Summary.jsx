@@ -26,22 +26,6 @@ function Summary() {
     'ROS_B1': 5
   };
 
-  const AVERAGE_ORDERING = {
-    'MAR_A1': 167,
-    'MEA_A1': 126,
-    'HAM_A1': 85,
-    'NAP_A1': 81,
-    'ROS_B1': 38,
-    
-    'HAM_A0': 5,
-    'MAR_A0': 51,
-    'MAR_B0': 3,
-    'MEA_A0': 50,
-    'NAP_A0': 8,
-    'ROS_B0': 4,
-    'ROS_A0': 19,
-  };
-
 // stock data
 useEffect(() => {
   const fetchData = async () => {
@@ -66,6 +50,30 @@ useEffect(() => {
 
   fetchData();
 }, []);
+
+
+const averageOrdering = useMemo(() => {
+  const pizzaTotals = {};
+  const pizzaWeeks = {};
+
+  orders.forEach(order => {
+    if (!order.delivery_day || order.delivery_day === "tbc") return;
+    const delivery = new Date(order.delivery_day);
+    const weekKey = `${order.delivery_week}`;
+    Object.entries(order.pizzas || {}).forEach(([pizzaId, pizzaData]) => {
+      pizzaTotals[pizzaId] = (pizzaTotals[pizzaId] || 0) + pizzaData.quantity;
+      pizzaWeeks[`${pizzaId}_${weekKey}`] = true;
+    });
+  });
+
+  const pizzaAverages = {};
+  Object.keys(pizzaTotals).forEach(pizzaId => {
+    const weeks = Object.keys(pizzaWeeks).filter(key => key.startsWith(pizzaId + '_')).length || 1;
+    pizzaAverages[pizzaId] = Math.round(pizzaTotals[pizzaId] / weeks);
+  });
+
+  return pizzaAverages;
+}, [orders]);
 
 
 
@@ -106,6 +114,19 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     return Infinity;
   };
 
+  const onOrderByPizza = {};
+  orders.forEach(order => {
+    Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
+      const week = getWeekOffset(order.delivery_day);
+      if (!onOrderByPizza[pizzaId]) onOrderByPizza[pizzaId] = { 1: 0, 2: 0, 3: 0 };
+      if ([1,2].includes(week)) {
+        onOrderByPizza[pizzaId][week] += pizzaData.quantity;
+      } else if (week > 2 && week !== Infinity) {
+        onOrderByPizza[pizzaId][3] += pizzaData.quantity;
+      }
+    });
+  });
+
 
   stock.forEach(batch => {
     if (!batch.completed) return;
@@ -117,22 +138,11 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
-      const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
-      allocations
-      .filter(a => a.pizzaId === pizza.id)
-      .forEach(a => {
-        let deliveryDay = a.delivery_day || a.date || a.allocation_date;
-        if (!deliveryDay && a.orderId) {
-          deliveryDay = orderDeliveryDayMap[a.orderId];
-        }
-        const week = getWeekOffset(deliveryDay);
-        if ([1,2,3].includes(week)) {
-          onOrderByWeek[week] += a.quantity;
-        }
-      });
+
 
       const total = pizza.quantity - completed;
-      const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
+      const pizzaOnOrder = onOrderByPizza[pizza.id] || { 1: 0, 2: 0, 3: 0 };
+      const available = total - (pizzaOnOrder[1] + pizzaOnOrder[2] + pizzaOnOrder[3]);
 
       if (total > 0) {
         let sleeveType;
@@ -164,9 +174,10 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         }
 
         totals[pizza.id].total += total;
-        totals[pizza.id].onOrder1 += onOrderByWeek[1];
-        totals[pizza.id].onOrder2 += onOrderByWeek[2];
-        totals[pizza.id].onOrder3 += onOrderByWeek[3];
+        const pizzaOnOrder = onOrderByPizza[pizza.id] || { 1: 0, 2: 0, 3: 0 };
+        totals[pizza.id].onOrder1 = pizzaOnOrder[1];
+        totals[pizza.id].onOrder2 = pizzaOnOrder[2];
+        totals[pizza.id].onOrder3 = pizzaOnOrder[3];
         totals[pizza.id].available += available;
 
         if (
@@ -200,7 +211,7 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     const orderedW2 = item.onOrder2 || 0;
     const orderedW3 = item.onOrder3 || 0;
     const currentStock = item.total || 0;
-    const avgOrder = AVERAGE_ORDERING[item.id] || 0;
+    const avgOrder = averageOrdering[item.id] || 0;
     let status = "";
     if (orderedW1 > currentStock) {
       status = "Short - Urgent!";
@@ -303,17 +314,19 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const d = toDate(dateLike);
       if (isNaN(d)) return Infinity;
       const now = new Date();
-      const { week: thisWeek, year: thisYear } = getISOWeekYear(now);
-      const { week: targetWeek, year: targetYear } = getISOWeekYear(d);
-    
-      const weekDiff = (targetYear - thisYear) * 52 + (targetWeek - thisWeek);
-      if (weekDiff === 0) return 1; // This week (Mon–Sun)
-      if (weekDiff === 1) return 2; // Next week
-      if (weekDiff === 2) return 3; // Week after next
-      return Infinity; // ignore 3+ weeks
+    // Set now to this week's Monday
+      now.setHours(0,0,0,0);
+      const dayOfWeek = now.getDay() || 7; // Sunday is 0, so set to 7
+      const thisMonday = new Date(now);
+      thisMonday.setDate(now.getDate() - dayOfWeek + 1);
+
+      // Calculate the difference in days
+      const diffDays = Math.floor((d - thisMonday) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) return 1;      // This week
+      if (diffDays >= 7 && diffDays < 14) return 2;     // Next week
+      if (diffDays >= 14 && diffDays < 21) return 3;    // Week after next
+      return Infinity; 
     };
-    const week = getWeekOffset(batch.batch_date);
-  if (![1,2,3].includes(week)) return; // ignore 3+ weeks
 
     batch.pizzas.forEach(pizza => {
       const completed = allocations
@@ -325,6 +338,8 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
 
       const pizzaDetails = pizzas.find(p => p.id === pizza.id);
       const sleeveType = (pizza.id === 'TOM_A0') ? 'base' : (pizza.id.endsWith('1') ? '1' : '0');
+
+      const week = getWeekOffset(batch.batch_date);
 
       if (sleeveType === 'base') return; // TOM_A0 and dough balls have no ratio; skip their contribution to sleeves
 
@@ -491,6 +506,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
             pizzas={pizzas}
             orders={orders}
             summaryOrder={stockSummary}
+            averageOrdering={averageOrdering}
             showPercent={showPercentOrdered}
           />
         </div>
