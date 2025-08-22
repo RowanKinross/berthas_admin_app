@@ -65,6 +65,10 @@
 }
 .statusShort {display: none;}
 
+.subtotalRow tr {
+  border-top: 2px solid black !important;
+}
+
 
 @media (max-width: 600px) {
   .statusFull { display: none; }
