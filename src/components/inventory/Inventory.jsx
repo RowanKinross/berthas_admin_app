@@ -671,9 +671,13 @@ return (
                 .filter(a => a.pizzaId === selectedPizzaId)
                 .map(a => {
                   const linkedOrder = orders.find(o => o.id === a.orderId);
+                  let accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  if (accountName === 'SAMPLES' && linkedOrder?.sample_customer_name) {
+                    accountName = `SAMPLES: ${linkedOrder.sample_customer_name}`;
+                  }
                   return {
                     ...a,
-                    accountName: linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown'),
+                    accountName,
                     deliveryDay: linkedOrder?.delivery_day || (a.orderId === 'archived' ? 'archived' : 'unknown')
                   };
                 })

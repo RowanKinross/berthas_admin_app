@@ -402,6 +402,8 @@ const formatDateDisplay = (dateStr) => {
       }, {})
     });
 
+    setIngredientsOrdered(batch.ingredients_ordered || false);
+
     setTimeout(() => {
       batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 0);

@@ -348,37 +348,28 @@ return (
               <h3>{selectedPizzaId} : batch {selectedBatch.batch_code}</h3>
               <div className='allocationsKey'>
                 <h5><strong>Allocations: </strong></h5>
-                <div>
-                  <p className='packed key'> packed </p>
-                  <p className='notPacked key'> not yet packed</p>
-                </div>
               </div>
               <div className='archiveModal'>
               {(selectedBatch.pizza_allocations || [])
                 .filter(a => a.pizzaId === selectedPizzaId)
-                .map((a, i) => {
+                .map(a => {
                   const linkedOrder = orders.find(o => o.id === a.orderId);
-                  const accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
-                  const deliveryDay = linkedOrder?.delivery_day
-                    ? new Date(linkedOrder.delivery_day).toLocaleDateString('en-GB')
-                    .replace(/\//g, '.')
-                    : '';
-                  return (
-                  <div className='onOrderFlex'>
-                    <p
-                      key={i}
-                      className={linkedOrder?.order_status === 'ready to pack' ? 'notPacked' : 'packed' }
-                      >
-                      {accountName}: {a.quantity}
-                    </p>
-                    <p 
-                      className={linkedOrder?.order_status === 'ready to pack' ? 'notPacked' : 'packed' }
-                      >
-                      {deliveryDay}
-                    </p>
-                  </div>
-                  );
-                })}
+                  let accountName = linkedOrder?.customer_name || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  if (accountName === 'SAMPLES' && linkedOrder?.sample_customer_name) {
+                    accountName = `SAMPLES: ${linkedOrder.sample_customer_name}`;
+                  }
+                  return {
+                    ...a,
+                    accountName,
+                    deliveryDay: linkedOrder?.delivery_day || (a.orderId === 'archived' ? 'archived' : 'unknown')
+                  };
+                })
+                .sort((a, b) => a.accountName.localeCompare(b.accountName))
+                .map((a, i) => (
+                  <p key={i}>
+                    <strong>{a.accountName}: {a.quantity}</strong> {a.deliveryDay}
+                  </p>
+                ))}
                 </div>
               <div style={{ marginTop: '1rem' }}>
                 <div className='availableControls'>
