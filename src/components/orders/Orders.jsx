@@ -645,7 +645,14 @@ const orderHasBatchErrors = (order) => {
     </style></head><body>`;
 
     selected.forEach(order => {
-      const customerName = order.customer_name || order.account_ID ;
+      let customerName;
+      if (order.customer_name === 'SAMPLES' && order.sample_customer_name) {
+        customerName = `SAMPLE: ${order.sample_customer_name}`;
+      } else if (order.customer_name === 'Weddings & Private Events' && order.sample_customer_name) {
+        customerName = `Wedding/Event: ${order.sample_customer_name}`;
+      } else {
+        customerName = order.customer_name || order.account_ID;
+      }
       html += `<div class="order-block">
         <h3>${customerName}</h3>
         <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
@@ -678,10 +685,18 @@ const orderHasBatchErrors = (order) => {
 const handlePrintClick = () => {
   const order = selectedOrder;
   const po = order.purchase_order || '—';
-  const date = formatDate(order.timestamp);
+  const date = formatDeliveryDay(order.delivery_day);
 
   const customerData = allCustomers[order.account_ID] || {};
-  const customerName = customerData.name || order.customer_name || order.account_ID;
+
+  let customerName;
+  if (order.customer_name === 'SAMPLES' && order.sample_customer_name) {
+    customerName = `SAMPLE: ${order.sample_customer_name}`;
+  } else if (order.customer_name === 'Weddings & Private Events' && order.sample_customer_name) {
+    customerName = `Wedding/Event: ${order.sample_customer_name}`;
+  } else {
+    customerName = customerData.name || order.customer_name || order.account_ID;
+  }
 
   const address = [
     customerName,

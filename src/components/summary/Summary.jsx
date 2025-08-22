@@ -106,6 +106,19 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     return Infinity;
   };
 
+  const onOrderByPizza = {};
+  orders.forEach(order => {
+    Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
+      const week = getWeekOffset(order.delivery_day);
+      if (!onOrderByPizza[pizzaId]) onOrderByPizza[pizzaId] = { 1: 0, 2: 0, 3: 0 };
+      if ([1,2].includes(week)) {
+        onOrderByPizza[pizzaId][week] += pizzaData.quantity;
+      } else if (week > 2 && week !== Infinity) {
+        onOrderByPizza[pizzaId][3] += pizzaData.quantity;
+      }
+    });
+  });
+
 
   stock.forEach(batch => {
     if (!batch.completed) return;
@@ -117,24 +130,11 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         .filter(a => a.pizzaId === pizza.id && a.status === "completed")
         .reduce((sum, a) => sum + a.quantity, 0);
 
-      const onOrderByWeek = { 1: 0, 2: 0, 3: 0 };
-      allocations
-      .filter(a => a.pizzaId === pizza.id)
-      .forEach(a => {
-        let deliveryDay = a.delivery_day || a.date || a.allocation_date;
-        if (!deliveryDay && a.orderId) {
-          deliveryDay = orderDeliveryDayMap[a.orderId];
-        }
-      const week = getWeekOffset(deliveryDay);
-      if ([1,2].includes(week)) {
-        onOrderByWeek[week] += a.quantity;
-      } else if (week > 2 && week !== Infinity) {
-        onOrderByWeek[3] += a.quantity; // 3 meaning 3 weeks and beyond
-      }
-      });
+
 
       const total = pizza.quantity - completed;
-      const available = total - Object.values(onOrderByWeek).reduce((a, b) => a + b, 0);
+      const pizzaOnOrder = onOrderByPizza[pizza.id] || { 1: 0, 2: 0, 3: 0 };
+      const available = total - (pizzaOnOrder[1] + pizzaOnOrder[2] + pizzaOnOrder[3]);
 
       if (total > 0) {
         let sleeveType;
@@ -166,9 +166,10 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         }
 
         totals[pizza.id].total += total;
-        totals[pizza.id].onOrder1 += onOrderByWeek[1];
-        totals[pizza.id].onOrder2 += onOrderByWeek[2];
-        totals[pizza.id].onOrder3 += onOrderByWeek[3];
+        const pizzaOnOrder = onOrderByPizza[pizza.id] || { 1: 0, 2: 0, 3: 0 };
+        totals[pizza.id].onOrder1 = pizzaOnOrder[1];
+        totals[pizza.id].onOrder2 = pizzaOnOrder[2];
+        totals[pizza.id].onOrder3 = pizzaOnOrder[3];
         totals[pizza.id].available += available;
 
         if (
@@ -331,7 +332,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const sleeveType = (pizza.id === 'TOM_A0') ? 'base' : (pizza.id.endsWith('1') ? '1' : '0');
 
       const week = getWeekOffset(batch.batch_date);
-      
+
       if (sleeveType === 'base') return; // TOM_A0 and dough balls have no ratio; skip their contribution to sleeves
 
       if (!plannedByPizza[pizza.id]) plannedByPizza[pizza.id] = {1:0,2:0,3:0};
