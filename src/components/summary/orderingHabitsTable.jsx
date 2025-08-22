@@ -16,12 +16,11 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
   const now = new Date();
   const thisMonday = getMonday(now);
   const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
-  const fourWeeksAgo = new Date(thisMonday); fourWeeksAgo.setDate(thisMonday.getDate() - 28);
 
-  // Build pizzaId -> { lastWeek, avg4Weeks } map
+  // Build pizzaId -> { lastWeek } map
   const pizzaStats = {};
   summaryOrder.forEach(item => {
-    pizzaStats[item.id] = { lastWeek: 0, fourWeekTotal: 0 };
+    pizzaStats[item.id] = { lastWeek: 0 };
   });
 
   orders.forEach(order => {
@@ -31,9 +30,6 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
       if (!pizzaStats[pizzaId]) return;
       if (delivery >= lastMonday && delivery < thisMonday) {
         pizzaStats[pizzaId].lastWeek += pizzaData.quantity || 0;
-      }
-      if (delivery >= fourWeeksAgo && delivery < thisMonday) {
-        pizzaStats[pizzaId].fourWeekTotal += pizzaData.quantity || 0;
       }
     });
   });
