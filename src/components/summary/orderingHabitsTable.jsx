@@ -46,6 +46,22 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
     }
   });
 
+
+  // Find indices of gap rows
+  const gapIndices = summaryOrder
+    .map((item, idx) => item.isGap ? idx : null)
+    .filter(idx => idx !== null);
+
+  // Helper to sum a field for a section
+  const sumSection = (start, end, field) =>
+    summaryOrder.slice(start, end).reduce((sum, item) =>
+      (!item.isGap && (item.sleeveType === '0' || item.sleeveType === '1')
+        ? sum + (field === 'lastWeek'
+            ? pizzaStats[item.id].lastWeek
+            : Math.round(pizzaStats[item.id].fourWeekTotal / 4))
+        : sum), 0
+    );
+
   return (
     <div>
       <table className="stockTable">
@@ -57,10 +73,27 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
           </tr>
         </thead>
         <tbody>
-          {summaryOrder.map(item =>
-            item.isGap ? (
-              <tr key={Math.random()}><td colSpan={3} className="gap"></td></tr>
-            ) : (
+          {summaryOrder.map((item, i) => {
+            // Subtotal row
+            if (item.isGap) {
+              const prevGapIdx = gapIndices.filter(idx => idx < i).pop() ?? -1;
+              const subtotalLastWeek = sumSection(prevGapIdx + 1, i, 'lastWeek');
+              const subtotal4Week = sumSection(prevGapIdx + 1, i, 'fourWeekTotal');
+
+              return (
+                <React.Fragment key={`subtotal-gap-${i}`}>
+                  <tr className="subtotalRow">
+                    <td><strong>Subtotal</strong></td>
+                    <td><strong>{subtotalLastWeek}</strong></td>
+                    <td><strong>{subtotal4Week}</strong></td>
+                  </tr>
+                  <tr key={`gap-${i}`} className="gap-row">
+                    <td colSpan={3} className="gap"></td>
+                  </tr>
+                </React.Fragment>
+              );
+            }
+            return (
               <tr key={item.id} style={{ backgroundColor: `${item.color}30` }}>
                 <td className="pizza-id-cell" >
                   <span className="pizzaBadge" title={item.name} style={{ backgroundColor: `${item.color}70`}}>
@@ -82,8 +115,8 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
                     : Math.round(pizzaStats[item.id].fourWeekTotal / 4)}
                 </td>
               </tr>
-            )
-          )}
+            );
+          })}
         </tbody>
       </table>
     </div>
