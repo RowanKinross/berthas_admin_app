@@ -125,10 +125,12 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
         if (!deliveryDay && a.orderId) {
           deliveryDay = orderDeliveryDayMap[a.orderId];
         }
-        const week = getWeekOffset(deliveryDay);
-        if ([1,2,3].includes(week)) {
-          onOrderByWeek[week] += a.quantity;
-        }
+      const week = getWeekOffset(deliveryDay);
+      if ([1,2].includes(week)) {
+        onOrderByWeek[week] += a.quantity;
+      } else if (week > 2 && week !== Infinity) {
+        onOrderByWeek[3] += a.quantity; // 3 meaning 3 weeks and beyond
+      }
       });
 
       const total = pizza.quantity - completed;
@@ -303,17 +305,19 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const d = toDate(dateLike);
       if (isNaN(d)) return Infinity;
       const now = new Date();
-      const { week: thisWeek, year: thisYear } = getISOWeekYear(now);
-      const { week: targetWeek, year: targetYear } = getISOWeekYear(d);
-    
-      const weekDiff = (targetYear - thisYear) * 52 + (targetWeek - thisWeek);
-      if (weekDiff === 0) return 1; // This week (Mon–Sun)
-      if (weekDiff === 1) return 2; // Next week
-      if (weekDiff === 2) return 3; // Week after next
-      return Infinity; // ignore 3+ weeks
+    // Set now to this week's Monday
+      now.setHours(0,0,0,0);
+      const dayOfWeek = now.getDay() || 7; // Sunday is 0, so set to 7
+      const thisMonday = new Date(now);
+      thisMonday.setDate(now.getDate() - dayOfWeek + 1);
+
+      // Calculate the difference in days
+      const diffDays = Math.floor((d - thisMonday) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) return 1;      // This week
+      if (diffDays >= 7 && diffDays < 14) return 2;     // Next week
+      if (diffDays >= 14 && diffDays < 21) return 3;    // Week after next
+      return Infinity; 
     };
-    const week = getWeekOffset(batch.batch_date);
-  if (![1,2,3].includes(week)) return; // ignore 3+ weeks
 
     batch.pizzas.forEach(pizza => {
       const completed = allocations
@@ -326,6 +330,8 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const pizzaDetails = pizzas.find(p => p.id === pizza.id);
       const sleeveType = (pizza.id === 'TOM_A0') ? 'base' : (pizza.id.endsWith('1') ? '1' : '0');
 
+      const week = getWeekOffset(batch.batch_date);
+      
       if (sleeveType === 'base') return; // TOM_A0 and dough balls have no ratio; skip their contribution to sleeves
 
       if (!plannedByPizza[pizza.id]) plannedByPizza[pizza.id] = {1:0,2:0,3:0};

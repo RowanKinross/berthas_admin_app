@@ -38,17 +38,17 @@ const sumSection = (start, end, field) =>
         <tr>
           <th></th>
           <th></th>
-          <th title='1 Week Planned Stock Ratio'>
+          <th title='1 Week Ordered Stock Ratio'>
             {/* <span className="th-full">1 Week</span> */}
             <span className="th-short">1wk</span>
           </th>
-          <th title='2 Weeks Planned Stock Ratio'>
+          <th title='2 Weeks Ordered Stock Ratio'>
             {/* <span className="th-full">2 Weeks</span> */}
             <span className="th-short">2wks</span>
           </th>
-          <th title='3 Weeks Planned Stock Ratio'>
+          <th title='All beyond 2 Weeks Ordered Stock Ratio'>
             {/* <span className="th-full">3 Weeks</span> */}
-            <span className="th-short">3wks</span>
+            <strong>>></strong>
           </th>
           <th></th>
         </tr>
