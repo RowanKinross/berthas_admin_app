@@ -5,6 +5,19 @@ function PlannedTable({ data, showPercent = true }) {
   if (!data || data.length === 0) {
     return <p>Loading or no planned stock.</p>;
   }
+  
+  // Find indices of gap rows
+  const gapIndices = data
+    .map((item, idx) => item.isGap ? idx : null)
+    .filter(idx => idx !== null);
+
+  // Helper to sum a field for a section
+  const sumSection = (start, end, field, subfield) =>
+    data.slice(start, end).reduce((sum, item) =>
+      (!item.isGap && item.sleeveType !== 'base'
+        ? sum + (subfield ? (item[field]?.[subfield] || 0) : (item[field] || 0))
+        : sum), 0
+    );
 
   return (
     <table className="stockTable plannedTable">
@@ -35,11 +48,28 @@ function PlannedTable({ data, showPercent = true }) {
       </thead>
       <tbody>
         {data.map((item, i) => {
+          // Subtotal row
           if (item.isGap) {
+            const prevGapIdx = gapIndices.filter(idx => idx < i).pop() ?? -1;
+            const subtotalStock = sumSection(prevGapIdx + 1, i, 'total');
+            const subtotalW1 = sumSection(prevGapIdx + 1, i, 'stockNumbers', 'w1');
+            const subtotalW2 = sumSection(prevGapIdx + 1, i, 'stockNumbers', 'w2');
+            const subtotalW3 = sumSection(prevGapIdx + 1, i, 'stockNumbers', 'w3');
+
             return (
-              <tr key={`gap-${i}`} className="sleeve-gap-row">
-                <td className="sleeve-gap-row"></td>
-              </tr>
+              <React.Fragment key={`subtotal-gap-${i}`}>
+                <tr className="subtotal-row">
+                  <td><strong>Subtotal</strong></td>
+                  <td><strong>{subtotalStock}</strong></td>
+                  <td><strong>{subtotalW1}</strong></td>
+                  <td><strong>{subtotalW2}</strong></td>
+                  <td><strong>{subtotalW3}</strong></td>
+                  <td></td>
+                </tr>
+                <tr key={`gap-${i}`} className="sleeve-gap-row">
+                  <td className="sleeve-gap-row"></td>
+                </tr>
+              </React.Fragment>
             );
           }
           return (
