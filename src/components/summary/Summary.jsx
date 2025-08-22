@@ -26,22 +26,6 @@ function Summary() {
     'ROS_B1': 5
   };
 
-  const AVERAGE_ORDERING = {
-    'MAR_A1': 167,
-    'MEA_A1': 126,
-    'HAM_A1': 85,
-    'NAP_A1': 81,
-    'ROS_B1': 38,
-    
-    'HAM_A0': 5,
-    'MAR_A0': 51,
-    'MAR_B0': 3,
-    'MEA_A0': 50,
-    'NAP_A0': 8,
-    'ROS_B0': 4,
-    'ROS_A0': 19,
-  };
-
 // stock data
 useEffect(() => {
   const fetchData = async () => {
@@ -66,6 +50,30 @@ useEffect(() => {
 
   fetchData();
 }, []);
+
+
+const averageOrdering = useMemo(() => {
+  const pizzaTotals = {};
+  const pizzaWeeks = {};
+
+  orders.forEach(order => {
+    if (!order.delivery_day || order.delivery_day === "tbc") return;
+    const delivery = new Date(order.delivery_day);
+    const weekKey = `${order.delivery_week}`;
+    Object.entries(order.pizzas || {}).forEach(([pizzaId, pizzaData]) => {
+      pizzaTotals[pizzaId] = (pizzaTotals[pizzaId] || 0) + pizzaData.quantity;
+      pizzaWeeks[`${pizzaId}_${weekKey}`] = true;
+    });
+  });
+
+  const pizzaAverages = {};
+  Object.keys(pizzaTotals).forEach(pizzaId => {
+    const weeks = Object.keys(pizzaWeeks).filter(key => key.startsWith(pizzaId + '_')).length || 1;
+    pizzaAverages[pizzaId] = Math.round(pizzaTotals[pizzaId] / weeks);
+  });
+
+  return pizzaAverages;
+}, [orders]);
 
 
 
@@ -203,7 +211,7 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     const orderedW2 = item.onOrder2 || 0;
     const orderedW3 = item.onOrder3 || 0;
     const currentStock = item.total || 0;
-    const avgOrder = AVERAGE_ORDERING[item.id] || 0;
+    const avgOrder = averageOrdering[item.id] || 0;
     let status = "";
     if (orderedW1 > currentStock) {
       status = "Short - Urgent!";
@@ -498,6 +506,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
             pizzas={pizzas}
             orders={orders}
             summaryOrder={stockSummary}
+            averageOrdering={averageOrdering}
             showPercent={showPercentOrdered}
           />
         </div>

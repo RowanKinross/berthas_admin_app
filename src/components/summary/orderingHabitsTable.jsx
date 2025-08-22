@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import './summary.css';
 
-function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true }) {
+function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, showPercent = true }) {
 
   // Helper: get Monday of this week
   const getMonday = (d) => {
@@ -45,6 +45,12 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
       sleeveTotals[item.sleeveType] += pizzaStats[item.id].lastWeek;
     }
   });
+  const sleeveAvgTotals = { '0': 0, '1': 0 };
+  summaryOrder.forEach(item => {
+  if (item.sleeveType === '0' || item.sleeveType === '1') {
+    sleeveAvgTotals[item.sleeveType] += averageOrdering[item.id] || 0;
+  }
+});
 
 
   // Find indices of gap rows
@@ -58,7 +64,7 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
       (!item.isGap && (item.sleeveType === '0' || item.sleeveType === '1')
         ? sum + (field === 'lastWeek'
             ? pizzaStats[item.id].lastWeek
-            : Math.round(pizzaStats[item.id].fourWeekTotal / 4))
+            : averageOrdering[item.id] || 0)
         : sum), 0
     );
 
@@ -78,7 +84,13 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
             if (item.isGap) {
               const prevGapIdx = gapIndices.filter(idx => idx < i).pop() ?? -1;
               const subtotalLastWeek = sumSection(prevGapIdx + 1, i, 'lastWeek');
-              const subtotal4Week = sumSection(prevGapIdx + 1, i, 'fourWeekTotal');
+              const subtotal4Week = summaryOrder
+                .slice(prevGapIdx + 1, i)
+                .reduce((sum, item) =>
+                  (!item.isGap && (item.sleeveType === '0' || item.sleeveType === '1')
+                    ? sum + (averageOrdering[item.id] || 0)
+                    : sum), 0
+                );
 
               return (
                 <React.Fragment key={`subtotal-gap-${i}`}>
@@ -111,12 +123,18 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, showPercent = true 
                 </td>
                 <td>
                   {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
-                    ? Math.round(pizzaStats[item.id].fourWeekTotal / 4)
+                    ? (averageOrdering[item.id] || 0)
                     : (showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
-                        ? (sleeveTotals[item.sleeveType]
-                            ? Math.round(((pizzaStats[item.id].fourWeekTotal / 4) / sleeveTotals[item.sleeveType]) * 100) + '%'
-                            : '0%')
-                        : Math.round(pizzaStats[item.id].fourWeekTotal / 4))}
+                        ? (
+                            sleeveAvgTotals[item.sleeveType]
+                              ? (
+                                  isNaN(averageOrdering[item.id] / sleeveAvgTotals[item.sleeveType])
+                                    ? '0%'
+                                    : Math.round((averageOrdering[item.id] / sleeveAvgTotals[item.sleeveType]) * 100) + '%'
+                                )
+                              : '0%'
+                          )
+                        : (averageOrdering[item.id] || 0))}
                 </td>
               </tr>
             );
