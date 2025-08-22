@@ -95,24 +95,31 @@ const sumSection = (start, end, field) =>
                       : item.total)}
               </td>
               <td>
-                {showPercent
-                  ? (sleeveOnOrderTotals[item.sleeveType]?.w1
-                      ? Math.round((item.onOrder1 / sleeveOnOrderTotals[item.sleeveType].w1) * 100) + '%'
-                      : '0%')
-                  : item.onOrder1}
-              </td>
-              <td>                {showPercent
-                  ? (sleeveOnOrderTotals[item.sleeveType]?.w2
-                      ? Math.round((item.onOrder2 / sleeveOnOrderTotals[item.sleeveType].w2) * 100) + '%'
-                      : '0%')
-                  : item.onOrder2}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? item.onOrder1
+                  : (showPercent
+                      ? (sleeveOnOrderTotals[item.sleeveType]?.w1
+                          ? Math.round((item.onOrder1 / sleeveOnOrderTotals[item.sleeveType].w1) * 100) + '%'
+                          : '0%')
+                      : item.onOrder1)}
               </td>
               <td>
-                                {showPercent
-                  ? (sleeveOnOrderTotals[item.sleeveType]?.w3
-                      ? Math.round((item.onOrder3 / sleeveOnOrderTotals[item.sleeveType].w3) * 100) + '%'
-                      : '0%')
-                  : item.onOrder3}
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? item.onOrder2
+                  : (showPercent
+                      ? (sleeveOnOrderTotals[item.sleeveType]?.w2
+                          ? Math.round((item.onOrder2 / sleeveOnOrderTotals[item.sleeveType].w2) * 100) + '%'
+                          : '0%')
+                      : item.onOrder2)}
+              </td>
+              <td>
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? item.onOrder3
+                  : (showPercent
+                      ? (sleeveOnOrderTotals[item.sleeveType]?.w3
+                          ? Math.round((item.onOrder3 / sleeveOnOrderTotals[item.sleeveType].w3) * 100) + '%'
+                          : '0%')
+                      : item.onOrder3)}
               </td>
               <td className="statusCell">
                 <span className="statusFull">{item.status}</span>

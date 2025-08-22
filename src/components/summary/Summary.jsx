@@ -188,8 +188,9 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
   });
 
   const summary = Object.values(totals).map(item => {
-    if (item.sleeveType === 'base') {
-      return { ...item }; // no ratio field at all
+    // removed stock status for now but can re-incorporate
+    if (item.sleeveType === 'base'  || item.id === 'DOU_A0' || item.id === 'DOU_A1') {
+      return { ...item };
     }
 
     const sleeveTotal = sleeveTypeTotals[item.sleeveType] || 1;
@@ -211,6 +212,7 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     if ((currentStock - (orderedW1 + orderedW2 + orderedW3)) > (3 * avgOrder)) {
       status = "Overstocked";
     }
+    
 
     return {
       ...item,
