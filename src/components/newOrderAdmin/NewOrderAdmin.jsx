@@ -35,6 +35,7 @@ const [dropdownOpen, setDropdownOpen] = useState(false);
 const [deliveryDay, setDeliveryDay] = useState("");
 
 const [sampleCustomerName, setSampleCustomerName] = useState("");
+const [confirmChecked, setConfirmChecked] = useState(false);
 
 
 
@@ -189,6 +190,7 @@ useEffect(() => {
     setDeliveryOption("asap");
     // Reset editable email to the selected customer's email
     setEditableEmail(customerData.find(c => c.account_ID === selectedCustomerId)?.email || "");
+     setConfirmChecked(false);
 }, [selectedCustomerId, pizzaData]);
 
 
@@ -588,6 +590,8 @@ return (
         label="Confirm input"
         feedback="You must agree before submitting."
         feedbackType="invalid"
+        checked={confirmChecked}
+        onChange={e => setConfirmChecked(e.target.checked)}
         />
     </Form.Group>
     <Button type="submit" className='button' disabled={submitting}>
