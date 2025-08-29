@@ -45,6 +45,7 @@ function Orders() {
   const [sortDirection, setSortDirection] = useState("asc");
   const [searchTerm, setSearchTerm] = useState("");
   const STATUS_ORDER = ["order placed", "ready to pack", "packed", "complete"];
+  const [lastCheckedIndex, setLastCheckedIndex] = useState(null);
 
   const [packingHtml, setPackingHtml] = useState('');
 
@@ -899,14 +900,33 @@ const handlePrintClick = () => {
                 <input
                   type="checkbox"
                   checked={selectedOrders.includes(order.id)}
-                  onChange={() => {
-                    setSelectedOrders(prev =>
-                      prev.includes(order.id)
-                      ? prev.filter(id => id !== order.id)
-                      : [...prev, order.id]
-                    );
+                  onChange={e => {
+                    const orderIndex = currentOrders.findIndex(o => o.id === order.id);
+                    if (e.nativeEvent.shiftKey && lastCheckedIndex !== null) {
+                      // Shift is held: select range
+                      const start = Math.min(lastCheckedIndex, orderIndex);
+                      const end = Math.max(lastCheckedIndex, orderIndex);
+                      const idsInRange = currentOrders.slice(start, end + 1).map(o => o.id);
+                      setSelectedOrders(prev => {
+                        // Add all in range if not all selected, else remove all in range
+                        const allSelected = idsInRange.every(id => prev.includes(id));
+                        if (allSelected) {
+                          return prev.filter(id => !idsInRange.includes(id));
+                        } else {
+                          return Array.from(new Set([...prev, ...idsInRange]));
+                        }
+                      });
+                    } else {
+                      // Normal click
+                      setSelectedOrders(prev =>
+                        prev.includes(order.id)
+                          ? prev.filter(id => id !== order.id)
+                          : [...prev, order.id]
+                      );
+                      setLastCheckedIndex(orderIndex);
+                    }
                   }}
-                  />
+                />
               </div>
             )}
             
