@@ -798,6 +798,111 @@ const handlePrintClick = () => {
 };
 
 
+const handleBulkPrintPackingSlips = () => {
+  const selected = orders.filter(o => selectedOrders.includes(o.id));
+
+  let html = `<html><head><title>Packing Slips</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      .packing-slip { page-break-after: always; font-size: 14px; padding: 40px; max-width: 700px; margin: auto; }
+      .packing-slip img { max-height: 80px; }
+      table { width:100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 6px 0; }
+      thead { border-bottom: 2px solid #000; }
+    </style>
+    </head><body>`;
+
+  selected.forEach(order => {
+    const po = order.purchase_order || '—';
+    const date = formatDeliveryDay(order.delivery_day);
+    const customerData = allCustomers[order.account_ID] || {};
+
+    let customerName;
+    if (order.customer_name === 'SAMPLES' && order.sample_customer_name) {
+      customerName = `SAMPLE: ${order.sample_customer_name}`;
+    } else if (order.customer_name === 'Weddings & Private Events' && order.sample_customer_name) {
+      customerName = `Wedding/Event: ${order.sample_customer_name}`;
+    } else {
+      customerName = customerData.name || order.customer_name || order.account_ID;
+    }
+
+    const address = [
+      customerName,
+      customerData.name_number,
+      customerData.street,
+      customerData.city,
+      customerData.postcode,
+      'GBR'
+    ].filter(Boolean).join('<br/>');
+
+    html += `
+      <div class="packing-slip">
+        <div style="margin-bottom: 20px;">
+          <img src="/bertha_logo_bw.png" />
+        </div>
+        <h2 style="text-align: center; margin-bottom: 30px;">PACKING SLIP</h2>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div style="border: 1px solid #000; padding: 10px; width: 48%;">
+            <strong>Deliver to</strong><br/>
+            ${address}
+          </div>
+          <div style="padding: 10px; width: 48%;">
+            <strong>Bill to</strong><br/>
+            ${address}
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div style="margin-bottom: 20px;">
+            <strong>Invoice Date:</strong> ${date}<br/>
+            <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
+            <strong>Reference:</strong> PO ${po}
+          </div>
+          <div style="margin-bottom: 20px;">
+            <strong>Bertha's At Home</strong><br/>
+            accounts@berthas.co.uk<br/>
+            sales@berthas.co.uk<br/>
+            <strong>VAT Number:</strong> 458323187
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Quantity</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+    Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
+      const pizzaName = pizzaTitles[pizzaId] || pizzaId;
+      pizzaData.batchesUsed.forEach(b => {
+        const batchDate = formatBatchDate(b.batch_number);
+        const quantity = parseFloat(b.quantity || 0).toFixed(2);
+        html += `
+            <tr>
+              <td>${pizzaName} ${batchDate}</td>
+              <td>${quantity}</td>
+            </tr>`;
+      });
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </div>`;
+  });
+
+  html += `</body></html>`;
+
+  const printWindow = window.open('', '', 'width=800,height=600');
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+  printWindow.close();
+};
+
+
 
 
 
@@ -831,6 +936,10 @@ const handlePrintClick = () => {
           {/* generate Packing list button */}
           <button className="button" onClick={generatePDF}>
             Generate Packing List
+          </button>
+          {/* generate Packing Packing Slips */}
+          <button className="button" onClick={handleBulkPrintPackingSlips}>
+            Generate Packing Slips
           </button>
           {/* mark as packed */}
           <button className="button" onClick={() => markSelectedAsPacked()}>
