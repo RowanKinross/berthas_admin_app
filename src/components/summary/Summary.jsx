@@ -94,23 +94,23 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     const d = toDate(dateLike);
     if (isNaN(d)) return Infinity;
     const now = new Date();
-    // Set now to this week's Monday
+    // Set now to this week's saturday
     now.setHours(0,0,0,0);
-    const dayOfWeek = now.getDay() || 7; // Sunday is 0, so set to 7
-    const thisMonday = new Date(now);
-    thisMonday.setDate(now.getDate() - dayOfWeek + 1);
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+    const thisSaturday = new Date(now);
+    thisSaturday.setDate(now.getDate() - ((dayOfWeek + 1) % 7));
 
-    // Get next Monday
-    const nextMonday = new Date(thisMonday);
-    nextMonday.setDate(thisMonday.getDate() + 7);
+    // Get next Saturday
+    const nextSaturday = new Date(thisSaturday);
+    nextSaturday.setDate(thisSaturday.getDate() + 7);
 
-    // Get week after next Monday
-    const weekAfterNextMonday = new Date(thisMonday);
-    weekAfterNextMonday.setDate(thisMonday.getDate() + 14);
+    // Get week after next saturday
+    const weekAfterNextSaturday = new Date(thisSaturday);
+    weekAfterNextSaturday.setDate(thisSaturday.getDate() + 14);
 
-    if (d >= thisMonday && d < nextMonday) return 1; // This week
-    if (d >= nextMonday && d < weekAfterNextMonday) return 2; // Next week
-    if (d >= weekAfterNextMonday && d < new Date(weekAfterNextMonday.getTime() + 7 * 24 * 60 * 60 * 1000)) return 3; // Week after next
+    if (d >= thisSaturday && d < nextSaturday) return 1; // This week (Sat–Fri)
+    if (d >= nextSaturday && d < weekAfterNextSaturday) return 2; // Next week
+    if (d >= weekAfterNextSaturday && d < new Date(weekAfterNextSaturday.getTime() + 7 * 24 * 60 * 60 * 1000)) return 3; // Week after next
     return Infinity;
   };
 
@@ -316,12 +316,12 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
       const now = new Date();
     // Set now to this week's Monday
       now.setHours(0,0,0,0);
-      const dayOfWeek = now.getDay() || 7; // Sunday is 0, so set to 7
-      const thisMonday = new Date(now);
-      thisMonday.setDate(now.getDate() - dayOfWeek + 1);
+      const dayOfWeek = now.getDay() || 7; // Sunday is 0, 6 = saturday
+      const thisSaturday = new Date(now);
+      thisSaturday.setDate(now.getDate() - ((dayOfWeek + 1) % 7));
 
       // Calculate the difference in days
-      const diffDays = Math.floor((d - thisMonday) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor((d - thisSaturday) / (1000 * 60 * 60 * 24));
       if (diffDays >= 0 && diffDays < 7) return 1;      // This week
       if (diffDays >= 7 && diffDays < 14) return 2;     // Next week
       if (diffDays >= 14 && diffDays < 21) return 3;    // Week after next
