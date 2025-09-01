@@ -8,8 +8,24 @@ function weeksAgo(dateStr) {
   if (!dateStr) return "-";
   const now = new Date();
   const date = new Date(dateStr);
-  const diffMs = now - date;
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
+
+  // Find the most recent Saturday before or on today
+  const nowDay = now.getDay();
+  const lastSaturday = new Date(now);
+  lastSaturday.setDate(now.getDate() - ((nowDay + 1) % 7));
+
+  // Find the Saturday for the order date
+  const orderDay = date.getDay();
+  const orderSaturday = new Date(date);
+  orderSaturday.setDate(date.getDate() - ((orderDay + 1) % 7));
+
+  // Calculate the number of weeks between the two Saturdays
+  const diffMs = lastSaturday - orderSaturday;
+  const weeks = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
+
+  // If the order is in the current week (last Saturday to coming Friday), return 0
+  if (weeks < 0) return 0;
+  return weeks;
 }
 
 const SORT_FIELDS = [
