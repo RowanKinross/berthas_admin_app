@@ -119,7 +119,24 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         <table className="stockTable" style={{ minWidth: 160, maxWidth: 200, borderRight: "1px solid #ccc" }}>
           <thead>
             <tr>
-              <th>Customer Name</th>
+              <th style={{ cursor: "pointer" }}>
+                Customer Name
+                <span
+                  className="filter"
+                  style={{ marginLeft: 6 }}
+                  onClick={() => {
+                    if (sortField === "name") {
+                      setSortDirection(d => (d === "asc" ? "desc" : "asc"));
+                    } else {
+                      setSortField("name");
+                      setSortDirection("asc");
+                    }
+                  }}
+                >
+                  <FontAwesomeIcon icon={faSort} />
+                  {sortField === "name" && (sortDirection === "asc" ? "▲" : "▼")}
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
