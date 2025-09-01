@@ -5,6 +5,23 @@ function PlannedTable({ data, showPercent = true }) {
   if (!data || data.length === 0) {
     return <p>Loading or no planned stock.</p>;
   }
+
+  // Calculate sleeve subtotals for current stock and planned weeks
+  const sleeveTotals = { '0': { stock: 0, w1: 0, w2: 0, w3: 0 }, '1': { stock: 0, w1: 0, w2: 0, w3: 0 } };
+  const baseTotals = { stock: 0, w1: 0, w2: 0, w3: 0 };
+  data.forEach(item => {
+    if (item.sleeveType === '0' || item.sleeveType === '1') {
+      sleeveTotals[item.sleeveType].stock += item.total || 0;
+      sleeveTotals[item.sleeveType].w1 += item.stockNumbers?.w1 || 0;
+      sleeveTotals[item.sleeveType].w2 += item.stockNumbers?.w2 || 0;
+      sleeveTotals[item.sleeveType].w3 += item.stockNumbers?.w3 || 0;
+    } else if (item.sleeveType === 'base') {
+      baseTotals.stock += item.total || 0;
+      baseTotals.w1 += item.stockNumbers?.w1 || 0;
+      baseTotals.w2 += item.stockNumbers?.w2 || 0;
+      baseTotals.w3 += item.stockNumbers?.w3 || 0;
+    }
+  });
   
   // Find indices of gap rows
   const gapIndices = data
@@ -90,21 +107,42 @@ function PlannedTable({ data, showPercent = true }) {
                 {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
                   ? (item.stockNumbers?.w1 ?? 0)
                   : (showPercent
-                      ? (item.ratios?.w1 ?? '') + '%'
+                      ? (() => {
+                          const sleeve = sleeveTotals[item.sleeveType];
+                          const numerator = (item.total || 0) + (item.stockNumbers?.w1 || 0);
+                          const denominator = (sleeve.stock || 0) + (sleeve.w1 || 0);
+                          return denominator
+                            ? Math.round((numerator / denominator) * 100) + '%'
+                            : '0%';
+                        })()
                       : (item.stockNumbers?.w1 ?? 0))}
               </td>
               <td>
                 {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
                   ? (item.stockNumbers?.w2 ?? 0)
                   : (showPercent
-                      ? (item.ratios?.w2 ?? '') + '%'
+                      ? (() => {
+                          const sleeve = sleeveTotals[item.sleeveType];
+                          const numerator = (item.total || 0) + (item.stockNumbers?.w1 || 0) + (item.stockNumbers?.w2 || 0);
+                          const denominator = (sleeve.stock || 0) + (sleeve.w1 || 0) + (sleeve.w2 || 0);
+                          return denominator
+                            ? Math.round((numerator / denominator) * 100) + '%'
+                            : '0%';
+                        })()
                       : (item.stockNumbers?.w2 ?? 0))}
               </td>
               <td>
                 {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
                   ? (item.stockNumbers?.w3 ?? 0)
                   : (showPercent
-                      ? (item.ratios?.w3 ?? '') + '%'
+                      ? (() => {
+                          const sleeve = sleeveTotals[item.sleeveType];
+                          const numerator = (item.total || 0) + (item.stockNumbers?.w1 || 0) + (item.stockNumbers?.w2 || 0) + (item.stockNumbers?.w3 || 0);
+                          const denominator = (sleeve.stock || 0) + (sleeve.w1 || 0) + (sleeve.w2 || 0) + (sleeve.w3 || 0);
+                          return denominator
+                            ? Math.round((numerator / denominator) * 100) + '%'
+                            : '0%';
+                        })()
                       : (item.stockNumbers?.w3 ?? 0))}
               </td>
               <td
