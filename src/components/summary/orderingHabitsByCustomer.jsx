@@ -29,7 +29,8 @@ function weeksAgo(dateStr) {
 }
 
 const SORT_FIELDS = [
-  { key: "totalPizzas", label: <>Total<br />Ordered</> },
+  { key: "rank", label: <>Rank</> },
+  { key: "totalPizzas", label: <>Total<br />Pizzas Ordered</> },
   { key: "lastDeliveryDate", label: <>Last<br />Delivery Date</> },
   { key: "weeksAgo", label: <>Weeks<br />Ago</> },
   { key: "pizzasLastDelivery", label: <>Pizzas in <br /> Last Delivery</> },
@@ -72,7 +73,6 @@ function OrderingHabitsByCustomer({ orders = [] }) {
     orders.forEach(order => {
       const name = order.customer_name || order.customerName || "Unknown";
       const deliveryDate = order.delivery_day || order.deliveryDate;
-      // Sum all pizzas in this order
       const pizzasInOrder = Object.values(order.pizzas || {}).reduce(
         (sum, pizza) => sum + (pizza.quantity || 0), 0
       );
@@ -83,7 +83,8 @@ function OrderingHabitsByCustomer({ orders = [] }) {
       });
     });
 
-    return Object.entries(map).map(([name, orders]) => {
+    // Calculate stats for each customer
+    const customerStats = Object.entries(map).map(([name, orders]) => {
       const totalPizzas = orders.reduce((sum, o) => sum + o.pizzas, 0);
       const lastOrder = orders.reduce((latest, o) =>
         !latest || new Date(o.date) > new Date(latest.date) ? o : latest, null
@@ -97,10 +98,8 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         const daysBetween = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
         weeksBetween = Math.max(1, Math.round(daysBetween / 7));
       }
-      // Average pizzas per week
       const avgPizzasPerWeek = weeksBetween ? Math.round(totalPizzas / weeksBetween) : totalPizzas;
 
-      // Average ordering frequency in weeks as whole number
       let avgFrequencyWeeks = "-";
       if (dates.length > 1) {
         const daysBetween = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
@@ -118,6 +117,15 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         avgPizzasPerWeek
       };
     });
+
+    // Assign ranking based on totalPizzas (descending)
+    customerStats
+      .sort((a, b) => b.totalPizzas - a.totalPizzas)
+      .forEach((customer, idx) => {
+        customer.rank = idx + 1;
+      });
+
+    return customerStats;
   }, [orders]);
 
   // Filter and sort
@@ -163,7 +171,7 @@ function OrderingHabitsByCustomer({ orders = [] }) {
           <thead>
             <tr>
               <th>
-              <br></br>
+                <br />
                 Customer Name
                 <span
                   className="filter"
@@ -193,7 +201,6 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         </table>
         {/* Scrollable columns */}
         <div className="customerTableScrollContainer">
-          {/* Actual scrollable table */}
           <div
             id="table-scrollbar"
             ref={tableScrollbarRef}
@@ -227,6 +234,7 @@ function OrderingHabitsByCustomer({ orders = [] }) {
               <tbody>
                 {filteredSortedCustomers.map((customer, idx) => (
                   <tr key={idx}>
+                    <td>{customer.rank}</td>
                     <td>{customer.totalPizzas}</td>
                     <td>{customer.lastDeliveryDate}</td>
                     <td>{customer.weeksAgo}</td>
