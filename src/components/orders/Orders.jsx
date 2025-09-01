@@ -63,6 +63,7 @@ function calculatePizzaTotal(pizzas) {
 
 
 
+
 useEffect(() => {
   const fetchAllCustomers = async () => {
     try {
@@ -206,7 +207,6 @@ const removePizzaAllocationFromBatch = async ({ pizzaId, batchCode }) => {
 };
 
 
-
 // delete order?
 const handleOrderDelete = async () => {
   if (!selectedOrder) return;
@@ -217,7 +217,23 @@ const handleOrderDelete = async () => {
   if (!confirmDelete) return;
 
   try {
+    // Delete the order
     await deleteDoc(doc(db, "orders", selectedOrder.id));
+    // Remove allocations for this order in all batches
+    const batchesSnapshot = await getDocs(collection(db, "batches"));
+    const batchDocs = batchesSnapshot.docs;
+    const allocationUpdates = batchDocs.map(async (docSnap) => {
+      const batchData = docSnap.data();
+      const filteredAllocations = (batchData.pizza_allocations || []).filter(
+        allocation => allocation.orderId !== selectedOrder.id
+      );
+      if (filteredAllocations.length !== (batchData.pizza_allocations || []).length) {
+        await updateDoc(doc(db, "batches", docSnap.id), {
+          pizza_allocations: filteredAllocations
+        });
+      }
+    });
+    await Promise.all(allocationUpdates);
     setSelectedOrder(null);
     setViewModal(false);
     fetchOrdersAgain();
@@ -412,12 +428,40 @@ const updateDeliveryDate = async (orderId, newDate) => {
     const markSelectedAsComplete = async (orderIds = selectedOrders) => {
       try {
         const batch = writeBatch(db);
+
+        // Update order docs
         orderIds.forEach(orderId => {
           const orderRef = doc(db, "orders", orderId);
           batch.update(orderRef, { order_status: "complete", complete: true });
         });
 
         await batch.commit();
+
+        // Now update allocations in all batches for these orders
+        const batchesSnapshot = await getDocs(collection(db, "batches"));
+        const batchDocs = batchesSnapshot.docs;
+
+        const allocationUpdates = batchDocs.map(async (docSnap) => {
+          const batchData = docSnap.data();
+          let updated = false;
+
+          const updatedAllocations = (batchData.pizza_allocations || []).map(allocation => {
+            if (orderIds.includes(allocation.orderId)) {
+              updated = true;
+              return { ...allocation, status: "completed" };
+            }
+            return allocation;
+          });
+
+          if (updated) {
+            await updateDoc(doc(db, "batches", docSnap.id), {
+              pizza_allocations: updatedAllocations
+            });
+          }
+        });
+
+        await Promise.all(allocationUpdates);
+
         fetchOrdersAgain();
         setSelectedOrders([]);
         setSelectMode(false);
@@ -1527,15 +1571,38 @@ const handleBulkPrintPackingSlips = () => {
           {selectedOrder.order_status === "complete" && (
             <button
               className="button button-secondary"
-              onClick={() => {
+              onClick={async () => {
                 // Revert to "packed"
-                updateOrderStatus(selectedOrder.id, "packed");
+                await updateOrderStatus(selectedOrder.id, "packed");
                 setSelectedOrder(prev => ({
                   ...prev,
                   order_status: "packed",
                   complete: false
                 }));
                 updateOrderInList(selectedOrder.id, { order_status: "packed", complete: false });
+                // Remove allocation status for this order in all batches
+                const batchesSnapshot = await getDocs(collection(db, "batches"));
+                const batchDocs = batchesSnapshot.docs;
+                const allocationUpdates = batchDocs.map(async (docSnap) => {
+                  const batchData = docSnap.data();
+                  let updated = false;
+                  const updatedAllocations = (batchData.pizza_allocations || []).map(allocation => {
+                    if (allocation.orderId === selectedOrder.id && allocation.status === "completed") {
+                      updated = true;
+                      // Remove the status property
+                      const { status, ...rest } = allocation;
+                      return rest;
+                    }
+                    return allocation;
+                  });
+                  if (updated) {
+                    await updateDoc(doc(db, "batches", docSnap.id), {
+                      pizza_allocations: updatedAllocations
+                    });
+                  }
+                });
+
+                await Promise.all(allocationUpdates);
               }}
             >
               Revert to "Packed"

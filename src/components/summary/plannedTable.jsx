@@ -58,7 +58,7 @@ function PlannedTable({ data, showPercent = true }) {
           </th>
           <th title='3 Weeks Planned Stock Ratio'>
             <span className="th-full">3 Weeks</span>
-            <span className="th-short"><strong>>></strong></span>
+            <span className="th-short"><strong>&gt;&gt;</strong></span>
           </th>
           <th></th>
         </tr>
