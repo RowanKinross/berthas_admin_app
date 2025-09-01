@@ -37,8 +37,8 @@ const SORT_FIELDS = [
 ];
 
 function OrderingHabitsByCustomer({ orders = [] }) {
-  const [sortField, setSortField] = useState("totalPizzas");
-  const [sortDirection, setSortDirection] = useState("desc");
+  const [sortField, setSortField] = useState("name");
+  const [sortDirection, setSortDirection] = useState("asc");
   const [searchTerm, setSearchTerm] = useState("");
 
   // Group orders by customer name and calculate stats
