@@ -34,7 +34,8 @@ const SORT_FIELDS = [
   { key: "weeksAgo", label: <>Weeks<br />Ago</> },
   { key: "pizzasLastDelivery", label: <>Pizzas in <br /> Last Delivery</> },
   { key: "avgPizzas", label: <>Average Pizzas <br />per Order</> },
-  { key: "avgFrequencyWeeks", label: <>Avg Ordering<br />Frequency (weeks)</> }
+  { key: "avgFrequencyWeeks", label: <>Avg Ordering<br />Frequency (wks)</> },
+  { key: "avgPizzasPerWeek", label: <>Avg Pizzas<br />per Week</> }
 ];
 
 function OrderingHabitsByCustomer({ orders = [] }) {
@@ -84,18 +85,26 @@ function OrderingHabitsByCustomer({ orders = [] }) {
 
     return Object.entries(map).map(([name, orders]) => {
       const totalPizzas = orders.reduce((sum, o) => sum + o.pizzas, 0);
-      // Find last order by date
       const lastOrder = orders.reduce((latest, o) =>
         !latest || new Date(o.date) > new Date(latest.date) ? o : latest, null
       );
-      const avgPizzas = orders.length ? (totalPizzas / orders.length).toFixed(2) : "0";
+      const avgPizzas = orders.length ? Math.round(totalPizzas / orders.length) : 0;
 
-      // Calculate average ordering frequency in weeks
+      // Calculate weeks between first and last order (inclusive)
       const dates = orders.map(o => new Date(o.date)).sort((a, b) => a - b);
+      let weeksBetween = 1;
+      if (dates.length > 1) {
+        const daysBetween = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
+        weeksBetween = Math.max(1, Math.round(daysBetween / 7));
+      }
+      // Average pizzas per week
+      const avgPizzasPerWeek = weeksBetween ? Math.round(totalPizzas / weeksBetween) : totalPizzas;
+
+      // Average ordering frequency in weeks as whole number
       let avgFrequencyWeeks = "-";
       if (dates.length > 1) {
         const daysBetween = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
-        avgFrequencyWeeks = ((daysBetween / orders.length) / 7).toFixed(2);
+        avgFrequencyWeeks = Math.round(daysBetween / orders.length / 7);
       }
 
       return {
@@ -104,8 +113,9 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         lastDeliveryDate: lastOrder?.date || "-",
         weeksAgo: lastOrder?.date ? weeksAgo(lastOrder.date) : "-",
         pizzasLastDelivery: lastOrder?.pizzas || "-",
-        avgPizzas: parseFloat(avgPizzas),
-        avgFrequencyWeeks
+        avgPizzas,
+        avgFrequencyWeeks,
+        avgPizzasPerWeek
       };
     });
   }, [orders]);
@@ -183,21 +193,13 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         </table>
         {/* Scrollable columns */}
         <div className="customerTableScrollContainer">
-          {/* Fake scrollbar at the top */}
-          <div
-            id="top-scrollbar"
-            ref={topScrollbarRef}
-            className="customerTableTopScrollbar"
-          >
-            <div style={{ width: "1200px", height: "1px" }} />
-          </div>
           {/* Actual scrollable table */}
           <div
             id="table-scrollbar"
             ref={tableScrollbarRef}
             className="customerTableScrollable"
           >
-            <table className="stockTable">
+            <table className="stockTable customerTableWide">
               <thead>
                 <tr>
                   {SORT_FIELDS.map(field => (
@@ -231,6 +233,7 @@ function OrderingHabitsByCustomer({ orders = [] }) {
                     <td>{customer.pizzasLastDelivery}</td>
                     <td>{customer.avgPizzas}</td>
                     <td>{customer.avgFrequencyWeeks}</td>
+                    <td>{customer.avgPizzasPerWeek}</td>
                   </tr>
                 ))}
               </tbody>

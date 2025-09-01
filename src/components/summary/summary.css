@@ -89,7 +89,7 @@
 .customerTableFixed {
   min-width: 160px;
   max-width: 200px;
-  margin-top: 20px;
+  margin-top: 1px;
   border-right: 1px solid #ccc;
 }
 /* Scrollable columns container */
@@ -97,17 +97,15 @@
   position: relative;
   max-width: 75%;
 }
-/* Top scrollbar */
-.customerTableTopScrollbar {
-  overflow-x: scroll;
-  overflow-y: hidden;
-  height: 16px;
-  max-width: 100%;
-}
 /* Actual scrollable table */
 .customerTableScrollable {
   overflow-x: scroll;
   max-width: 100%;
+}
+/* Wide table for columns */
+.customerTableWide {
+  min-width: 700px;
+  table-layout: fixed;
 }
 
 .searchCustomer {
