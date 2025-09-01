@@ -12,7 +12,7 @@
     padding-top: 30px;
 }
 .customerSummaryContainer {
-  max-width: 100%;
+  max-width: 98%;
 }
 
 
@@ -89,7 +89,7 @@
 .customerTableFixed {
   min-width: 160px;
   max-width: 200px;
-  margin-top: 1px;
+  margin-top: 20px;
   border-right: 1px solid #ccc;
 }
 /* Scrollable columns container */
@@ -104,8 +104,11 @@
 }
 /* Wide table for columns */
 .customerTableWide {
-  min-width: 900px;
+  min-width: 1000px;
   table-layout: fixed;
+}
+.stockTable tbody tr:nth-child(odd) {
+  background-color: var(--paleGrey);
 }
 
 .searchCustomer {
@@ -117,8 +120,6 @@
   .statusFull { display: none; }
   .statusShort { display: inline; }
 }
-/* ...existing code... */
-
 @media (max-width: 1160px) {
   /* tablet size */
   .demandSummaryFlex {

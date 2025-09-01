@@ -28,6 +28,15 @@ function weeksAgo(dateStr) {
   return weeks;
 }
 
+function formatDateDMY(dateStr) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 const SORT_FIELDS = [
   { key: "rank", label: <>Rank</> },
   { key: "totalPizzas", label: <>Total<br />Pizzas Ordered</> },
@@ -36,7 +45,8 @@ const SORT_FIELDS = [
   { key: "pizzasLastDelivery", label: <>Pizzas in <br /> Last Delivery</> },
   { key: "avgPizzas", label: <>Average Pizzas <br />per Order</> },
   { key: "avgFrequencyWeeks", label: <>Avg Ordering<br />Frequency (wks)</> },
-  { key: "avgPizzasPerWeek", label: <>Avg Pizzas<br />per Week</> }
+  { key: "avgPizzasPerWeek", label: <>Avg Pizzas<br />per Week</> },
+  { key: "weeklyRank", label: <>Weekly<br />Rank</> }
 ];
 
 function OrderingHabitsByCustomer({ orders = [] }) {
@@ -118,11 +128,18 @@ function OrderingHabitsByCustomer({ orders = [] }) {
       };
     });
 
-    // Assign ranking based on totalPizzas (descending)
+    // Assign overall rank (total pizzas)
     customerStats
       .sort((a, b) => b.totalPizzas - a.totalPizzas)
       .forEach((customer, idx) => {
         customer.rank = idx + 1;
+      });
+
+    // Assign weekly rank (avg pizzas per week)
+    [...customerStats]
+      .sort((a, b) => b.avgPizzasPerWeek - a.avgPizzasPerWeek)
+      .forEach((customer, idx) => {
+        customer.weeklyRank = idx + 1;
       });
 
     return customerStats;
@@ -171,7 +188,6 @@ function OrderingHabitsByCustomer({ orders = [] }) {
           <thead>
             <tr>
               <th>
-                <br />
                 Customer Name
                 <span
                   className="filter"
@@ -236,12 +252,13 @@ function OrderingHabitsByCustomer({ orders = [] }) {
                   <tr key={idx}>
                     <td>{customer.rank}</td>
                     <td>{customer.totalPizzas}</td>
-                    <td>{customer.lastDeliveryDate}</td>
+                    <td>{customer.lastDeliveryDate !== "-" ? formatDateDMY(customer.lastDeliveryDate) : "-"}</td>
                     <td>{customer.weeksAgo}</td>
                     <td>{customer.pizzasLastDelivery}</td>
                     <td>{customer.avgPizzas}</td>
                     <td>{customer.avgFrequencyWeeks}</td>
                     <td>{customer.avgPizzasPerWeek}</td>
+                    <td>{customer.weeklyRank}</td>
                   </tr>
                 ))}
               </tbody>
