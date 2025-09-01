@@ -3,19 +3,19 @@ import './summary.css';
 
 function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, showPercent = true }) {
 
-  // Helper: get Monday of this week
-  const getMonday = (d) => {
+  // Get Saturday (for week beginning
+  const getSaturday = (d) => {
     const date = new Date(d);
-    const day = date.getDay() || 7;
-    if (day !== 1) date.setDate(date.getDate() - (day - 1));
+    const day = date.getDay(); // 0 = Sunday, 6 = Saturday
+    date.setDate(date.getDate() - ((day + 1) % 7));
     date.setHours(0,0,0,0);
     return date;
   };
 
   // Calculate week ranges
   const now = new Date();
-  const thisMonday = getMonday(now);
-  const lastMonday = new Date(thisMonday); lastMonday.setDate(thisMonday.getDate() - 7);
+  const thisSaturday = getSaturday(now);
+  const lastSaturday = new Date(thisSaturday); lastSaturday.setDate(thisSaturday.getDate() - 7);
 
   // Build pizzaId -> { lastWeek } map
   const pizzaStats = {};
@@ -28,10 +28,11 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
     const delivery = new Date(order.delivery_day);
     Object.entries(order.pizzas || {}).forEach(([pizzaId, pizzaData]) => {
       if (!pizzaStats[pizzaId]) return;
-      if (delivery >= lastMonday && delivery < thisMonday) {
+      if (delivery >= lastSaturday && delivery < thisSaturday) {
         pizzaStats[pizzaId].lastWeek += pizzaData.quantity || 0;
       }
     });
+
   });
 
   // Calculate sleeve totals for percent
@@ -46,7 +47,16 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
   if (item.sleeveType === '0' || item.sleeveType === '1') {
     sleeveAvgTotals[item.sleeveType] += averageOrdering[item.id] || 0;
   }
-});
+  });
+  const averageOrderingPercent = {};
+  summaryOrder.forEach(item => {
+    if (item.sleeveType === '0' || item.sleeveType === '1') {
+      const sleeveTotal = sleeveAvgTotals[item.sleeveType];
+      averageOrderingPercent[item.id] = sleeveTotal
+        ? Math.round((averageOrdering[item.id] / sleeveTotal) * 100)
+        : 0;
+    }
+  });
 
 
   // Find indices of gap rows

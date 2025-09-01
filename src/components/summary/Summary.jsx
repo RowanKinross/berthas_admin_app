@@ -4,6 +4,7 @@ import { db } from '../firebase/firebase';
 import StockTable from './stockTable';
 import PlannedTable from './plannedTable';
 import OrderingHabitsTable from './orderingHabitsTable';
+import OrderingHabitsByCustomer from './orderingHabitsByCustomer';
 import './summary.css';
 
 function Summary() {
@@ -77,6 +78,7 @@ const averageOrdering = useMemo(() => {
 
 
 
+
 const orderDeliveryDayMap = useMemo(() => {
   const map = {};
   orders.forEach(order => {
@@ -126,6 +128,8 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
       }
     });
   });
+
+  
 
 
   stock.forEach(batch => {
@@ -448,6 +452,24 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
     [stock, pizzas, stockSummary]
   );
 
+  //calculate average ordering
+  const sleeveAvgTotals = { '0': 0, '1': 0 };
+  (stockSummary || []).forEach(item => {
+    if (item.sleeveType === '0' || item.sleeveType === '1') {
+      sleeveAvgTotals[item.sleeveType] += averageOrdering[item.id] || 0;
+    }
+  });
+const averageOrderingPercent = {};
+(stockSummary || []).forEach(item => {
+  if (item.sleeveType === '0' || item.sleeveType === '1') {
+    const sleeveTotal = sleeveAvgTotals[item.sleeveType];
+    const value = sleeveTotal
+      ? Math.round((averageOrdering[item.id] / sleeveTotal) * 100)
+      : 0;
+    averageOrderingPercent[item.id] = isNaN(value) ? '0' : value;
+  }
+});
+
 
 
 
@@ -488,6 +510,7 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
           <PlannedTable 
           data={plannedSummary} 
           showPercent={showPercentPlanned}
+          averageOrderingPercent={averageOrderingPercent}
           sleeveDenoms={plannedSleeveDenoms}
           />
         </div>
@@ -510,6 +533,18 @@ const getPlannedSummaryMulti = (stock, pizzas, existingStockSummary = []) => {
             showPercent={showPercentOrdered}
           />
         </div>
+        <div className='summaryContainer customerSummaryContainer'>
+          <h3>Ordering Habits By Customer</h3>
+          <label className="switch percentNumberSlider" title="Switch between percent & quantity">
+            <input
+              type="checkbox"
+              checked={showPercentOrdered}
+              onChange={e => setShowPercentOrdered(e.target.checked)}
+            />
+            <span className="slider round"></span>
+          </label>
+            <OrderingHabitsByCustomer orders={orders} />
+          </div>
       </div>
     </div>
   );

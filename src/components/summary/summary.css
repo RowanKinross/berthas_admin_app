@@ -11,6 +11,9 @@
     box-shadow: 0 2px 4px var(--boxShadow);
     padding-top: 30px;
 }
+.customerSummaryContainer {
+  max-width: 100%;
+}
 
 
 
