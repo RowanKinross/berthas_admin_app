@@ -72,6 +72,17 @@
   border-top: 2px solid black !important;
 }
 
+/* Custom scrollbar for stock table */
+.stockTable::-webkit-scrollbar {
+  height: 12px;
+}
+.stockTable::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 6px;
+}
+.stockTable::-webkit-scrollbar-track {
+  background: #eee;
+}
 
 @media (max-width: 600px) {
   .statusFull { display: none; }

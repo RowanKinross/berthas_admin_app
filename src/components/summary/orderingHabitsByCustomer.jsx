@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort } from '@fortawesome/free-solid-svg-icons';
 import './summary.css';
@@ -33,13 +33,37 @@ const SORT_FIELDS = [
   { key: "lastDeliveryDate", label: "Last Delivery Date" },
   { key: "weeksAgo", label: "Weeks Ago" },
   { key: "pizzasLastDelivery", label: "Pizzas in Last Delivery" },
-  { key: "avgPizzas", label: "Average Pizzas per Order" }
+  { key: "avgPizzas", label: "Average Pizzas per Order" },
+  { key: "avgFrequencyWeeks", label: "Avg Ordering Frequency (weeks)" }
 ];
 
 function OrderingHabitsByCustomer({ orders = [] }) {
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [searchTerm, setSearchTerm] = useState("");
+
+  const topScrollbarRef = useRef(null);
+  const tableScrollbarRef = useRef(null);
+
+  // Sync scroll position between top scrollbar and table scrollbar
+  useEffect(() => {
+    const top = topScrollbarRef.current;
+    const table = tableScrollbarRef.current;
+    if (!top || !table) return;
+
+    const syncScroll = (source, target) => {
+      source.addEventListener("scroll", () => {
+        target.scrollLeft = source.scrollLeft;
+      });
+    };
+    syncScroll(top, table);
+    syncScroll(table, top);
+
+    return () => {
+      top.removeEventListener("scroll", () => {});
+      table.removeEventListener("scroll", () => {});
+    };
+  }, []);
 
   // Group orders by customer name and calculate stats
   const customers = useMemo(() => {
@@ -65,13 +89,23 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         !latest || new Date(o.date) > new Date(latest.date) ? o : latest, null
       );
       const avgPizzas = orders.length ? (totalPizzas / orders.length).toFixed(2) : "0";
+
+      // Calculate average ordering frequency in weeks
+      const dates = orders.map(o => new Date(o.date)).sort((a, b) => a - b);
+      let avgFrequencyWeeks = "-";
+      if (dates.length > 1) {
+        const daysBetween = (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24);
+        avgFrequencyWeeks = ((daysBetween / orders.length) / 7).toFixed(2);
+      }
+
       return {
         name,
         totalPizzas,
         lastDeliveryDate: lastOrder?.date || "-",
         weeksAgo: lastOrder?.date ? weeksAgo(lastOrder.date) : "-",
         pizzasLastDelivery: lastOrder?.pizzas || "-",
-        avgPizzas: parseFloat(avgPizzas)
+        avgPizzas: parseFloat(avgPizzas),
+        avgFrequencyWeeks
       };
     });
   }, [orders]);
@@ -148,44 +182,68 @@ function OrderingHabitsByCustomer({ orders = [] }) {
           </tbody>
         </table>
         {/* Scrollable columns */}
-        <div style={{ overflowX: "auto", width: "100%" }}>
-          <table className="stockTable" style={{ minWidth: 600 }}>
-            <thead>
-              <tr>
-                {SORT_FIELDS.map(field => (
-                  <th key={field.key} style={{ cursor: "pointer" }}>
-                    {field.label}
-                    <span
-                      className="filter"
-                      style={{ marginLeft: 6 }}
-                      onClick={() => {
-                        if (sortField === field.key) {
-                          setSortDirection(d => (d === "asc" ? "desc" : "asc"));
-                        } else {
-                          setSortField(field.key);
-                          setSortDirection("desc");
-                        }
-                      }}
-                    >
-                      <FontAwesomeIcon icon={faSort} />
-                      {sortField === field.key && (sortDirection === "asc" ? "▲" : "▼")}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSortedCustomers.map((customer, idx) => (
-                <tr key={idx}>
-                  <td>{customer.totalPizzas}</td>
-                  <td>{customer.lastDeliveryDate}</td>
-                  <td>{customer.weeksAgo}</td>
-                  <td>{customer.pizzasLastDelivery}</td>
-                  <td>{customer.avgPizzas}</td>
+        <div style={{ position: "relative", width: "75%" }}>
+          {/* Fake scrollbar at the top */}
+          <div
+            id="top-scrollbar"
+            ref={topScrollbarRef}
+            style={{
+              overflowX: "scroll",
+              overflowY: "hidden",
+              height: "16px",
+              width: "100%"
+            }}
+          >
+            <div style={{ width: "1200px", height: "1px" }} />
+          </div>
+          {/* Actual scrollable table */}
+          <div
+            id="table-scrollbar"
+            ref={tableScrollbarRef}
+            style={{
+              overflowX: "scroll",
+              width: "100%"
+            }}
+          >
+            <table className="stockTable" style={{ minWidth: 1200 }}>
+              <thead>
+                <tr>
+                  {SORT_FIELDS.map(field => (
+                    <th key={field.key} style={{ cursor: "pointer" }}>
+                      {field.label}
+                      <span
+                        className="filter"
+                        style={{ marginLeft: 6 }}
+                        onClick={() => {
+                          if (sortField === field.key) {
+                            setSortDirection(d => (d === "asc" ? "desc" : "asc"));
+                          } else {
+                            setSortField(field.key);
+                            setSortDirection("desc");
+                          }
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faSort} />
+                        {sortField === field.key && (sortDirection === "asc" ? "▲" : "▼")}
+                      </span>
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredSortedCustomers.map((customer, idx) => (
+                  <tr key={idx}>
+                    <td>{customer.totalPizzas}</td>
+                    <td>{customer.lastDeliveryDate}</td>
+                    <td>{customer.weeksAgo}</td>
+                    <td>{customer.pizzasLastDelivery}</td>
+                    <td>{customer.avgPizzas}</td>
+                    <td>{customer.avgFrequencyWeeks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
