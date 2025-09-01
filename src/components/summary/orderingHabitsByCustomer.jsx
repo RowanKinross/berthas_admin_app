@@ -29,12 +29,12 @@ function weeksAgo(dateStr) {
 }
 
 const SORT_FIELDS = [
-  { key: "totalPizzas", label: "Total Pizzas Ordered" },
-  { key: "lastDeliveryDate", label: "Last Delivery Date" },
-  { key: "weeksAgo", label: "Weeks Ago" },
-  { key: "pizzasLastDelivery", label: "Pizzas in Last Delivery" },
-  { key: "avgPizzas", label: "Average Pizzas per Order" },
-  { key: "avgFrequencyWeeks", label: "Avg Ordering Frequency (weeks)" }
+  { key: "totalPizzas", label: <>Total<br />Ordered</> },
+  { key: "lastDeliveryDate", label: <>Last<br />Delivery Date</> },
+  { key: "weeksAgo", label: <>Weeks<br />Ago</> },
+  { key: "pizzasLastDelivery", label: <>Pizzas in <br /> Last Delivery</> },
+  { key: "avgPizzas", label: <>Average Pizzas <br />per Order</> },
+  { key: "avgFrequencyWeeks", label: <>Avg Ordering<br />Frequency (weeks)</> }
 ];
 
 function OrderingHabitsByCustomer({ orders = [] }) {
@@ -139,21 +139,21 @@ function OrderingHabitsByCustomer({ orders = [] }) {
 
   return (
     <div>
-      <div style={{ marginBottom: 8 }}>
+      <div className="searchCustomer">
         <input
           type="text"
           placeholder="Search customer..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          style={{ marginRight: 12 }}
         />
       </div>
       <div style={{ display: "flex" }}>
         {/* Fixed first column */}
-        <table className="stockTable" style={{ minWidth: 160, maxWidth: 200, borderRight: "1px solid #ccc" }}>
+        <table className="stockTable customerTableFixed">
           <thead>
             <tr>
-              <th style={{ cursor: "pointer" }}>
+              <th>
+              <br></br>
                 Customer Name
                 <span
                   className="filter"
@@ -182,17 +182,12 @@ function OrderingHabitsByCustomer({ orders = [] }) {
           </tbody>
         </table>
         {/* Scrollable columns */}
-        <div style={{ position: "relative", width: "75%" }}>
+        <div className="customerTableScrollContainer">
           {/* Fake scrollbar at the top */}
           <div
             id="top-scrollbar"
             ref={topScrollbarRef}
-            style={{
-              overflowX: "scroll",
-              overflowY: "hidden",
-              height: "16px",
-              width: "100%"
-            }}
+            className="customerTableTopScrollbar"
           >
             <div style={{ width: "1200px", height: "1px" }} />
           </div>
@@ -200,16 +195,13 @@ function OrderingHabitsByCustomer({ orders = [] }) {
           <div
             id="table-scrollbar"
             ref={tableScrollbarRef}
-            style={{
-              overflowX: "scroll",
-              width: "100%"
-            }}
+            className="customerTableScrollable"
           >
-            <table className="stockTable" style={{ minWidth: 1200 }}>
+            <table className="stockTable">
               <thead>
                 <tr>
                   {SORT_FIELDS.map(field => (
-                    <th key={field.key} style={{ cursor: "pointer" }}>
+                    <th key={field.key}>
                       {field.label}
                       <span
                         className="filter"

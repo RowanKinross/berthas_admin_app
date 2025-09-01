@@ -84,6 +84,37 @@
   background: #eee;
 }
 
+
+/* Fixed first column */
+.customerTableFixed {
+  min-width: 160px;
+  max-width: 200px;
+  margin-top: 20px;
+  border-right: 1px solid #ccc;
+}
+/* Scrollable columns container */
+.customerTableScrollContainer {
+  position: relative;
+  max-width: 75%;
+}
+/* Top scrollbar */
+.customerTableTopScrollbar {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  height: 16px;
+  max-width: 100%;
+}
+/* Actual scrollable table */
+.customerTableScrollable {
+  overflow-x: scroll;
+  max-width: 100%;
+}
+
+.searchCustomer {
+  padding: 0 10px 5px 0;
+  text-align: right;
+}
+
 @media (max-width: 600px) {
   .statusFull { display: none; }
   .statusShort { display: inline; }
