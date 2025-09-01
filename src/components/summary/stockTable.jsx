@@ -48,7 +48,7 @@ const sumSection = (start, end, field) =>
           </th>
           <th title='All beyond 2 Weeks Ordered Stock Ratio'>
             {/* <span className="th-full">3 Weeks</span> */}
-            <strong>>></strong>
+            <strong>&gt;&gt;</strong>
           </th>
           <th></th>
         </tr>

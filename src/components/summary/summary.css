@@ -11,6 +11,9 @@
     box-shadow: 0 2px 4px var(--boxShadow);
     padding-top: 30px;
 }
+.customerSummaryContainer {
+  max-width: 98%;
+}
 
 
 
@@ -69,13 +72,54 @@
   border-top: 2px solid black !important;
 }
 
+/* Custom scrollbar for stock table */
+.stockTable::-webkit-scrollbar {
+  height: 12px;
+}
+.stockTable::-webkit-scrollbar-thumb {
+  background: #bbb;
+  border-radius: 6px;
+}
+.stockTable::-webkit-scrollbar-track {
+  background: #eee;
+}
+
+
+/* Fixed first column */
+.customerTableFixed {
+  min-width: 160px;
+  max-width: 200px;
+  margin-top: 20px;
+  border-right: 1px solid #ccc;
+}
+/* Scrollable columns container */
+.customerTableScrollContainer {
+  position: relative;
+  max-width: 75%;
+}
+/* Actual scrollable table */
+.customerTableScrollable {
+  overflow-x: scroll;
+  max-width: 100%;
+}
+/* Wide table for columns */
+.customerTableWide {
+  min-width: 1000px;
+  table-layout: fixed;
+}
+.stockTable tbody tr:nth-child(odd) {
+  background-color: var(--paleGrey);
+}
+
+.searchCustomer {
+  padding: 0 10px 5px 0;
+  text-align: right;
+}
 
 @media (max-width: 600px) {
   .statusFull { display: none; }
   .statusShort { display: inline; }
 }
-/* ...existing code... */
-
 @media (max-width: 1160px) {
   /* tablet size */
   .demandSummaryFlex {

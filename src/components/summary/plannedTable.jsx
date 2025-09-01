@@ -1,7 +1,7 @@
 import React from 'react';
 import './summary.css'; // Assuming shared styles
 
-function PlannedTable({ data, showPercent = true }) {
+function PlannedTable({ data, showPercent = true, averageOrderingPercent = {} }) {
   if (!data || data.length === 0) {
     return <p>Loading or no planned stock.</p>;
   }
@@ -58,7 +58,7 @@ function PlannedTable({ data, showPercent = true }) {
           </th>
           <th title='3 Weeks Planned Stock Ratio'>
             <span className="th-full">3 Weeks</span>
-            <span className="th-short"><strong>>></strong></span>
+            <span className="th-short"><strong>&gt;&gt;</strong></span>
           </th>
           <th></th>
         </tr>
@@ -145,12 +145,13 @@ function PlannedTable({ data, showPercent = true }) {
                         })()
                       : (item.stockNumbers?.w3 ?? 0))}
               </td>
-              <td
-                className={
-                  item.goal == null ? '' : item.meetsGoal ? 'ok' : 'warn'
+              <td>
+                {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                  ? ''
+                  : (averageOrderingPercent[item.id] != null && averageOrderingPercent[item.id] !== ''
+                      ? `${averageOrderingPercent[item.id]}%`
+                      : '')
                 }
-              >
-                {item.goal != null ? `${item.goal}%` : ''}
               </td>
             </tr>
           );
