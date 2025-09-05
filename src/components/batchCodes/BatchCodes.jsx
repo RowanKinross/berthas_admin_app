@@ -694,13 +694,8 @@ const formatDateDisplay = (dateStr) => {
       const batchDate = new Date(batch.batch_date);
       const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
 
-      // This week or last week
-      return (
-        (batchYear === thisYear && batchWeek === thisWeek) ||
-        (batchYear === thisYear && batchWeek === thisWeek - 1) ||
-        // Handle year change (last week of previous year)
-        (batchYear === thisYear - 1 && thisWeek === 1 && batchWeek === getWeekYear(new Date(batchYear, 11, 31)).week)
-      );
+      // Only this current week (Saturday to Friday)
+      return batchYear === thisYear && batchWeek === thisWeek;
     }
     return true;
   })
