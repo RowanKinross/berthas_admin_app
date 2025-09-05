@@ -202,13 +202,6 @@ const formatDateDisplay = (dateStr) => {
 
   return () => unsubscribe(); // Clean up listener on unmount
   }, []);
-  
-
-  // filter function to be able to search batches
-  const filteredBatches = batches.filter(batch =>
-    batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
     
   useEffect(() => {
@@ -660,22 +653,75 @@ const formatDateDisplay = (dateStr) => {
   
 
   
+  // Get userRole from localStorage
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
+
+  // Helper to get week number and year (Saturday to Friday)
+  function getWeekYear(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    // Find the previous Saturday (or today if it's Saturday)
+    const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+    const diffToSaturday = (day + 1) % 7; // Saturday = 6, so (6+1)%7 = 0
+    d.setDate(d.getDate() - diffToSaturday);
+
+    // First Saturday of the year
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const yearStartDay = yearStart.getDay();
+    const firstSaturday =
+      yearStartDay === 6
+        ? yearStart
+        : new Date(yearStart.setDate(yearStart.getDate() + ((6 - yearStartDay + 7) % 7)));
+
+    // Calculate week number
+    const week = Math.floor((d - firstSaturday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+
+    return {
+      year: d.getFullYear(),
+      week,
+    };
+  }
+
+  // Combine userRole/week filter and search filter
+  const filteredBatches = batches
+  .filter(batch => {
+    if (userRole === 'admin') return true;
+    if (userRole === 'unit') {
+      if (!batch.batch_date) return false;
+      const today = new Date();
+      const { year: thisYear, week: thisWeek } = getWeekYear(today);
+      const batchDate = new Date(batch.batch_date);
+      const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
+
+      // Only this current week (Saturday to Friday)
+      return batchYear === thisYear && batchWeek === thisWeek;
+    }
+    return true;
+  })
+  .filter(batch =>
+    batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   return (
     <div className='batchCodes navContent'>
       <h2>BATCH CODES</h2>
-      {/* only show batch search if sufficient internet connection */}
-      {filteredBatches.length > 0 && (
-        <div 
-          className="alignRight">
+      {/* Only show batch search if not unit and there are batches */}
+      {userRole !== 'unit' && filteredBatches.length > 0 && (
+        <div className="alignRight">
           <input
             type="text"
             placeholder="Search batch dates..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          />
         </div>
       )}
-      <button className='button' onClick={handleAddClick}>+</button>
+      {/* Only show add button if not unit */}
+      {userRole !== 'unit' && (
+        <button className='button' onClick={handleAddClick}>+</button>
+      )}
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
           <h2>Batch Details</h2>
@@ -1089,21 +1135,24 @@ const formatDateDisplay = (dateStr) => {
       ) : (
         <p className='py-3'>Loading batches...</p>
       )}
-      <div className="pagination">
-        {getPagination(currentPage, Math.ceil(filteredBatches.length / batchesPerPage)).map((page, idx) =>
-          page === '...' ? (
-            <span key={`ellipsis-${idx}`} className="page-ellipsis">...</span>
-          ) : (
-            <button
-              key={page}
-              className={`page-button ${currentPage === page ? 'active' : ''}`}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          )
-        )}
-      </div>
+      {/* Pagination: hide for unit userRole */}
+      {userRole !== 'unit' && (
+        <div className="pagination">
+          {getPagination(currentPage, Math.ceil(filteredBatches.length / batchesPerPage)).map((page, idx) =>
+            page === '...' ? (
+              <span key={`ellipsis-${idx}`} className="page-ellipsis">...</span>
+            ) : (
+              <button
+                key={page}
+                className={`page-button ${currentPage === page ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
   
