@@ -169,11 +169,8 @@ function Prep() {
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2>Tuesday</h2>
-        <table>
-          
-        </table>
-        <table>
+        <h2 className='dayTitles'>Tuesday</h2>
+        <table  className='prepTable'>
           <thead>
             <tr>
               <th>Ingredients</th>
@@ -211,8 +208,8 @@ function Prep() {
         </table>
         </div>
         <div className='prepBox'>
-            <h2>Wednesday</h2>
-        <table>
+            <h2 className='dayTitles'>Wednesday</h2>
+        <table  className='prepTable'>
           <thead>
             <tr>
               <th></th>
@@ -232,8 +229,8 @@ function Prep() {
         </table>
         </div>
         <div className='prepBox'>
-            <h2>Thursday</h2>
-        <table>
+            <h2 className='dayTitles'>Thursday</h2>
+        <table  className='prepTable'>
           <thead>
             <tr>
               <th></th>
