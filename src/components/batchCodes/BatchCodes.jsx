@@ -202,13 +202,6 @@ const formatDateDisplay = (dateStr) => {
 
   return () => unsubscribe(); // Clean up listener on unmount
   }, []);
-  
-
-  // filter function to be able to search batches
-  const filteredBatches = batches.filter(batch =>
-    batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
     
   useEffect(() => {
@@ -659,6 +652,62 @@ const formatDateDisplay = (dateStr) => {
   }, [viewingBatch]);
   
 
+  
+  // Get userRole from localStorage
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
+
+  // Helper to get week number and year (Saturday to Friday)
+  function getWeekYear(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    // Find the previous Saturday (or today if it's Saturday)
+    const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+    const diffToSaturday = (day + 1) % 7; // Saturday = 6, so (6+1)%7 = 0
+    d.setDate(d.getDate() - diffToSaturday);
+
+    // First Saturday of the year
+    const yearStart = new Date(d.getFullYear(), 0, 1);
+    const yearStartDay = yearStart.getDay();
+    const firstSaturday =
+      yearStartDay === 6
+        ? yearStart
+        : new Date(yearStart.setDate(yearStart.getDate() + ((6 - yearStartDay + 7) % 7)));
+
+    // Calculate week number
+    const week = Math.floor((d - firstSaturday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+
+    return {
+      year: d.getFullYear(),
+      week,
+    };
+  }
+
+  // Combine userRole/week filter and search filter
+  const filteredBatches = batches
+  .filter(batch => {
+    if (userRole === 'admin') return true;
+    if (userRole === 'unit') {
+      if (!batch.batch_date) return false;
+      const today = new Date();
+      const { year: thisYear, week: thisWeek } = getWeekYear(today);
+      const batchDate = new Date(batch.batch_date);
+      const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
+
+      // This week or last week
+      return (
+        (batchYear === thisYear && batchWeek === thisWeek) ||
+        (batchYear === thisYear && batchWeek === thisWeek - 1) ||
+        // Handle year change (last week of previous year)
+        (batchYear === thisYear - 1 && thisWeek === 1 && batchWeek === getWeekYear(new Date(batchYear, 11, 31)).week)
+      );
+    }
+    return true;
+  })
+  .filter(batch =>
+    batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
+  );
   
   return (
     <div className='batchCodes navContent'>
