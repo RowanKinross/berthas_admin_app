@@ -712,19 +712,21 @@ const formatDateDisplay = (dateStr) => {
   return (
     <div className='batchCodes navContent'>
       <h2>BATCH CODES</h2>
-      {/* only show batch search if sufficient internet connection */}
-      {filteredBatches.length > 0 && (
-        <div 
-          className="alignRight">
+      {/* Only show batch search if not unit and there are batches */}
+      {userRole !== 'unit' && filteredBatches.length > 0 && (
+        <div className="alignRight">
           <input
             type="text"
             placeholder="Search batch dates..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          />
         </div>
       )}
-      <button className='button' onClick={handleAddClick}>+</button>
+      {/* Only show add button if not unit */}
+      {userRole !== 'unit' && (
+        <button className='button' onClick={handleAddClick}>+</button>
+      )}
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
           <h2>Batch Details</h2>
@@ -1138,21 +1140,24 @@ const formatDateDisplay = (dateStr) => {
       ) : (
         <p className='py-3'>Loading batches...</p>
       )}
-      <div className="pagination">
-        {getPagination(currentPage, Math.ceil(filteredBatches.length / batchesPerPage)).map((page, idx) =>
-          page === '...' ? (
-            <span key={`ellipsis-${idx}`} className="page-ellipsis">...</span>
-          ) : (
-            <button
-              key={page}
-              className={`page-button ${currentPage === page ? 'active' : ''}`}
-              onClick={() => setCurrentPage(page)}
-            >
-              {page}
-            </button>
-          )
-        )}
-      </div>
+      {/* Pagination: hide for unit userRole */}
+      {userRole !== 'unit' && (
+        <div className="pagination">
+          {getPagination(currentPage, Math.ceil(filteredBatches.length / batchesPerPage)).map((page, idx) =>
+            page === '...' ? (
+              <span key={`ellipsis-${idx}`} className="page-ellipsis">...</span>
+            ) : (
+              <button
+                key={page}
+                className={`page-button ${currentPage === page ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
   
