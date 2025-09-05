@@ -92,7 +92,8 @@ function Prep() {
     Object.keys(ingredientQuantities).forEach(ingredient => {
       const data = ingredientQuantities[ingredient];
       data.quantity = data.quantity / 1000; // grams to kg
-      data.unitsNeeded = data.unitWeight ? Math.ceil(data.quantity / data.unitWeight) : 0;
+      // Round unitsNeeded to 1 decimal place
+      data.unitsNeeded = data.unitWeight ? Math.round((data.quantity / data.unitWeight) * 10) / 10 : 0;
     });
 
     setIngredientTotals(Object.entries(ingredientQuantities).map(([name, data]) => ({
@@ -100,6 +101,65 @@ function Prep() {
       ...data
     })));
   }, [batches, ingredients]);
+
+
+  // Get this week's Saturday date
+  const today = new Date();
+  const day = today.getDay();
+  const diffToSaturday = (day + 1) % 7;
+  const saturday = new Date(today);
+  saturday.setDate(today.getDate() - diffToSaturday);
+
+
+  // Helper to get all pizzas for a given date
+  const getPizzasForDate = (date) => {
+    return batches
+      .filter(batch => {
+        if (!batch.batch_date) return false;
+        const batchDate = new Date(batch.batch_date);
+        return (
+          batchDate.getFullYear() === date.getFullYear() &&
+          batchDate.getMonth() === date.getMonth() &&
+          batchDate.getDate() === date.getDate()
+        );
+      })
+      .flatMap(batch => batch.pizzas || []);
+  };
+
+  // Helper to get total tomato needed for a given date
+  const getTomatoPrepForDate = (date) => {
+    const pizzas = getPizzasForDate(date);
+    const tomatoData = ingredients.find(i => i.name.toLowerCase() === "tomato");
+    if (!tomatoData) return null;
+    const { gramsPerPizza, unitWeight } = parseIngredientRatio(tomatoData.ratio);
+    let totalGrams = 0;
+    pizzas.forEach(pizza => {
+      if ((pizza.ingredients || []).includes("Tomato")) {
+        totalGrams += gramsPerPizza * (pizza.quantity || 0);
+      }
+    });
+    const totalKg = totalGrams / 1000;
+    // Round unitsNeeded to 1 decimal place
+    const unitsNeeded = unitWeight ? Math.round((totalKg / unitWeight) * 10) / 10 : 0;
+    return { totalKg, unitsNeeded, unit: tomatoData.packaging };
+  };
+
+  // Get Wednesday and Thursday dates for this week
+  const getWeekdayDate = (weekday) => {
+    // weekday: 0=Sunday, 1=Monday, ..., 6=Saturday
+    const today = new Date();
+    const day = today.getDay();
+    const diff = weekday - day;
+    const date = new Date(today);
+    date.setDate(today.getDate() + diff);
+    return date;
+  };
+  const wednesdayDate = getWeekdayDate(3); // 3 = Wednesday
+  const thursdayDate = getWeekdayDate(4);  // 4 = Thursday
+
+  const wednesdayTomato = getTomatoPrepForDate(wednesdayDate);
+  const thursdayTomato = getTomatoPrepForDate(thursdayDate);
+
 
   return (
     <div className="prep navContent">
@@ -160,12 +220,14 @@ function Prep() {
             </tr>
           </thead>
           <tbody>
-            {ingredientTotals.map(ing => (
-              <tr key={ing.name}>
-                <td>{ing.name} x {ing.unitsNeeded} {ing.unit}</td>
+            {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
+              <tr>
+                <td>
+                  Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit} ({wednesdayTomato.totalKg.toFixed(2)} kg)
+                </td>
                 <td>--</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
         </div>
@@ -179,12 +241,14 @@ function Prep() {
             </tr>
           </thead>
           <tbody>
-            {ingredientTotals.map(ing => (
-              <tr key={ing.name}>
-                <td>{ing.name} x {ing.unitsNeeded} {ing.unit}</td>
+            {thursdayTomato && thursdayTomato.totalKg > 0 && (
+              <tr>
+                <td>
+                  Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit} ({thursdayTomato.totalKg.toFixed(2)} kg)
+                </td>
                 <td>--</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
         </div>
