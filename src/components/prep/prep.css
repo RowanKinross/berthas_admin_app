@@ -1,0 +1,41 @@
+.prepContainers {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 20px;
+}
+  .prepBox {
+    display: flex;
+    text-align: left;
+    flex-direction: column;
+    aspect-ratio: 1 / 1;
+    width: 30%;
+    margin: 1%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+    
+    box-shadow: 0 2px 4px var(--boxShadow);
+  }
+  .prepTable {
+    margin: 5%;
+  }
+  .dayTitles {
+    margin: 3% 3% 0 3%;
+  }
+
+    @media (max-width: 1200px) {
+    .prepBox {
+      width: 48%;
+    }
+    
+  }
+  @media (max-width: 900px) {
+    .prepBox {
+      width: 100%;
+    }
+    
+  }
