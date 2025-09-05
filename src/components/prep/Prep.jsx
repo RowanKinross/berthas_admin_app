@@ -202,7 +202,12 @@ function Prep() {
               })
               .map(ing => (
                 <tr key={ing.name}>
-                  <td>{ing.name} x {ing.unitsNeeded} {ing.unit}</td>
+                  <td>
+                    <input type="checkbox" id={`checkbox-${ing.name}`} />
+                    <label htmlFor={`checkbox-${ing.name}`}>
+                      {ing.name} x {ing.unitsNeeded} {ing.unit}
+                    </label>
+                  </td>
                   <td>--</td>
                 </tr>
               ))}
