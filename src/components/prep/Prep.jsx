@@ -168,30 +168,15 @@ function Prep() {
         <p>Loading...</p>
       ) : (
         <div className='prepContainers'>
-        <div>
-            <h2>Tuesday Prep</h2>
+        <div className='prepBox'>
+        <h2>Tuesday</h2>
         <table>
-          <thead>
-            <tr>
-              <th>Mixes</th>
-              <th>Batch Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Flour</td>
-              <td>--</td>
-            </tr>
-            <tr>
-              <td>Salt</td>
-              <td>--</td>
-            </tr>
-          </tbody>
+          
         </table>
         <table>
           <thead>
             <tr>
-              <th>Ingredient</th>
+              <th>Ingredients</th>
               <th>Batch Code</th>
             </tr>
           </thead>
@@ -208,14 +193,29 @@ function Prep() {
                 </tr>
               ))}
           </tbody>
+          <thead>
+            <tr>
+              <th>Mixes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Flour</td>
+              <td>--</td>
+            </tr>
+            <tr>
+              <td>Salt</td>
+              <td>--</td>
+            </tr>
+          </tbody>
         </table>
         </div>
-        <div>
-            <h2>Wednesday Prep</h2>
+        <div className='prepBox'>
+            <h2>Wednesday</h2>
         <table>
           <thead>
             <tr>
-              <th>Ingredient</th>
+              <th></th>
               <th>Batch Code</th>
             </tr>
           </thead>
@@ -223,7 +223,7 @@ function Prep() {
             {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
               <tr>
                 <td>
-                  Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit} ({wednesdayTomato.totalKg.toFixed(2)} kg)
+                  Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit}
                 </td>
                 <td>--</td>
               </tr>
@@ -231,12 +231,12 @@ function Prep() {
           </tbody>
         </table>
         </div>
-        <div>
-            <h2>Thursday Prep</h2>
+        <div className='prepBox'>
+            <h2>Thursday</h2>
         <table>
           <thead>
             <tr>
-              <th>Ingredient</th>
+              <th></th>
               <th>Batch Code</th>
             </tr>
           </thead>
@@ -244,7 +244,7 @@ function Prep() {
             {thursdayTomato && thursdayTomato.totalKg > 0 && (
               <tr>
                 <td>
-                  Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit} ({thursdayTomato.totalKg.toFixed(2)} kg)
+                  Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit}
                 </td>
                 <td>--</td>
               </tr>
