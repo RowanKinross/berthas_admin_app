@@ -2,7 +2,12 @@
 import './prep.css'
 import { useState, useEffect } from 'react';
 import { db } from '../firebase/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+
+
+
+
+
 
 function getWeekYear(date) {
   const d = new Date(date);
@@ -131,12 +136,17 @@ function Prep() {
             </tr>
           </thead>
           <tbody>
-            {ingredientTotals.map(ing => (
-              <tr key={ing.name}>
-                <td>{ing.name} x {ing.unitsNeeded} {ing.unit}</td>
-                <td>--</td>
-              </tr>
-            ))}
+            {ingredientTotals
+              .filter(ing => {
+                const ingredientData = ingredients.find(i => i.name === ing.name);
+                return ingredientData && ingredientData.prep_ahead === true;
+              })
+              .map(ing => (
+                <tr key={ing.name}>
+                  <td>{ing.name} x {ing.unitsNeeded} {ing.unit}</td>
+                  <td>--</td>
+                </tr>
+              ))}
           </tbody>
         </table>
         </div>
