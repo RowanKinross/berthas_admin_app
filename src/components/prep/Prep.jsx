@@ -33,6 +33,18 @@ const parseIngredientRatio = (ratioString) => {
   };
 };
 
+// Add this function in your file (outside your component)
+function getOrdinalDay(date) {
+  const day = date.getDate();
+  if (day > 3 && day < 21) return day + 'th';
+  switch (day % 10) {
+    case 1:  return day + 'st';
+    case 2:  return day + 'nd';
+    case 3:  return day + 'rd';
+    default: return day + 'th';
+  }
+}
+
 function Prep() {
   const [batches, setBatches] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -154,6 +166,8 @@ function Prep() {
     date.setDate(today.getDate() + diff);
     return date;
   };
+  const mondayDate = getWeekdayDate(1);    // 1 = Monday
+  const tuesdayDate = getWeekdayDate(2);   // 2 = Tuesday
   const wednesdayDate = getWeekdayDate(3); // 3 = Wednesday
   const thursdayDate = getWeekdayDate(4);  // 4 = Thursday
 
@@ -163,13 +177,16 @@ function Prep() {
 
   return (
     <div className="prep navContent">
-      <h2>Prep for This Week</h2>
+      <h2>Prep</h2>
+      <p>
+        Week Commencing: {getOrdinalDay(mondayDate)} {mondayDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+      </p>
       {loading ? (
         <p>Loading...</p>
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2 className='dayTitles'>Tuesday</h2>
+        <h2 className='dayTitles'>Tuesday {getOrdinalDay(tuesdayDate)}</h2>
         <table  className='prepTable'>
           <thead>
             <tr>
@@ -208,7 +225,7 @@ function Prep() {
         </table>
         </div>
         <div className='prepBox'>
-            <h2 className='dayTitles'>Wednesday</h2>
+            <h2 className='dayTitles'>Wednesday {getOrdinalDay(wednesdayDate)}</h2>
         <table  className='prepTable'>
           <thead>
             <tr>
@@ -229,7 +246,7 @@ function Prep() {
         </table>
         </div>
         <div className='prepBox'>
-            <h2 className='dayTitles'>Thursday</h2>
+            <h2 className='dayTitles'>Thursday {getOrdinalDay(thursdayDate)}</h2>
         <table  className='prepTable'>
           <thead>
             <tr>
