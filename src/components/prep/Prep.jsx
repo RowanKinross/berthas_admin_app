@@ -45,6 +45,32 @@ function getOrdinalDay(date) {
   }
 }
 
+// Helper to get the correct "week commencing" Monday
+function getCurrentOrNextMonday(date = new Date()) {
+  const day = date.getDay();
+  const monday = new Date(date);
+  if (day === 6) {
+    // Saturday: add 2 days
+    monday.setDate(date.getDate() + 2);
+  } else if (day === 0) {
+    // Sunday: add 1 day
+    monday.setDate(date.getDate() + 1);
+  } else {
+    // Monday-Friday: subtract (day - 1) days to get this week's Monday
+    monday.setDate(date.getDate() - (day - 1));
+  }
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Helper to get a weekday date relative to a given Monday
+function getRelativeWeekdayDate(monday, weekday) {
+  // weekday: 1=Monday, 2=Tuesday, ..., 7=Sunday
+  const date = new Date(monday);
+  date.setDate(monday.getDate() + (weekday - 1));
+  return date;
+}
+
 function Prep() {
   const [batches, setBatches] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -166,10 +192,10 @@ function Prep() {
     date.setDate(today.getDate() + diff);
     return date;
   };
-  const mondayDate = getWeekdayDate(1);    // 1 = Monday
-  const tuesdayDate = getWeekdayDate(2);   // 2 = Tuesday
-  const wednesdayDate = getWeekdayDate(3); // 3 = Wednesday
-  const thursdayDate = getWeekdayDate(4);  // 4 = Thursday
+  const mondayDate = getCurrentOrNextMonday();
+  const tuesdayDate = getRelativeWeekdayDate(mondayDate, 2);   // Tuesday
+  const wednesdayDate = getRelativeWeekdayDate(mondayDate, 3); // Wednesday
+  const thursdayDate = getRelativeWeekdayDate(mondayDate, 4);  // Thursday
 
   const wednesdayTomato = getTomatoPrepForDate(wednesdayDate);
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
