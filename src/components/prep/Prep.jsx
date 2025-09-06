@@ -1,6 +1,8 @@
 // import berthasLogo from '../bertha_logo'
 import './prep.css'
 import React, { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 
@@ -72,6 +74,7 @@ function Prep() {
   const [loading, setLoading] = useState(true);
   const [ingredientTotals, setIngredientTotals] = useState([]);
   const [checkedIngredients, setCheckedIngredients] = useState({});
+  const [openNote, setOpenNote] = useState(null); // Add this line
 
   useEffect(() => {
     const fetchData = async () => {
@@ -232,6 +235,20 @@ function Prep() {
     return Array.from(codes).join(', ');
   }
 
+  useEffect(() => {
+    if (!openNote) return;
+
+    function handleClickOutside(e) {
+      // Close the popup if any click occurs outside the open note
+      setOpenNote(null);
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openNote]);
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -257,22 +274,62 @@ function Prep() {
                 const ingredientData = ingredients.find(i => i.name === ing.name);
                 return ingredientData && ingredientData.prep_ahead === true;
               })
-              .map(ing => (
-                <tr key={ing.name} >
-                  <td>
-                    <label htmlFor={`checkbox-${ing.name}`} className={checkedIngredients[ing.name] ? 'strikethrough' : ''}>
+              .map(ing => {
+                const ingredientData = ingredients.find(i => i.name === ing.name);
+                return (
+                  <tr key={ing.name} style={{ position: 'relative' }}>
+                    <td>
                       <input
                         type="checkbox"
                         id={`checkbox-${ing.name}`}
                         checked={!!checkedIngredients[ing.name]}
                         onChange={() => handleCheckboxChange(ing.name)}
-                      />{' '}
-                      {ing.name} x {ing.unitsNeeded} {ing.unit}
-                    </label>
-                  </td>
-                  <td>{(getBatchCodesForIngredient(ing.name))? (getBatchCodesForIngredient(ing.name)) : (<p className='red'>--</p>)}</td>
-                </tr>
-              ))}
+                      />
+                      <label
+                        htmlFor={`checkbox-${ing.name}`}
+                        className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
+                        style={{ marginLeft: 6, marginRight: 4 }}
+                      >
+                        {ing.name} x {ing.unitsNeeded} {ing.unit}
+                      </label>
+                      {/* Info icon and click handler OUTSIDE the label */}
+                      {ingredientData && ingredientData.prep_notes && (
+                        <span
+                          style={{ marginLeft: 8, cursor: 'pointer', color: '#007bff' }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setOpenNote(openNote === ing.name ? null : ing.name);
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} />
+                        </span>
+                      )}
+                      {/* Prep notes popup */}
+                      {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            background: '#222',
+                            color: '#fff',
+                            padding: '8px 12px',
+                            borderRadius: 6,
+                            left: 40,
+                            zIndex: 10,
+                            fontSize: '0.95em',
+                            minWidth: 180,
+                            maxWidth: 260,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                          }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {ingredientData.prep_notes}
+                        </span>
+                      )}
+                    </td>
+                    <td>{getBatchCodesForIngredient(ing.name) ? getBatchCodesForIngredient(ing.name) : (<p className='red'>--</p>)}</td>
+                  </tr>
+                );
+              })}
           </tbody>
           <thead>
             <tr>
