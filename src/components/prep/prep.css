@@ -26,6 +26,15 @@
   .dayTitles {
     margin: 3% 3% 0 3%;
   }
+  .strikethrough {
+    text-decoration: line-through;
+  }
+  .red {
+    color: red;
+    font-weight: bold;
+    margin: 0;
+  }
+  
 
     @media (max-width: 1200px) {
     .prepBox {

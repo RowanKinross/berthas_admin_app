@@ -1,13 +1,10 @@
 // import berthasLogo from '../bertha_logo'
 import './prep.css'
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-
-
-
-
-
 
 function getWeekYear(date) {
   const d = new Date(date);
@@ -45,11 +42,39 @@ function getOrdinalDay(date) {
   }
 }
 
+// Helper to get the correct "week commencing" Monday
+function getCurrentOrNextMonday(date = new Date()) {
+  const day = date.getDay();
+  const monday = new Date(date);
+  if (day === 6) {
+    // Saturday: add 2 days
+    monday.setDate(date.getDate() + 2);
+  } else if (day === 0) {
+    // Sunday: add 1 day
+    monday.setDate(date.getDate() + 1);
+  } else {
+    // Monday-Friday: subtract (day - 1) days to get this week's Monday
+    monday.setDate(date.getDate() - (day - 1));
+  }
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Helper to get a weekday date relative to a given Monday
+function getRelativeWeekdayDate(monday, weekday) {
+  // weekday: 1=Monday, 2=Tuesday, ..., 7=Sunday
+  const date = new Date(monday);
+  date.setDate(monday.getDate() + (weekday - 1));
+  return date;
+}
+
 function Prep() {
   const [batches, setBatches] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ingredientTotals, setIngredientTotals] = useState([]);
+  const [checkedIngredients, setCheckedIngredients] = useState({});
+  const [openNote, setOpenNote] = useState(null); // Add this line
 
   useEffect(() => {
     const fetchData = async () => {
@@ -166,14 +191,63 @@ function Prep() {
     date.setDate(today.getDate() + diff);
     return date;
   };
-  const mondayDate = getWeekdayDate(1);    // 1 = Monday
-  const tuesdayDate = getWeekdayDate(2);   // 2 = Tuesday
-  const wednesdayDate = getWeekdayDate(3); // 3 = Wednesday
-  const thursdayDate = getWeekdayDate(4);  // 4 = Thursday
+  const mondayDate = getCurrentOrNextMonday();
+  const tuesdayDate = getRelativeWeekdayDate(mondayDate, 2);   // Tuesday
+  const wednesdayDate = getRelativeWeekdayDate(mondayDate, 3); // Wednesday
+  const thursdayDate = getRelativeWeekdayDate(mondayDate, 4);  // Thursday
 
   const wednesdayTomato = getTomatoPrepForDate(wednesdayDate);
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
 
+
+  // Handler for checkbox toggle
+  const handleCheckboxChange = (name) => {
+    setCheckedIngredients(prev => ({
+      ...prev,
+      [name]: !prev[name]
+    }));
+  };
+
+  // Returns a comma-separated string of unique batch codes for a given ingredient name
+  function getBatchCodesForIngredient(ingredientName) {
+    // Get this week's batches (Sat-Fri)
+    const today = new Date();
+    const { year: thisYear, week: thisWeek } = getWeekYear(today);
+    const weekBatches = batches.filter(batch => {
+      if (!batch.batch_date) return false;
+      const batchDate = new Date(batch.batch_date);
+      const { year, week } = getWeekYear(batchDate);
+      return year === thisYear && week === thisWeek;
+    });
+
+    const codes = new Set();
+    weekBatches.forEach(batch => {
+      (batch.pizzas || []).forEach(pizza => {
+        if (
+          pizza.ingredientBatchCodes &&
+          pizza.ingredientBatchCodes[ingredientName] &&
+          pizza.ingredientBatchCodes[ingredientName] !== "-"
+        ) {
+          codes.add(pizza.ingredientBatchCodes[ingredientName]);
+        }
+      });
+    });
+    return Array.from(codes).join(', ');
+  }
+
+  useEffect(() => {
+    if (!openNote) return;
+
+    function handleClickOutside(e) {
+      // Close the popup if any click occurs outside the open note
+      setOpenNote(null);
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openNote]);
 
   return (
     <div className="prep navContent">
@@ -187,7 +261,7 @@ function Prep() {
         <div className='prepContainers'>
         <div className='prepBox'>
         <h2 className='dayTitles'>Tuesday {getOrdinalDay(tuesdayDate)}</h2>
-        <table  className='prepTable'>
+        <table className='prepTable'>
           <thead>
             <tr>
               <th>Ingredients</th>
@@ -200,71 +274,123 @@ function Prep() {
                 const ingredientData = ingredients.find(i => i.name === ing.name);
                 return ingredientData && ingredientData.prep_ahead === true;
               })
-              .map(ing => (
-                <tr key={ing.name}>
-                  <td>{ing.name} x {ing.unitsNeeded} {ing.unit}</td>
-                  <td>--</td>
-                </tr>
-              ))}
+              .map(ing => {
+                const ingredientData = ingredients.find(i => i.name === ing.name);
+                return (
+                  <tr key={ing.name} style={{ position: 'relative' }}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        id={`checkbox-${ing.name}`}
+                        checked={!!checkedIngredients[ing.name]}
+                        onChange={() => handleCheckboxChange(ing.name)}
+                      />
+                      <label
+                        htmlFor={`checkbox-${ing.name}`}
+                        className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
+                        style={{ marginLeft: 6, marginRight: 4 }}
+                      >
+                        {ing.name} x {ing.unitsNeeded} {ing.unit}
+                      </label>
+                      {/* Info icon and click handler OUTSIDE the label */}
+                      {ingredientData && ingredientData.prep_notes && (
+                        <span
+                          style={{ marginLeft: 8, cursor: 'pointer', color: '#007bff' }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setOpenNote(openNote === ing.name ? null : ing.name);
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faCircleInfo} />
+                        </span>
+                      )}
+                      {/* Prep notes popup */}
+                      {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            background: '#222',
+                            color: '#fff',
+                            padding: '8px 12px',
+                            borderRadius: 6,
+                            left: 40,
+                            zIndex: 10,
+                            fontSize: '0.95em',
+                            minWidth: 180,
+                            maxWidth: 260,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                          }}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {ingredientData.prep_notes}
+                        </span>
+                      )}
+                    </td>
+                    <td>{getBatchCodesForIngredient(ing.name) ? getBatchCodesForIngredient(ing.name) : (<p className='red'>--</p>)}</td>
+                  </tr>
+                );
+              })}
           </tbody>
           <thead>
             <tr>
               <th>Mixes</th>
+              <th>Batch Code</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Flour</td>
-              <td>--</td>
+              <td>{(getBatchCodesForIngredient("Flour (Caputo Red)"))?(getBatchCodesForIngredient("Flour (Caputo Red)")) : (<p className='red'>--</p>)}</td>
             </tr>
             <tr>
               <td>Salt</td>
-              <td>--</td>
+              <td>{(getBatchCodesForIngredient("Salt"))?(getBatchCodesForIngredient("Salt")) : (<p className='red'>--</p>)}</td>
             </tr>
           </tbody>
         </table>
         </div>
         <div className='prepBox'>
-            <h2 className='dayTitles'>Wednesday {getOrdinalDay(wednesdayDate)}</h2>
-        <table  className='prepTable'>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Batch Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
-              <tr>
-                <td>
-                  Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit}
-                </td>
-                <td>--</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          <h2 className='dayTitles'>Wednesday {getOrdinalDay(wednesdayDate)}</h2>
+          {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
+            <table className='prepTable'>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Batch Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit}
+                  </td>
+                  <td>{(getBatchCodesForIngredient("Tomato"))?(getBatchCodesForIngredient("Tomato")) : (<p className='red'>--</p>)}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
+
         <div className='prepBox'>
-            <h2 className='dayTitles'>Thursday {getOrdinalDay(thursdayDate)}</h2>
-        <table  className='prepTable'>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Batch Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            {thursdayTomato && thursdayTomato.totalKg > 0 && (
-              <tr>
-                <td>
-                  Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit}
-                </td>
-                <td>--</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          <h2 className='dayTitles'>Thursday {getOrdinalDay(thursdayDate)}</h2>
+          {thursdayTomato && thursdayTomato.totalKg > 0 && (
+            <table className='prepTable'>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Batch Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit}
+                  </td>
+                  <td>{getBatchCodesForIngredient("Tomato")}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
         </div>
       )}
