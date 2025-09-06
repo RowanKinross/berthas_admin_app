@@ -205,6 +205,33 @@ function Prep() {
     }));
   };
 
+  // Returns a comma-separated string of unique batch codes for a given ingredient name
+  function getBatchCodesForIngredient(ingredientName) {
+    // Get this week's batches (Sat-Fri)
+    const today = new Date();
+    const { year: thisYear, week: thisWeek } = getWeekYear(today);
+    const weekBatches = batches.filter(batch => {
+      if (!batch.batch_date) return false;
+      const batchDate = new Date(batch.batch_date);
+      const { year, week } = getWeekYear(batchDate);
+      return year === thisYear && week === thisWeek;
+    });
+
+    const codes = new Set();
+    weekBatches.forEach(batch => {
+      (batch.pizzas || []).forEach(pizza => {
+        if (
+          pizza.ingredientBatchCodes &&
+          pizza.ingredientBatchCodes[ingredientName] &&
+          pizza.ingredientBatchCodes[ingredientName] !== "-"
+        ) {
+          codes.add(pizza.ingredientBatchCodes[ingredientName]);
+        }
+      });
+    });
+    return Array.from(codes).join(', ');
+  }
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -243,68 +270,70 @@ function Prep() {
                       {ing.name} x {ing.unitsNeeded} {ing.unit}
                     </label>
                   </td>
-                  <td>--</td>
+                  <td>{getBatchCodesForIngredient(ing.name)}</td>
                 </tr>
               ))}
           </tbody>
           <thead>
             <tr>
               <th>Mixes</th>
+              <th>Batch Code</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Flour</td>
-              <td>--</td>
+              <td>{getBatchCodesForIngredient("Flour (Caputo Red)")}</td>
             </tr>
             <tr>
               <td>Salt</td>
-              <td>--</td>
+              <td>{getBatchCodesForIngredient("Salt")}</td>
             </tr>
           </tbody>
         </table>
         </div>
         <div className='prepBox'>
-            <h2 className='dayTitles'>Wednesday {getOrdinalDay(wednesdayDate)}</h2>
-        <table  className='prepTable'>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Batch Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
-              <tr>
-                <td>
-                  Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit}
-                </td>
-                <td>--</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          <h2 className='dayTitles'>Wednesday {getOrdinalDay(wednesdayDate)}</h2>
+          {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
+            <table className='prepTable'>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Batch Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit}
+                  </td>
+                  <td>{getBatchCodesForIngredient("Tomato")}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
+
         <div className='prepBox'>
-            <h2 className='dayTitles'>Thursday {getOrdinalDay(thursdayDate)}</h2>
-        <table  className='prepTable'>
-          <thead>
-            <tr>
-              <th></th>
-              <th>Batch Code</th>
-            </tr>
-          </thead>
-          <tbody>
-            {thursdayTomato && thursdayTomato.totalKg > 0 && (
-              <tr>
-                <td>
-                  Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit}
-                </td>
-                <td>--</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          <h2 className='dayTitles'>Thursday {getOrdinalDay(thursdayDate)}</h2>
+          {thursdayTomato && thursdayTomato.totalKg > 0 && (
+            <table className='prepTable'>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Batch Code</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    Tomato x {thursdayTomato.unitsNeeded} {thursdayTomato.unit}
+                  </td>
+                  <td>{getBatchCodesForIngredient("Tomato")}</td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         </div>
         </div>
       )}
