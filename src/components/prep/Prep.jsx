@@ -270,7 +270,7 @@ function Prep() {
                       {ing.name} x {ing.unitsNeeded} {ing.unit}
                     </label>
                   </td>
-                  <td>{getBatchCodesForIngredient(ing.name)}</td>
+                  <td>{(getBatchCodesForIngredient(ing.name))? (getBatchCodesForIngredient(ing.name)) : (<p className='red'>--</p>)}</td>
                 </tr>
               ))}
           </tbody>
@@ -283,11 +283,11 @@ function Prep() {
           <tbody>
             <tr>
               <td>Flour</td>
-              <td>{getBatchCodesForIngredient("Flour (Caputo Red)")}</td>
+              <td>{(getBatchCodesForIngredient("Flour (Caputo Red)"))?(getBatchCodesForIngredient("Flour (Caputo Red)")) : (<p className='red'>--</p>)}</td>
             </tr>
             <tr>
               <td>Salt</td>
-              <td>{getBatchCodesForIngredient("Salt")}</td>
+              <td>{(getBatchCodesForIngredient("Salt"))?(getBatchCodesForIngredient("Salt")) : (<p className='red'>--</p>)}</td>
             </tr>
           </tbody>
         </table>
@@ -307,7 +307,7 @@ function Prep() {
                   <td>
                     Tomato x {wednesdayTomato.unitsNeeded} {wednesdayTomato.unit}
                   </td>
-                  <td>{getBatchCodesForIngredient("Tomato")}</td>
+                  <td>{(getBatchCodesForIngredient("Tomato"))?(getBatchCodesForIngredient("Tomato")) : (<p className='red'>--</p>)}</td>
                 </tr>
               </tbody>
             </table>
