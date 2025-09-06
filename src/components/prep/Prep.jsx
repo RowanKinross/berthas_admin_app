@@ -1,13 +1,8 @@
 // import berthasLogo from '../bertha_logo'
 import './prep.css'
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-
-
-
-
-
 
 function getWeekYear(date) {
   const d = new Date(date);
@@ -76,6 +71,7 @@ function Prep() {
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ingredientTotals, setIngredientTotals] = useState([]);
+  const [checkedIngredients, setCheckedIngredients] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -201,6 +197,14 @@ function Prep() {
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
 
 
+  // Handler for checkbox toggle
+  const handleCheckboxChange = (name) => {
+    setCheckedIngredients(prev => ({
+      ...prev,
+      [name]: !prev[name]
+    }));
+  };
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -213,7 +217,7 @@ function Prep() {
         <div className='prepContainers'>
         <div className='prepBox'>
         <h2 className='dayTitles'>Tuesday {getOrdinalDay(tuesdayDate)}</h2>
-        <table  className='prepTable'>
+        <table className='prepTable'>
           <thead>
             <tr>
               <th>Ingredients</th>
@@ -227,10 +231,15 @@ function Prep() {
                 return ingredientData && ingredientData.prep_ahead === true;
               })
               .map(ing => (
-                <tr key={ing.name}>
+                <tr key={ing.name} >
                   <td>
-                    <input type="checkbox" id={`checkbox-${ing.name}`} />
-                    <label htmlFor={`checkbox-${ing.name}`}>
+                    <label htmlFor={`checkbox-${ing.name}`} className={checkedIngredients[ing.name] ? 'strikethrough' : ''}>
+                      <input
+                        type="checkbox"
+                        id={`checkbox-${ing.name}`}
+                        checked={!!checkedIngredients[ing.name]}
+                        onChange={() => handleCheckboxChange(ing.name)}
+                      />{' '}
                       {ing.name} x {ing.unitsNeeded} {ing.unit}
                     </label>
                   </td>
