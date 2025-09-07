@@ -260,7 +260,7 @@ function Prep() {
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2 className='dayTitles'>Tuesday {getOrdinalDay(tuesdayDate)}</h2>
+        <h2 className='dayTitles'>Prep Day (Tuesday {getOrdinalDay(tuesdayDate)})</h2>
         <table className='prepTable'>
           <thead>
             <tr>
@@ -349,7 +349,7 @@ function Prep() {
           </tbody>
         </table>
         </div>
-        <div className='prepBox'>
+        {/* <div className='prepBox'>
           <h2 className='dayTitles'>Wednesday {getOrdinalDay(wednesdayDate)}</h2>
           {wednesdayTomato && wednesdayTomato.totalKg > 0 && (
             <table className='prepTable'>
@@ -391,7 +391,7 @@ function Prep() {
               </tbody>
             </table>
           )}
-        </div>
+        </div> */}
         </div>
       )}
     </div>
