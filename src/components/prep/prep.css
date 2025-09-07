@@ -9,7 +9,7 @@
     display: flex;
     text-align: left;
     flex-direction: column;
-    aspect-ratio: 1 / 1;
+    /* aspect-ratio: 1 / 1; */
     width: 30%;
     margin: 1%;
     background-size: cover;
@@ -25,6 +25,11 @@
   }
   .dayTitles {
     margin: 3% 3% 0 3%;
+    text-align: center;
+  }
+  .prepDay {
+    text-align: center;
+    font-style: italic;
   }
   .strikethrough {
     text-decoration: line-through;
@@ -37,14 +42,21 @@
   
 
     @media (max-width: 1200px) {
+      /* Tablet */
     .prepBox {
       width: 48%;
     }
     
   }
   @media (max-width: 900px) {
+      /* Mobile */
     .prepBox {
       width: 100%;
+      padding: 0;
+      margin: 0;
+    }
+    .prepTable {
+      font-size: 12px;
     }
     
   }
