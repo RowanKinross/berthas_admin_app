@@ -160,12 +160,8 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   batches[index].quantity = newQuantity;
   order.pizzas[pizzaId].batchesUsed = batches;
 
-  // Update the pizza's total quantity based on split mode
-  if (isSplitChecked) {
-    order.pizzas[pizzaId].quantity = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
-  } else {
-    order.pizzas[pizzaId].quantity = newQuantity;
-  }
+  // ❌ Do NOT update order.pizzas[pizzaId].quantity in split mode!
+  // Just update batchesUsed and sync allocation
 
   setSelectedOrder(order);
 
@@ -179,7 +175,7 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   try {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaId}.batchesUsed`]: batches,
-      [`pizzas.${pizzaId}.quantity`]: order.pizzas[pizzaId].quantity,
+      // Do NOT update [`pizzas.${pizzaId}.quantity`] here
     });
   } catch (error) {
     console.error("Error updating batch quantities in Firestore:", error);
@@ -247,17 +243,17 @@ const handleOrderDelete = async () => {
 
 
   useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (modalRef.current && !modalRef.current.contains(event.target)) {
-      setSelectedOrder(null);
-      setViewModal(false);
-    }
-  };
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-  };
-}, []);
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSelectedOrder(null);
+        setViewModal(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -946,12 +942,38 @@ const handleBulkPrintPackingSlips = () => {
   printWindow.close();
 };
 
+useEffect(() => {
+  if (!selectedOrder) return;
+  // Check if any pizza has more than one batch allocated
+  const hasSplit = Object.values(selectedOrder.pizzas || {}).some(
+    pizza => Array.isArray(pizza.batchesUsed) && pizza.batchesUsed.length > 1
+  );
+  setIsSplitChecked(hasSplit);
+}, [selectedOrder]);
 
+function getAllocatedTally(order) {
+  if (!order || !order.pizzas) return { allocated: 0, total: 0 };
+  let allocated = 0;
+  let total = 0;
+  Object.values(order.pizzas).forEach(pizza => {
+    total += Number(pizza.quantity) || 0;
+    // Sum all batch allocations for this pizza
+    if (Array.isArray(pizza.batchesUsed)) {
+      allocated += pizza.batchesUsed.reduce((sum, b) => sum + (Number(b.quantity) || 0), 0);
+    }
+  });
+  return { allocated, total };
+}
 
+function getPizzaAllocatedTally(pizzaData) {
+  const total = Number(pizzaData.quantity) || 0;
+  let allocated = 0;
+  if (Array.isArray(pizzaData.batchesUsed)) {
+    allocated = pizzaData.batchesUsed.reduce((sum, b) => sum + (Number(b.quantity) || 0), 0);
+  }
+  return { allocated, total };
+}
 
-
-
-  
   return (
   <div className='orders navContent'>
     <h2>ORDERS</h2>
@@ -1364,7 +1386,8 @@ const handleBulkPrintPackingSlips = () => {
                     style={{ width: 60 }}
                   />
                 ) : (
-                  <p>{pizzaData.quantity}</p>
+                  <p>allocated {getPizzaAllocatedTally(pizzaData).allocated}/{pizzaData.quantity}
+                  </p>
                 )}
               </div>    
               {(() => {
@@ -1595,6 +1618,7 @@ const handleBulkPrintPackingSlips = () => {
                     }
                     return allocation;
                   });
+
                   if (updated) {
                     await updateDoc(doc(db, "batches", docSnap.id), {
                       pizza_allocations: updatedAllocations
