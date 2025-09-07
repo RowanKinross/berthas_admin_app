@@ -247,17 +247,17 @@ const handleOrderDelete = async () => {
 
 
   useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (modalRef.current && !modalRef.current.contains(event.target)) {
-      setSelectedOrder(null);
-      setViewModal(false);
-    }
-  };
-  document.addEventListener('mousedown', handleClickOutside);
-  return () => {
-    document.removeEventListener('mousedown', handleClickOutside);
-  };
-}, []);
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setSelectedOrder(null);
+        setViewModal(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -946,11 +946,14 @@ const handleBulkPrintPackingSlips = () => {
   printWindow.close();
 };
 
-
-
-
-
-
+useEffect(() => {
+  if (!selectedOrder) return;
+  // Check if any pizza has more than one batch allocated
+  const hasSplit = Object.values(selectedOrder.pizzas || {}).some(
+    pizza => Array.isArray(pizza.batchesUsed) && pizza.batchesUsed.length > 1
+  );
+  setIsSplitChecked(hasSplit);
+}, [selectedOrder]);
   
   return (
   <div className='orders navContent'>
