@@ -25,6 +25,11 @@
   }
   .dayTitles {
     margin: 3% 3% 0 3%;
+    text-align: center;
+  }
+  .prepDay {
+    text-align: center;
+    font-style: italic;
   }
   .strikethrough {
     text-decoration: line-through;

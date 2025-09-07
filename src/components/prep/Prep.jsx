@@ -260,7 +260,8 @@ function Prep() {
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2 className='dayTitles'>Prep Day (Tuesday {getOrdinalDay(tuesdayDate)})</h2>
+        <h2 className='dayTitles'>Prep Day </h2>
+          <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
         <table className='prepTable'>
           <thead>
             <tr>
