@@ -39,6 +39,142 @@
     font-weight: bold;
     margin: 0;
   }
+
+
+
+/* dough calculator */
+.doughBox {
+  display: flex;
+  text-align: left;
+  flex-direction: column;
+  /* aspect-ratio: 1 / 1; */
+  width: 66%;
+  margin: 1%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  
+  box-shadow: 0 2px 4px var(--boxShadow);
+}
+.doughCalcWrapper {
+  display: flex;
+}
+.calculatorContainer {
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 47%;
+  margin: 20px auto;
+}
+.calcRed {
+  background: #ffe1e182;
+  box-shadow: 0 4px 8px #d9362b88;
+}
+.calcBlue {
+  background: #e1f0ff82;
+  box-shadow: 0 4px 8px #2b6fd988;
+}
+.title {
+  text-align: center;
+  font-size: 1.6rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+.last-edit {
+  text-align: right;
+  font-size: 0.85rem;
+  color: #777;
+  margin-bottom: 0.5rem;
+}
+.inputs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.input-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.input-row label {
+  flex: 1;
+  color: #444;
+}
+.input-row input {
+  width: 80px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: right;
+}
+.input-row input:focus {
+  outline: none;
+  border-color: #ffb347;
+  box-shadow: 0 0 3px #ffb347aa;
+}
+.result {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2e7d32;
+}
+.result span {
+  display: block;
+  font-size: 2rem;
+  margin-top: 0.5rem;
+}
+.dotted-divider {
+  border: none;
+  border-top: 1px dotted #aaa;
+  margin: 1rem 0;
+}
+.tray-subtotal {
+  text-align: right;
+  font-size: 0.95rem;
+  color: #555;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.sub-result {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #444;
+  text-align: left;
+}
+.sub-result p {
+  margin: 4px 0;
+}
+.paddingGeneral {
+  padding: 0 10px;
+  font-weight: lighter;
+}
+.strong {
+  font-weight: bolder;
+}
+.redBlueContainer {
+  display: flex;
+  justify-content: left;
+  align-items: center;
+}
+.mixBreakdown {
+  display: flex;
+}
+.text-red {
+  color: red;
+  padding: 2px;
+}
+.text-blue {
+  color: blue;
+  padding: 2px;
+}
+@media (max-width: 530px) {
+  .mixBreakdown {
+    flex-direction: column;
+  }
+}
+
   
 
     @media (max-width: 1200px) {
@@ -52,8 +188,6 @@
       /* Mobile */
     .prepBox {
       width: 100%;
-      padding: 0;
-      margin: 0;
     }
     .prepTable {
       font-size: 12px;

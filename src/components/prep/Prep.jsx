@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import DoughCalculator from './Dough.jsx';
 
 function getWeekYear(date) {
   const d = new Date(date);
@@ -393,6 +394,12 @@ function Prep() {
             </table>
           )}
         </div> */}
+{/* 
+         <div className='doughBox'>
+          <h2 className='dayTitles'>Dough</h2>
+          <DoughCalculator/>
+        </div> */}
+
         </div>
       )}
     </div>
