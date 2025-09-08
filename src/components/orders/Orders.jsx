@@ -65,6 +65,9 @@ function calculatePizzaTotal(pizzas) {
 
 
 
+
+
+
 useEffect(() => {
   const fetchAllCustomers = async () => {
     try {
@@ -388,27 +391,27 @@ const updateDeliveryDate = async (orderId, newDate) => {
   };
 
 
-    const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
-      const batchDoc = batches.find(b => b.batch_code === batchCode);
-      if (!batchDoc) return;
-      const allocations = batchDoc.pizza_allocations || [];
-      const orderId = selectedOrder.id;
-      // Remove any existing allocation for this order/pizza/batch
-      const filtered = allocations.filter(
-        a => !(a.orderId === orderId && a.pizzaId === pizzaId)
-      );
-      // If quantity is > 0, re-add it
-      if (quantity > 0) {
-        filtered.push({ orderId, pizzaId, quantity });
-      }
-      try {
-        await updateDoc(doc(db, "batches", batchDoc.id), {
-          pizza_allocations: filtered
-        });
-      } catch (error) {
-        console.error("Error syncing pizza allocation:", error);
-      }
-    };
+const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
+  const batchDoc = batches.find(b => b.batch_code === batchCode);
+  if (!batchDoc) return;
+  const allocations = batchDoc.pizza_allocations || [];
+  const orderId = selectedOrder.id;
+  // Remove any existing allocation for this order/pizza/batch
+  const filtered = allocations.filter(
+    a => !(a.orderId === orderId && a.pizzaId === pizzaId)
+  );
+  // If quantity is > 0, re-add it with status: "incomplete"
+  if (quantity > 0) {
+    filtered.push({ orderId, pizzaId, quantity, status: "incomplete" });
+  }
+  try {
+    await updateDoc(doc(db, "batches", batchDoc.id), {
+      pizza_allocations: filtered
+    });
+  } catch (error) {
+    console.error("Error syncing pizza allocation:", error);
+  }
+};
 
 
     // revert order status
@@ -526,27 +529,34 @@ const handleBatchClick = async (pizzaName, batchCode) => {
   const updatedOrder = { ...selectedOrder };
   updatedOrder.pizzas[pizzaName].batchesUsed = newBatches;
   setSelectedOrder(updatedOrder);
+
   try {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaName}.batchesUsed`]: newBatches,
     });
+
+    // Remove allocations from batches that are no longer used
     for (const b of currentBatches) {
-      if (b.batch_number !== batchCode) {
+      if (!newBatches.some(nb => nb.batch_number === b.batch_number)) {
         await removePizzaAllocationFromBatch({ pizzaId: pizzaName, batchCode: b.batch_number });
       }
     }
-    await syncPizzaAllocation({
-      pizzaId: pizzaName,
-      batchCode,
-      quantity: newQuantity
-    });
-    } catch (error) {
-      console.error("Error updating batch assignment:", error);
+
+    // Sync allocations for all batches in newBatches
+    for (const b of newBatches) {
+      await syncPizzaAllocation({
+        pizzaId: pizzaName,
+        batchCode: b.batch_number,
+        quantity: b.quantity
+      });
     }
-    if (!selectedOrder.complete) {
-      validateAndUpdateOrderStatus(updatedOrder);
-    }
-  };
+  } catch (error) {
+    console.error("Error updating batch assignment:", error);
+  }
+  if (!selectedOrder.complete) {
+    validateAndUpdateOrderStatus(updatedOrder);
+  }
+};
 
 
   const validateAndUpdateOrderStatus = async (order) => {
@@ -1369,7 +1379,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 style={{ display: "inline-block" }}
                 onClick={e => {
                   if (isSplitToggleDisabled) {
-                    setSplitToggleError("*allocated must match ordered before reverting");
+                    setSplitToggleError("*allocated must match ordered before reverting and cannot revert on split batches");
                     e.preventDefault();
                     e.stopPropagation();
                   } else {
@@ -1698,12 +1708,10 @@ function getPizzaAllocatedTally(pizzaData) {
                   const batchData = docSnap.data();
                   let updated = false;
                   const updatedAllocations = (batchData.pizza_allocations || []).map(allocation => {
-                    if (allocation.orderId === selectedOrder.id && allocation.status === "completed") {
-                      updated = true;
-                      // Remove the status property
-                      const { status, ...rest } = allocation;
-                      return rest;
-                    }
+                  if (allocation.orderId === selectedOrder.id && allocation.status === "completed") {
+                        updated = true;
+                        return { ...allocation, status: "incomplete" }; // <-- revert to incomplete
+                      }
                     return allocation;
                   });
 
