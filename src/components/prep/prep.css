@@ -137,7 +137,7 @@
   font-weight: lighter;
 }
 .strong {
-  font-weight: bolder;
+  font-weight: bold;
 }
 .redBlueContainer {
   display: flex;
@@ -184,8 +184,14 @@
   }
   @media (max-width: 900px) {
       /* Mobile */
-    .prepBox {
+    .prepBox, .doughBox{
       width: 100%;
+    }
+    .doughCalcWrapper {
+      flex-direction: column;
+    }
+    .calculatorContainer {
+      width: 98%;
     }
     .prepContainers {
       margin: 0;

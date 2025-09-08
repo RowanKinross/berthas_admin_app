@@ -16,6 +16,7 @@ const DoughCalculator = () => {
   const [leftover, setLeftover] = useState(0);
   const originalDataRef = useRef({ projections: {}, leftover: null });
   const [lastEdit, setLastEdit] = useState(null);
+  const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
 
   // Calculations
   const currentWeekKeys = ['wed', 'thurs', 'fri', 'sat', 'sun'];
@@ -297,69 +298,12 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
     <div className='doughCalcWrapper'>
     <div className="calculatorContainer calcBlue">
       <h2>Restaurant</h2>
-      {lastEdit && (
-        <p className="last-edit">
-          Last edit: {lastEdit.toLocaleString('en-GB')}
-        </p>
-      )}
-
-      {/* Leftover input */}
-      <div className="input-row">
-        <label>Leftover from last week:</label>
-        <input
-          type="number"
-          min="0"
-          value={leftover || ''}
-          onChange={(e) => setLeftover(Number(e.target.value))}
-        />
-      </div>
-
-      <hr className="dotted-divider" />
-      <p><strong>Next Week:</strong></p>
-
-      {/* Dough projections */}
-      <div className="inputs-section">
-
-        {orderedDays.map((day) => (
-          <React.Fragment key={day}>
-            <div className="input-row">
-              <label>{dayLabels[day]}</label>
-              <input
-                type="number"
-                name={day}
-                min="0"
-                value={projections[day] || ''}
-                onChange={handleChange}
-              />
-            </div>
-
-            {day === 'sun' && (
-              <>
-                <div className="tray-subtotal">
-                  Week subtotal: <strong>{currentWeekTotal}</strong> trays
-                </div>
-                <hr className="dotted-divider" />
-                <p><strong>Following Week:</strong></p>
-              </>
-            )}
-          </React.Fragment>
-        ))}
-
-      </div>
-      <hr className="dotted-divider" />
-
-      {/* Final result */}
-      <div className="result">
-        <p>Total to make:</p>
-        <span>{totalToMake} trays</span>
-
+      {userRole === 'unit' ? (
         <div className="sub-result">
-          <p>Make on Tuesday: <strong>{tuesdayMakeAhead}</strong> trays</p>
-
+          <p>Make on <strong>Tuesday:</strong> {tuesdayMakeAhead} trays</p>
           {mixPlan.length > 0 ? (
             <div className='ul'>
               <p className='paddingGeneral'>total flour: <strong>{roundedKg}kg</strong></p>
-              
               <div className='mixBreakdown'>
                 <div className='redBlueContainer paddingGeneral'>
                   <p>mix breakdown: <strong className='paddingGeneral strong'> {mixPlan.join('kg  + ')}kg </strong> </p>
@@ -375,70 +319,192 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
               ⚠️ No valid mix plan for {kgNeeded}kg. Try adjusting trays slightly.
             </p>
           )}
+          <p>Make on <strong>Thursday:</strong> {thursdayBatch} trays<br /></p>
+          <div className='ul'>
+            <p className='paddingGeneral'> total flour: <strong> 30kg</strong></p>
+            <div className='mixBreakdown'>
+              <div className='redBlueContainer paddingGeneral'>
+                <p>mix breakdown: <strong className='paddingGeneral strong'> 30kg </strong> </p>
+              </div>  
+              <div className='redBlueContainer paddingGeneral' >
+                <p> - half caputo </p>
+                <p className="text-red"> red</p>
+                <p>/ half</p>
+                <p className="text-blue">blue</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {lastEdit && (
+            <p className="last-edit">
+              Last edit: {lastEdit.toLocaleString('en-GB')}
+            </p>
+          )}
 
+          {/* Leftover input */}
+          <div className="input-row">
+            <label>Leftover from last week:</label>
+            <input
+              type="number"
+              min="0"
+              value={leftover || ''}
+              onChange={(e) => setLeftover(Number(e.target.value))}
+            />
+          </div>
 
-            <p>Make on Thursday: <strong>{thursdayBatch}</strong> trays<br /></p>
-            <div className='ul'>
-              <p className='paddingGeneral'> total flour: <strong> 30kg</strong></p>
-              <div className='mixBreakdown'>
-                <div className='redBlueContainer paddingGeneral'>
-                  <p>mix breakdown: <strong className='paddingGeneral strong'> 30kg </strong> </p>
-                </div>  
-                <div className='redBlueContainer paddingGeneral' >
-                  <p> - half caputo </p>
-                  <p className="text-red"> red</p>
-                  <p>/ half</p>
-                  <p className="text-blue">blue</p>
+          <hr className="dotted-divider" />
+          <p><strong>Next Week:</strong></p>
+
+          {/* Dough projections */}
+          <div className="inputs-section">
+            {orderedDays.map((day) => (
+              <React.Fragment key={day}>
+                <div className="input-row">
+                  <label>{dayLabels[day]}</label>
+                  <input
+                    type="number"
+                    name={day}
+                    min="0"
+                    value={projections[day] || ''}
+                    onChange={handleChange}
+                  />
+                </div>
+                {day === 'sun' && (
+                  <>
+                    <div className="tray-subtotal">
+                      Week subtotal: <strong>{currentWeekTotal}</strong> trays
+                    </div>
+                    <hr className="dotted-divider" />
+                    <p><strong>Following Week:</strong></p>
+                  </>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+          <hr className="dotted-divider" />
+
+          {/* Final result */}
+          <div className="result">
+            <p>Total to make:</p>
+            <span>{totalToMake} trays</span>
+            <div className="sub-result">
+              <p>Make on<strong> Tuesday:</strong> {tuesdayMakeAhead} trays</p>
+              {mixPlan.length > 0 ? (
+                <div className='ul'>
+                  <p className='paddingGeneral'>total flour: <strong>{roundedKg}kg</strong></p>
+                  <div className='mixBreakdown'>
+                    <div className='redBlueContainer paddingGeneral'>
+                      <p>mix breakdown: <strong className='paddingGeneral strong'> {mixPlan.join('kg  + ')}kg </strong> </p>
+                    </div>  
+                    <div className='redBlueContainer paddingGeneral' >
+                      <p>- all caputo </p>
+                      <p className="text-blue">blue</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="warning">
+                  ⚠️ No valid mix plan for {kgNeeded}kg. Try adjusting trays slightly.
+                </p>
+              )}
+              <p>Make on<strong> Thursday:</strong> {thursdayBatch} trays<br /></p>
+              <div className='ul'>
+                <p className='paddingGeneral'> total flour: <strong> 30kg</strong></p>
+                <div className='mixBreakdown'>
+                  <div className='redBlueContainer paddingGeneral'>
+                    <p>mix breakdown: <strong className='paddingGeneral strong'> 30kg </strong> </p>
+                  </div>  
+                  <div className='redBlueContainer paddingGeneral' >
+                    <p> - half caputo </p>
+                    <p className="text-red"> red</p>
+                    <p>/ half</p>
+                    <p className="text-blue">blue</p>
+                  </div>
                 </div>
               </div>
             </div>
-        </div>
-
-      </div>
+          </div>
+        </>
+      )}
     </div>
     <div className='calculatorContainer calcRed'>
       <h2>Frozen</h2>
-      <hr className="dotted-divider" />
-      <p><strong>Next Week:</strong></p>
-      <div className="inputs-section">
-        <div className="input-row">
-          <label>Total pizzas this week:</label>
-          <span><strong>{totalFrozenPizzas}</strong></span>
-        </div>
-        <div className="input-row">
-          <label>+10% buffer:</label>
-          <span><strong>{frozenWith10Percent}</strong></span>
+      {userRole === 'unit' ? (
+  <div className="result">
+    <div className="sub-result paddingGeneral">
+      <p>Make on <strong>Tuesday:</strong> ~{frozenWith10Percent} dough balls</p>
+      <div className='ul'>
+        <p className='paddingGeneral'>total flour: <strong>{frozenPlan.totalFlour}kg</strong></p>
+        <p className='paddingGeneral'> (makes {frozenPlan.totalBalls} dough balls)</p>
+        <div className='mixBreakdown'>
+          <div className='redBlueContainer paddingGeneral'>
+            <p>
+              mix breakdown:
+              <strong className='paddingGeneral strong'>
+                {frozenPlan.plan.map((kg, i) => (
+                  <span key={i}>
+                    {kg}kg 
+                    {i < frozenPlan.plan.length - 1 ? ' + ' : ''}
+                  </span>
+                ))}
+              </strong>
+            </p>
+          </div>
+          <div className='redBlueContainer paddingGeneral'>
+            <p>- all caputo</p>
+            <p className="text-red">red</p>
+          </div>
         </div>
       </div>
-      <hr className="dotted-divider" />
-      <div className="result">
-        <div className="sub-result">
-          <p>Make on Tuesday: <strong>~{frozenWith10Percent}</strong> dough balls</p>
-            <div className='ul'>
-              <p className='paddingGeneral'>total flour: <strong>{frozenPlan.totalFlour}kg</strong></p>
-              <p className='paddingGeneral'> (makes {frozenPlan.totalBalls} dough balls)</p>
-              <div className='mixBreakdown'>
-                <div className='redBlueContainer paddingGeneral'>
-                  <p>
-                    mix breakdown:
-                    <strong className='paddingGeneral strong'>
-                      {frozenPlan.plan.map((kg, i) => (
-                        <span key={i}>
-                          {kg}kg 
-                          {i < frozenPlan.plan.length - 1 ? ' + ' : ''}
-                        </span>
-                      ))}
-                    </strong>
-                  </p>
-                </div>
-                <div className='redBlueContainer paddingGeneral'>
-                  <p>- all caputo</p>
-                  <p className="text-red">red</p>
-                </div>
-              </div>
+    </div>
+  </div>
+) : (
+  <>
+    <hr className="dotted-divider" />
+    <p><strong>Next Week:</strong></p>
+    <div className="inputs-section">
+      <div className="input-row">
+        <label>Total pizzas this week:</label>
+        <span><strong>{totalFrozenPizzas}</strong></span>
+      </div>
+      <div className="input-row">
+        <label>+10% buffer:</label>
+        <span><strong>{frozenWith10Percent}</strong></span>
+      </div>
+    </div>
+    <hr className="dotted-divider" />
+    <div className="result">
+      <div className="sub-result paddingGeneral">
+        <p>Make on <strong>Tuesday:</strong>~{frozenWith10Percent} dough balls</p>
+        <div className='ul'>
+          <p className='paddingGeneral'>total flour: <strong>{frozenPlan.totalFlour}kg</strong></p>
+          <p className='paddingGeneral'> (makes {frozenPlan.totalBalls} dough balls)</p>
+          <div className='mixBreakdown'>
+            <div className='redBlueContainer '>
+              <p>
+                mix breakdown:
+                <strong className=' strong'>
+                  {frozenPlan.plan.map((kg, i) => (
+                    <span key={i}>
+                      {kg}kg 
+                      {i < frozenPlan.plan.length - 1 ? ' + ' : ''}
+                    </span>
+                  ))}
+                </strong>
+              </p>
             </div>
+            <div className='redBlueContainer paddingGeneral'>
+              <p>- all caputo</p>
+              <p className="text-red">red</p>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  </>
+)}
     </div>
     </div>
   );

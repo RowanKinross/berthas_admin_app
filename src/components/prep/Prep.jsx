@@ -384,7 +384,7 @@ function Prep() {
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2 className='dayTitles'>Prep Day </h2>
+        <h2 className='dayTitles'>To do:</h2>
           <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
         <table className='prepTable'>
           <thead>
@@ -393,6 +393,7 @@ function Prep() {
               <th>Batch Code</th>
             </tr>
           </thead>
+            {/* <p>*Subtract any already prepped in the walk-in</p> */}
           <tbody>
             {ingredientTotals
               .filter(ing => {
@@ -410,23 +411,23 @@ function Prep() {
                         id={`checkbox-${ing.name}`}
                         checked={!!checkedIngredients[ing.name]}
                         onChange={() => handleCheckboxChange(ing.name)}
-                      />
+                        />
                       <label
                         htmlFor={`checkbox-${ing.name}`}
                         className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
                         style={{ marginLeft: 6, marginRight: 4 }}
-                      >
+                        >
                         {ing.name} x {ing.unitsNeeded} {ing.unit}
                       </label>
                       {/* Info icon and click handler OUTSIDE the label */}
                       {ingredientData && ingredientData.prep_notes && (
                         <span
-                          className='infoIcon'
-                          
-                          onClick={e => {
-                            e.stopPropagation();
-                            setOpenNote(openNote === ing.name ? null : ing.name);
-                          }}
+                        className='infoIcon'
+                        
+                        onClick={e => {
+                          e.stopPropagation();
+                          setOpenNote(openNote === ing.name ? null : ing.name);
+                        }}
                         >
                           <FontAwesomeIcon icon={faCircleInfo} />
                         </span>
@@ -434,13 +435,13 @@ function Prep() {
                       {/* Prep notes popup */}
                       {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
                         <span
-                          style={{
-                            position: 'absolute',
-                            background: '#222',
-                            color: '#fff',
-                            padding: '8px 12px',
-                            borderRadius: 6,
-                            left: 40,
+                        style={{
+                          position: 'absolute',
+                          background: '#222',
+                          color: '#fff',
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          left: 40,
                             zIndex: 10,
                             fontSize: '0.95em',
                             minWidth: 180,
@@ -448,7 +449,7 @@ function Prep() {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                           }}
                           onClick={e => e.stopPropagation()}
-                        >
+                          >
                           {ingredientData.prep_notes}
                         </span>
                       )}
@@ -484,11 +485,11 @@ function Prep() {
                         </>
                       ) : (
                         <span
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            setEditingBatchCode(ing.name);
-                            setEditingBatchCodeValue(getBatchCodesForIngredient(ing.name));
-                          }}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setEditingBatchCode(ing.name);
+                          setEditingBatchCodeValue(getBatchCodesForIngredient(ing.name));
+                        }}
                         >
                           {getBatchCodesForIngredient(ing.name) || <span className='red'>--</span>}
                         </span>
