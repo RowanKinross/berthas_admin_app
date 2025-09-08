@@ -311,8 +311,8 @@ input:checked + .slider:before {
     gap: 5px;
   }
 
-  .modal {
-    width: 95%;
+  .orderModal {
+    width: 98%;
   }
   .deliveryToday {
     padding: 0;
