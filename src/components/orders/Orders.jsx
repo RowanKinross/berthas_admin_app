@@ -46,8 +46,8 @@ function Orders() {
   const [searchTerm, setSearchTerm] = useState("");
   const STATUS_ORDER = ["order placed", "ready to pack", "packed", "complete"];
   const [lastCheckedIndex, setLastCheckedIndex] = useState(null);
-
   const [packingHtml, setPackingHtml] = useState('');
+  const [draftBatchQuantities, setDraftBatchQuantities] = useState({});
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -1488,11 +1488,31 @@ function getPizzaAllocatedTally(pizzaData) {
                           type="number"
                           min={0}
                           max={available}
-                          value={quantity === 0 ? "" : quantity}
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            handleBatchQuantityChange(pizzaName, batch.batch_code, isNaN(val) ? 0 : val);
+                          value={
+                            draftBatchQuantities[`${pizzaName}_${batch.batch_code}`] !== undefined
+                              ? draftBatchQuantities[`${pizzaName}_${batch.batch_code}`]
+                              : (quantity === 0 ? "" : quantity)
+                          }
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setDraftBatchQuantities(prev => ({
+                              ...prev,
+                              [`${pizzaName}_${batch.batch_code}`]: val
+                            }));
+                          }}
+                          onBlur={e => {
+                            const val = parseInt(e.target.value, 10);
+                            handleBatchQuantityChange(
+                              pizzaName,
+                              batch.batch_code,
+                              isNaN(val) ? 0 : val
+                            );
+                            setDraftBatchQuantities(prev => {
+                              const updated = { ...prev };
+                              delete updated[`${pizzaName}_${batch.batch_code}`];
+                              return updated;
+                            });
                           }}
                         />
                       )}
