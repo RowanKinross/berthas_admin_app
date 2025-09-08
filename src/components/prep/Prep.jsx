@@ -79,6 +79,7 @@ function Prep() {
   const [editingBatchCode, setEditingBatchCode] = useState(null); // ingredient name
   const [editingBatchCodeValue, setEditingBatchCodeValue] = useState('');
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState({});
+  const [pizzaCatalog, setPizzaCatalog] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -92,6 +93,14 @@ function Prep() {
       setLoading(false);
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchPizzaCatalog = async () => {
+      const pizzaSnap = await getDocs(collection(db, "pizzas"));
+      setPizzaCatalog(pizzaSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchPizzaCatalog();
   }, []);
 
   useEffect(() => {
@@ -542,6 +551,54 @@ function Prep() {
               </td>
             </tr>
           </tbody>
+          <thead>
+            <tr>
+              <th colSpan={2}>Write Sleeves</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(() => {
+              // Get this week's batches (Sat-Fri)
+              const today = new Date();
+              const { year: thisYear, week: thisWeek } = getWeekYear(today);
+              const weekBatches = batches.filter(batch => {
+                if (!batch.batch_date) return false;
+                const batchDate = new Date(batch.batch_date);
+                const { year, week } = getWeekYear(batchDate);
+                return year === thisYear && week === thisWeek;
+              });
+              // Flatten all pizzas and count by pizza name, only if sleeve === true in batch pizza
+              const pizzaCounts = {};
+              weekBatches.forEach(batch => {
+                (batch.pizzas || []).forEach(pizza => {
+                  if (pizza.sleeve) {
+                    if (!pizzaCounts[pizza.id]) pizzaCounts[pizza.id] = { count: 0, pizza_title: pizza.pizza_title };
+                    pizzaCounts[pizza.id].count += pizza.quantity || 0;
+                  }
+                });
+              });
+              return Object.entries(pizzaCounts)
+                .filter(([id, data]) => data.count > 0)
+                .map(([id, data]) => (
+                  <tr key={id}>
+                    <td colSpan={2}>
+                      <input
+                        type="checkbox"
+                        id={`sleeve-checkbox-${id}`}
+                        // Optionally, add state to track checked/unchecked for sleeves
+                        // checked={!!checkedSleeves[id]}
+                        // onChange={() => handleSleeveCheckboxChange(id)}
+                      />
+                      <label htmlFor={`sleeve-checkbox-${id}`} style={{ marginLeft: 6 }}>
+                        {data.pizza_title} x {data.count}
+                      </label>
+                    </td>
+                  </tr>
+                ));
+            })()}
+          </tbody>
+
+
         </table>
         </div>
         {/* <div className='prepBox'>
