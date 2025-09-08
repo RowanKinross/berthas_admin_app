@@ -436,27 +436,32 @@ return (
                       {batch.pizzas.map((p, idx) => (
                         p.id === pizza.id && p.quantity > 0 ? (
                           <div key={idx} className='container'>
-                            {(() => {
-                              const allocations = (batch.pizza_allocations || [])
-                              const completed = allocations
-                                  .filter(a => a.pizzaId === p.id && a.status === "completed")
-                                  .reduce((sum, a) => sum + a.quantity, 0);
+                          {(() => {
+                            const allocations = (batch.pizza_allocations || []);
+                            // Only include allocations for this pizza AND this batch
+                            const batchAllocations = allocations.filter(
+                              a => a.pizzaId === p.id && a.batch_number === batch.batch_code
+                            );
 
-                                const active = allocations
-                                  .filter(a => a.pizzaId === p.id && a.status !== "completed")
-                                  .reduce((sum, a) => sum + a.quantity, 0);
+                            const completed = batchAllocations
+                              .filter(a => a.status === "completed")
+                              .reduce((sum, a) => sum + a.quantity, 0);
 
-                                const effectiveQuantity = p.quantity - completed;
-                                const available = effectiveQuantity - active;
+                            const active = batchAllocations
+                              .filter(a => a.status !== "completed")
+                              .reduce((sum, a) => sum + a.quantity, 0);
 
-                              return (
-                                <>
-                                  <p>Total: {effectiveQuantity}</p>
-                                  <p>On order: {active}</p>
-                                  <p>Available: {available}</p>
-                                </>
-                              );
-                            })()}
+                            const effectiveQuantity = p.quantity - completed;
+                            const available = effectiveQuantity - active;
+
+                            return (
+                              <>
+                                <p>Total: {effectiveQuantity}</p>
+                                <p>On order: {active}</p>
+                                <p>Available: {available}</p>
+                              </>
+                            );
+                          })()}
                           </div>
                         ) : null
                       ))}
