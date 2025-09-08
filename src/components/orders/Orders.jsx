@@ -156,14 +156,33 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
   if (index === -1) return;
 
+  if (newQuantity === 0) {
+    // Remove batch allocation from local state
+    batches.splice(index, 1);
+    order.pizzas[pizzaId].batchesUsed = batches;
+    setSelectedOrder(order);
+    updateOrderInList(order.id, { pizzas: order.pizzas }); // <-- Add this line
+
+    // Remove allocation from Firestore
+    await removePizzaAllocationFromBatch({ pizzaId, batchCode });
+
+    try {
+      await updateDoc(doc(db, "orders", selectedOrder.id), {
+        [`pizzas.${pizzaId}.batchesUsed`]: batches,
+      });
+    } catch (error) {
+      console.error("Error removing batch allocation in Firestore:", error);
+    }
+
+    validateAndUpdateOrderStatus(order);
+    return;
+  }
+
   // Update the changed batch's quantity
   batches[index].quantity = newQuantity;
   order.pizzas[pizzaId].batchesUsed = batches;
-
-  // ❌ Do NOT update order.pizzas[pizzaId].quantity in split mode!
-  // Just update batchesUsed and sync allocation
-
   setSelectedOrder(order);
+  updateOrderInList(order.id, { pizzas: order.pizzas }); // <-- Add this line
 
   // Update the allocation in the batch
   await syncPizzaAllocation({
@@ -175,7 +194,6 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
   try {
     await updateDoc(doc(db, "orders", selectedOrder.id), {
       [`pizzas.${pizzaId}.batchesUsed`]: batches,
-      // Do NOT update [`pizzas.${pizzaId}.quantity`] here
     });
   } catch (error) {
     console.error("Error updating batch quantities in Firestore:", error);
@@ -183,6 +201,8 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
   validateAndUpdateOrderStatus(order);
 };
+
+
 
 
 const removePizzaAllocationFromBatch = async ({ pizzaId, batchCode }) => {
@@ -475,7 +495,9 @@ const updateDeliveryDate = async (orderId, newDate) => {
     };
 
 
-  const handleBatchClick = async (pizzaName, batchCode) => {
+
+
+const handleBatchClick = async (pizzaName, batchCode) => {
   const currentBatches = [...selectedOrder.pizzas[pizzaName].batchesUsed];
   const index = currentBatches.findIndex(b => b.batch_number === batchCode);
   const totalQty = selectedOrder.pizzas[pizzaName].quantity;
@@ -487,8 +509,9 @@ const updateDeliveryDate = async (orderId, newDate) => {
       newBatches = currentBatches.filter(b => b.batch_number !== batchCode);
       newQuantity = 0;
     } else {
-      newBatches = [...currentBatches, { batch_number: batchCode, quantity: 0 }];
-      newQuantity = 0;
+      // Assign quantity 1 to new batch in split mode
+      newBatches = [...currentBatches, { batch_number: batchCode, quantity: 1 }];
+      newQuantity = 1;
     }
   } else {
     if (index !== -1) {
@@ -769,7 +792,7 @@ const handlePrintClick = () => {
 
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <div style="margin-bottom: 20px;">
-        <strong>Invoice Date:</strong> ${date}<br/>
+        <strong>Delivery Date:</strong> ${date}<br/>
         <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
         <strong>Reference:</strong> PO ${po}
       </div>
@@ -893,7 +916,7 @@ const handleBulkPrintPackingSlips = () => {
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
           <div style="margin-bottom: 20px;">
-            <strong>Invoice Date:</strong> ${date}<br/>
+            <strong>Delivery Date:</strong> ${date}<br/>
             <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
             <strong>Reference:</strong> PO ${po}
           </div>
@@ -944,9 +967,11 @@ const handleBulkPrintPackingSlips = () => {
 
 useEffect(() => {
   if (!selectedOrder) return;
-  // Check if any pizza has more than one batch allocated
+  // Only turn on if any pizza has more than one batch with quantity > 0
   const hasSplit = Object.values(selectedOrder.pizzas || {}).some(
-    pizza => Array.isArray(pizza.batchesUsed) && pizza.batchesUsed.length > 1
+    pizza =>
+      Array.isArray(pizza.batchesUsed) &&
+      pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0).length > 1
   );
   setIsSplitChecked(hasSplit);
 }, [selectedOrder]);
@@ -1276,37 +1301,39 @@ function getPizzaAllocatedTally(pizzaData) {
 
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <div className='flexRow'>
-              <strong className='space'>Delivery Day:</strong>{" "}
-              {editingDeliveryDate ? (
-                <>
-                  <input
-                    type="date"
-                    value={deliveryDateInput}
-                    onChange={(e) => setDeliveryDateInput(e.target.value)}
-                    onBlur={() => {
-                      if (deliveryDateInput) {
-                        updateDeliveryDate(selectedOrder.id, deliveryDateInput);
-                      } else {
-                        setEditingDeliveryDate(false);
-                      }
-                    }}
-                    autoFocus
-                  />
-                </>
-              ) : (
-                <span
-                  className="clickable "
-                  onClick={() => {
-                    setEditingDeliveryDate(true);
-                    setDeliveryDateInput(selectedOrder.delivery_day || '');
+            <strong className='space'>Delivery Day:</strong>{" "}
+            {editingDeliveryDate ? (
+              <>
+                <input
+                  type="date"
+                  value={deliveryDateInput}
+                  onChange={(e) => setDeliveryDateInput(e.target.value)}
+                  onBlur={() => {
+                    if (deliveryDateInput) {
+                      updateDeliveryDate(selectedOrder.id, deliveryDateInput);
+                    } else {
+                      setEditingDeliveryDate(false);
+                    }
                   }}
-                >
-                <div className={`${selectedOrder.delivery_day === 'tbc'? 'tbc' : ''}`}>
-                  {selectedOrder.delivery_day ==='tbc'? 'select day' : formatDeliveryDay(selectedOrder.delivery_day)}
+                  autoFocus
+                />
+              </>
+            ) : (
+              <span
+                className="clickable"
+                onClick={() => {
+                  setEditingDeliveryDate(true);
+                  setDeliveryDateInput(selectedOrder.delivery_day || '');
+                }}
+              >
+                <div className={`${selectedOrder.delivery_day === 'tbc' ? 'tbc' : ''}`}>
+                  {selectedOrder.delivery_day === 'tbc' || !selectedOrder.delivery_day
+                    ? 'select day'
+                    : formatDeliveryDay(selectedOrder.delivery_day)}
                 </div>
-                </span>
-              )}
-            </div>
+              </span>
+            )}
+          </div>
             <div className='split'>
             <strong>Pizzas Ordered:</strong>
               <FontAwesomeIcon

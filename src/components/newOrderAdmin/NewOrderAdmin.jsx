@@ -150,22 +150,25 @@ useEffect(() => {
   }, [pizzaData]);
 
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    if (name === "additionalNotes") {
-      setAdditionalNotes(value);
-    } else {
-      setPizzaQuantities(prevState => {
-        const updatedQuantities = {
-          ...prevState,
-          [name]: parseInt(value, 10)
-        };
-        const total = Object.values(updatedQuantities).reduce((acc, curr) => acc + curr, 0);
-        setTotalPizzas(total);
-        return updatedQuantities;
-      });
-    }
+const handleChange = (event) => {
+  const { name, value } = event.target;
+  if (name === "additionalNotes") {
+    setAdditionalNotes(value);
+  } else {
+    setPizzaQuantities(prevState => {
+      const updatedQuantities = {
+        ...prevState,
+        [name]: value === "" ? "" : parseInt(value, 10)
+      };
+      // Treat "" and NaN as 0 for total
+      const total = Object.values(updatedQuantities)
+        .map(v => (v === "" || isNaN(v)) ? 0 : v)
+        .reduce((acc, curr) => acc + curr, 0);
+      setTotalPizzas(total);
+      return updatedQuantities;
+    });
   }
+}
   
 
   const handleSaveEmail = () => {
