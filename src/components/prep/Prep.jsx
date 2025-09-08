@@ -683,11 +683,11 @@ function Prep() {
             </table>
           )}
         </div> */}
-{/* 
+
          <div className='doughBox'>
           <h2 className='dayTitles'>Dough</h2>
           <DoughCalculator/>
-        </div> */}
+        </div>
 
         </div>
       )}
