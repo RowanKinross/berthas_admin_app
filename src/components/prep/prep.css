@@ -160,7 +160,11 @@
   background: var(--paleGrey);
   padding: 5px;
   display: inline-block;
-  border: 1px solid var(--grey)
+  border: 1px solid var(--dark);
+  border-radius: 3px;
+}
+.sleeveDateRow {
+  text-align: center;
 }
 .prepCheckbox {
   margin: 0 5px 0 20px;

@@ -610,9 +610,9 @@ function Prep() {
                 return (
                   <React.Fragment key={batch.id}>
                     <tr>
-                      <td colSpan={2}>
+                      <td colSpan={2} className='sleeveDateRow'>
                       <div className="sleeveLabel">
-                        {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} – {getBestBefore(batch.batch_date).replace(/\//g, '.')}
+                        {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br></br> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
                       </div>
                       </td>
                     </tr>
@@ -756,7 +756,7 @@ function Prep() {
               value={newPrepItem}
               onChange={e => setNewPrepItem(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleAddPrepItem(); }}
-              placeholder="Add new prep item..."
+              placeholder="Add prep item..."
               style={{ flex: 1, marginRight: 8 }}
             />
             <button onClick={handleAddPrepItem}>Add</button>
