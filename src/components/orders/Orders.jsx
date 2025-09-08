@@ -968,15 +968,29 @@ const handleBulkPrintPackingSlips = () => {
 };
 
 useEffect(() => {
-  if (!selectedOrder) return;
-  // Only turn on if any pizza has more than one batch with quantity > 0
-  const hasSplit = Object.values(selectedOrder.pizzas || {}).some(
-    pizza =>
-      Array.isArray(pizza.batchesUsed) &&
-      pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0).length > 1
-  );
+if (!selectedOrder) return;
+  const hasSplit = Object.values(selectedOrder.pizzas || {}).some(pizza => {
+    if (!Array.isArray(pizza.batchesUsed)) return false;
+    const nonZeroBatches = pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0);
+    // More than one batch: disable
+    if (nonZeroBatches.length > 1) return true;
+    // One batch, but quantity doesn't match ordered: disable
+    if (nonZeroBatches.length === 1 && Number(nonZeroBatches[0].quantity) !== Number(pizza.quantity)) return true;
+    return false;
+  });
   setIsSplitChecked(hasSplit);
 }, [selectedOrder]);
+
+// Add this before your return (
+const isSplitToggleDisabled = selectedOrder && Object.values(selectedOrder.pizzas || {}).some(pizza => {
+  if (!Array.isArray(pizza.batchesUsed)) return false;
+  const nonZeroBatches = pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0);
+  // More than one batch: disable
+  if (nonZeroBatches.length > 1) return true;
+  // One batch, but quantity doesn't match ordered: disable
+  if (nonZeroBatches.length === 1 && Number(nonZeroBatches[0].quantity) !== Number(pizza.quantity)) return true;
+  return false;
+});
 
 function getAllocatedTally(order) {
   if (!order || !order.pizzas) return { allocated: 0, total: 0 };
@@ -1348,13 +1362,8 @@ function getPizzaAllocatedTally(pizzaData) {
               <div
                 style={{ display: "inline-block" }}
                 onClick={e => {
-                  const isDisabled = Object.values(selectedOrder.pizzas || {}).some(
-                    pizza =>
-                      Array.isArray(pizza.batchesUsed) &&
-                      pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0).length > 1
-                  );
-                  if (isDisabled) {
-                    setSplitToggleError("*toggle disabled on already split batches");
+                  if (isSplitToggleDisabled) {
+                    setSplitToggleError("*allocated must match ordered before reverting");
                     e.preventDefault();
                     e.stopPropagation();
                   } else {
@@ -1366,13 +1375,7 @@ function getPizzaAllocatedTally(pizzaData) {
                   <input 
                     type="checkbox"
                     checked={isSplitChecked}
-                    disabled={
-                      Object.values(selectedOrder.pizzas || {}).some(
-                        pizza =>
-                          Array.isArray(pizza.batchesUsed) &&
-                          pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0).length > 1
-                      )
-                    }
+                    disabled={isSplitToggleDisabled}
                     onChange={e => setIsSplitChecked(e.target.checked)}
                   />
                   <span className="slider round"></span>
