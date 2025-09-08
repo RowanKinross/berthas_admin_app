@@ -1015,7 +1015,7 @@ const formatDateDisplay = (dateStr) => {
           )}
         </p>
         <div className="batchActionButtons container center">
-  
+          {userRole !== 'unit' && (
             <button
               type="button"
               className='button draft'
@@ -1028,6 +1028,7 @@ const formatDateDisplay = (dateStr) => {
             >
               Delete batch
             </button>
+          )}
           </div>
         </div>
       )}
