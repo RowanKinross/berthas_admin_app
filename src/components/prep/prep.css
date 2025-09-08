@@ -114,33 +114,19 @@
   box-shadow: 0 0 3px #ffb347aa;
 }
 .result {
-  margin-top: 1.5rem;
-  text-align: center;
-  font-size: 1.2rem;
   font-weight: bold;
-  color: #2e7d32;
-}
-.result span {
-  display: block;
-  font-size: 2rem;
-  margin-top: 0.5rem;
 }
 .dotted-divider {
   border: none;
-  border-top: 1px dotted #aaa;
+  border-top: 1px dotted var(--dark);
   margin: 1rem 0;
 }
 .tray-subtotal {
   text-align: right;
-  font-size: 0.95rem;
-  color: #555;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 .sub-result {
   margin-top: 1rem;
   font-size: 0.95rem;
-  color: #444;
   text-align: left;
 }
 .sub-result p {
@@ -151,12 +137,13 @@
   font-weight: lighter;
 }
 .strong {
-  font-weight: bolder;
+  font-weight: bold;
 }
 .redBlueContainer {
   display: flex;
   justify-content: left;
   align-items: center;
+  font-style: italic;
 }
 .mixBreakdown {
   display: flex;
@@ -169,15 +156,30 @@
   color: blue;
   padding: 2px;
 }
-@media (max-width: 530px) {
-  .mixBreakdown {
-    flex-direction: column;
-  }
+.sleeveLabel {
+  background: var(--paleGrey);
+  padding: 5px;
+  display: inline-block;
+  border: 1px solid var(--dark);
+  border-radius: 3px;
+}
+.sleeveDateRow {
+  text-align: center;
+}
+.prepCheckbox {
+  margin: 0 5px 0 20px;
+}
+.sleeve-strikethrough {
+  text-decoration: line-through;
+}
+.infoIcon {
+  margin-left: 8;
+  cursor: pointer;
+  color: var(--darkLight);
 }
 
-  
 
-    @media (max-width: 1200px) {
+  @media (max-width: 1200px) {
       /* Tablet */
     .prepBox {
       width: 48%;
@@ -186,11 +188,25 @@
   }
   @media (max-width: 900px) {
       /* Mobile */
-    .prepBox {
+    .prepBox, .doughBox{
       width: 100%;
+    }
+    .doughCalcWrapper {
+      flex-direction: column;
+    }
+    .calculatorContainer {
+      width: 98%;
+    }
+    .prepContainers {
+      margin: 0;
+    }
+    .prepCheckbox {
+      margin: 0;
     }
     .prepTable {
       font-size: 12px;
     }
-    
+    .mixBreakdown {
+      flex-direction: column;
+    }
   }

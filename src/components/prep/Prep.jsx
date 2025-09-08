@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../firebase/firebase';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, setDoc, getDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import DoughCalculator from './Dough.jsx';
 
 function getWeekYear(date) {
@@ -75,7 +75,40 @@ function Prep() {
   const [loading, setLoading] = useState(true);
   const [ingredientTotals, setIngredientTotals] = useState([]);
   const [checkedIngredients, setCheckedIngredients] = useState({});
-  const [openNote, setOpenNote] = useState(null); // Add this line
+  const [checkedSleeves, setCheckedSleeves] = useState({});
+  const [openNote, setOpenNote] = useState(null);
+  const [editingBatchCode, setEditingBatchCode] = useState(null); // ingredient name
+  const [editingBatchCodeValue, setEditingBatchCodeValue] = useState('');
+  const [batchCodeSuggestions, setBatchCodeSuggestions] = useState({});
+  const [pizzaCatalog, setPizzaCatalog] = useState([]);
+  const [extraPrep, setExtraPrep] = useState([]);
+  const [newPrepItem, setNewPrepItem] = useState('');
+
+  // Always present static item
+  const staticPrepItem = { text: 'organise freezer', done: false };
+
+  // Load extraPrep from Firestore for this week
+  useEffect(() => {
+    const fetchExtraPrep = async () => {
+      const today = new Date();
+      const { year, week } = getWeekYear(today);
+      const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+      let loaded = [];
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        loaded = data.extraPrep || [];
+      }
+      // Ensure 'organise freezer' is always first
+      if (!loaded.length || loaded[0].text !== staticPrepItem.text) {
+        // If it's missing, add it at the start (preserve checked if present)
+        const found = loaded.find(i => i.text === staticPrepItem.text);
+        const freezerItem = found || staticPrepItem;
+        loaded = [freezerItem, ...loaded.filter(i => i.text !== staticPrepItem.text)];
+      }
+      setExtraPrep(loaded);
+    };
+    fetchExtraPrep();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -89,6 +122,14 @@ function Prep() {
       setLoading(false);
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchPizzaCatalog = async () => {
+      const pizzaSnap = await getDocs(collection(db, "pizzas"));
+      setPizzaCatalog(pizzaSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    };
+    fetchPizzaCatalog();
   }, []);
 
   useEffect(() => {
@@ -201,13 +242,48 @@ function Prep() {
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
 
 
-  // Handler for checkbox toggle
-  const handleCheckboxChange = (name) => {
-    setCheckedIngredients(prev => ({
-      ...prev,
-      [name]: !prev[name]
-    }));
+  // Save checkedIngredients for this week
+  const savePrepStatus = async (checkedIngredients, checkedSleeves) => {
+    const today = new Date();
+    const { year, week } = getWeekYear(today);
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { checkedIngredients, checkedSleeves, year, week },
+      { merge: true }
+    );
   };
+
+  // On checkbox change:
+  const handleCheckboxChange = (name) => {
+    setCheckedIngredients(prev => {
+      const updated = { ...prev, [name]: !prev[name] };
+      savePrepStatus(updated, checkedSleeves);
+      return updated;
+    });
+  };
+
+  const handleSleeveCheckboxChange = (id) => {
+    setCheckedSleeves(prev => {
+      const updated = { ...prev, [id]: !prev[id] };
+      savePrepStatus(checkedIngredients, updated);
+      return updated;
+    });
+  };
+
+  // On mount, load checkedIngredients for this week:
+  useEffect(() => {
+    const fetchChecked = async () => {
+      const today = new Date();
+      const { year, week } = getWeekYear(today);
+      const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setCheckedIngredients(data.checkedIngredients || {});
+        setCheckedSleeves(data.checkedSleeves || {});
+      }
+    };
+    fetchChecked();
+  }, []);
 
   // Returns a comma-separated string of unique batch codes for a given ingredient name
   function getBatchCodesForIngredient(ingredientName) {
@@ -250,6 +326,125 @@ function Prep() {
     };
   }, [openNote]);
 
+  const handleBatchCodeSave = async (ingredientName) => {
+    setEditingBatchCode(null);
+    const newCode = editingBatchCodeValue.trim();
+
+    // Get this week's batches (Sat-Fri)
+    const today = new Date();
+    const { year: thisYear, week: thisWeek } = getWeekYear(today);
+    const weekBatches = batches.filter(batch => {
+      if (!batch.batch_date) return false;
+      const batchDate = new Date(batch.batch_date);
+      const { year, week } = getWeekYear(batchDate);
+      return year === thisYear && week === thisWeek;
+    });
+
+    // Update all batches that use this ingredient
+    for (const batch of weekBatches) {
+      let updated = false;
+      const pizzas = (batch.pizzas || []).map(pizza => {
+        if ((pizza.ingredients || []).includes(ingredientName)) {
+          if (!pizza.ingredientBatchCodes) pizza.ingredientBatchCodes = {};
+          if (newCode === "") {
+            // Remove the property entirely if cleared
+            delete pizza.ingredientBatchCodes[ingredientName];
+          } else {
+            pizza.ingredientBatchCodes[ingredientName] = newCode;
+          }
+          updated = true;
+        }
+        return pizza;
+      });
+      if (updated) {
+        const batchRef = doc(db, "batches", batch.id);
+        await updateDoc(batchRef, { pizzas });
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Collect batch code suggestions from all batches
+    const ingredientCodeMap = {};
+    batches.forEach(batch => {
+      batch.pizzas?.forEach(pizza => {
+        Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+          if (code?.trim()) {
+            if (!ingredientCodeMap[ingredient]) ingredientCodeMap[ingredient] = new Set();
+            ingredientCodeMap[ingredient].add(code.trim());
+          }
+        });
+      });
+    });
+    // Convert sets to arrays for easier use in JSX
+    const mapAsArrays = {};
+    Object.entries(ingredientCodeMap).forEach(([ingredient, codes]) => {
+      mapAsArrays[ingredient] = Array.from(codes);
+    });
+    setBatchCodeSuggestions(mapAsArrays);
+  }, [batches]);
+
+  useEffect(() => {
+    const cleanupOldPrepStatus = async () => {
+      const today = new Date();
+      const { year, week } = getWeekYear(today);
+      const currentDocId = `${year}-W${week}`;
+      const prepStatusSnap = await getDocs(collection(db, "prepStatus"));
+      const deletions = [];
+      prepStatusSnap.forEach(docSnap => {
+        if (docSnap.id !== currentDocId) {
+          deletions.push(deleteDoc(doc(db, "prepStatus", docSnap.id)));
+        }
+      });
+      await Promise.all(deletions);
+    };
+    cleanupOldPrepStatus();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('extraPrep', JSON.stringify(extraPrep));
+  }, [extraPrep]);
+
+  // When saving, always ensure 'organise freezer' is first
+  const saveExtraPrep = async (newList) => {
+    let list = newList;
+    // Ensure 'organise freezer' is always first and unique
+    if (!list.length || list[0].text !== staticPrepItem.text) {
+      const found = list.find(i => i.text === staticPrepItem.text) || staticPrepItem;
+      list = [found, ...list.filter(i => i.text !== staticPrepItem.text)];
+    }
+    setExtraPrep(list);
+    const today = new Date();
+    const { year, week } = getWeekYear(today);
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { extraPrep: list },
+      { merge: true }
+    );
+  };
+
+  const handleAddPrepItem = async () => {
+    if (newPrepItem.trim()) {
+      const newList = [...extraPrep, { text: newPrepItem.trim(), done: false }];
+      await saveExtraPrep(newList);
+      setNewPrepItem('');
+    }
+  };
+
+  const handleTogglePrepItem = async idx => {
+    const newList = extraPrep.map((item, i) =>
+      i === idx ? { ...item, done: !item.done } : item
+    );
+    await saveExtraPrep(newList);
+  };
+
+  const handleRemovePrepItem = async idx => {
+    // Prevent removing the first item ("organise freezer")
+    if (idx === 0) return;
+    const newList = extraPrep.filter((_, i) => i !== idx);
+    await saveExtraPrep(newList);
+  };
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -261,15 +456,16 @@ function Prep() {
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2 className='dayTitles'>Prep Day </h2>
+        <h2 className='dayTitles'>To do</h2>
           <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
         <table className='prepTable'>
           <thead>
             <tr>
-              <th>Ingredients</th>
+              <th>Prep Ingredients:</th>
               <th>Batch Code</th>
             </tr>
           </thead>
+            {/* <p>*Subtract any already prepped in the walk-in</p> */}
           <tbody>
             {ingredientTotals
               .filter(ing => {
@@ -283,25 +479,27 @@ function Prep() {
                     <td>
                       <input
                         type="checkbox"
+                        className='prepCheckbox'
                         id={`checkbox-${ing.name}`}
                         checked={!!checkedIngredients[ing.name]}
                         onChange={() => handleCheckboxChange(ing.name)}
-                      />
+                        />
                       <label
                         htmlFor={`checkbox-${ing.name}`}
                         className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
                         style={{ marginLeft: 6, marginRight: 4 }}
-                      >
+                        >
                         {ing.name} x {ing.unitsNeeded} {ing.unit}
                       </label>
                       {/* Info icon and click handler OUTSIDE the label */}
                       {ingredientData && ingredientData.prep_notes && (
                         <span
-                          style={{ marginLeft: 8, cursor: 'pointer', color: '#007bff' }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setOpenNote(openNote === ing.name ? null : ing.name);
-                          }}
+                        className='infoIcon'
+                        
+                        onClick={e => {
+                          e.stopPropagation();
+                          setOpenNote(openNote === ing.name ? null : ing.name);
+                        }}
                         >
                           <FontAwesomeIcon icon={faCircleInfo} />
                         </span>
@@ -309,13 +507,13 @@ function Prep() {
                       {/* Prep notes popup */}
                       {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
                         <span
-                          style={{
-                            position: 'absolute',
-                            background: '#222',
-                            color: '#fff',
-                            padding: '8px 12px',
-                            borderRadius: 6,
-                            left: 40,
+                        style={{
+                          position: 'absolute',
+                          background: '#222',
+                          color: '#fff',
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          left: 40,
                             zIndex: 10,
                             fontSize: '0.95em',
                             minWidth: 180,
@@ -323,32 +521,249 @@ function Prep() {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                           }}
                           onClick={e => e.stopPropagation()}
-                        >
+                          >
                           {ingredientData.prep_notes}
                         </span>
                       )}
                     </td>
-                    <td>{getBatchCodesForIngredient(ing.name) ? getBatchCodesForIngredient(ing.name) : (<p className='red'>--</p>)}</td>
+                    <td>
+                      {editingBatchCode === ing.name ? (
+                        <>
+                        <input
+                          type="text"
+                          value={editingBatchCodeValue}
+                          list={`batch-code-suggestions-${ing.name}`}
+                          autoFocus
+                          onChange={e => setEditingBatchCodeValue(e.target.value)}
+                          onBlur={() => handleBatchCodeSave(ing.name)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleBatchCodeSave(ing.name);
+                            if (e.key === 'Escape') setEditingBatchCode(null);
+                          }}
+                          style={{ width: 80 }}
+                        />
+                        <datalist id={`batch-code-suggestions-${ing.name}`}>
+                          {(batchCodeSuggestions[ing.name] || [])
+                            .filter(code =>
+                              editingBatchCodeValue
+                                ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
+                                : true
+                            )
+                            .slice(0, 3) // Limit to 3 suggestions
+                            .map(code => (
+                              <option key={code} value={code} />
+                            ))}
+                        </datalist>
+                        </>
+                      ) : (
+                        <span
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          setEditingBatchCode(ing.name);
+                          setEditingBatchCodeValue(getBatchCodesForIngredient(ing.name));
+                        }}
+                        >
+                          {getBatchCodesForIngredient(ing.name) || <span className='red'>--</span>}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
           </tbody>
           <thead>
             <tr>
-              <th>Mixes</th>
+              <th colSpan={2}>Write Sleeves:</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(() => {
+              // Get this week's batches (Sat-Fri)
+              const today = new Date();
+              const { year: thisYear, week: thisWeek } = getWeekYear(today);
+              const weekBatches = batches
+                .filter(batch => {
+                  if (!batch.batch_date) return false;
+                  const batchDate = new Date(batch.batch_date);
+                  const { year, week } = getWeekYear(batchDate);
+                  return year === thisYear && week === thisWeek;
+                })
+                // Sort by batch_date ascending
+                .sort((a, b) => new Date(a.batch_date) - new Date(b.batch_date));
+
+              // Helper to format best before date (9 months from batch date)
+              const getBestBefore = (batchDateStr) => {
+                const batchDate = new Date(batchDateStr);
+                const bestBefore = new Date(batchDate);
+                bestBefore.setMonth(bestBefore.getMonth() + 9);
+                // Adjust for month overflow
+                if (bestBefore.getDate() !== batchDate.getDate()) {
+                  bestBefore.setDate(0);
+                }
+                return bestBefore.toLocaleDateString('en-GB');
+              };
+
+              return weekBatches.map(batch => {
+                // Get all sleeved pizzas in this batch
+                const sleevedPizzas = (batch.pizzas || []).filter(pizza => pizza.sleeve && pizza.quantity > 0);
+                if (sleevedPizzas.length === 0) return null;
+                return (
+                  <React.Fragment key={batch.id}>
+                    <tr>
+                      <td colSpan={2} className='sleeveDateRow'>
+                      <div className="sleeveLabel">
+                        {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br></br> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
+                      </div>
+                      </td>
+                    </tr>
+                    {sleevedPizzas.map(pizza => {
+                      const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
+                      return (
+                        <tr key={pizza.id}>
+                          <td colSpan={2}>
+                            <input
+                              type="checkbox"
+                              className='prepCheckbox'
+                              id={`sleeve-checkbox-${batch.id}-${pizza.id}`}
+                              checked={!!checkedSleeves[`${batch.id}-${pizza.id}`]}
+                              onChange={() => handleSleeveCheckboxChange(`${batch.id}-${pizza.id}`)}
+                              />
+                            <label 
+                            htmlFor={`sleeve-checkbox-${batch.id}-${pizza.id}`} 
+                            className={checkedSleeves[`${batch.id}-${pizza.id}`] ? 'sleeve-strikethrough' : ''}>
+                              {pizza.pizza_title} x {displayCount}
+                            </label>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              });
+            })()}
+          </tbody>
+
+          <thead>
+            <tr>
+              <th>Mixes:</th>
               <th>Batch Code</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>Flour</td>
-              <td>{(getBatchCodesForIngredient("Flour (Caputo Red)"))?(getBatchCodesForIngredient("Flour (Caputo Red)")) : (<p className='red'>--</p>)}</td>
+              <td>
+                {editingBatchCode === "Flour (Caputo Red)" ? (
+                  <input
+                    type="text"
+                    value={editingBatchCodeValue}
+                    autoFocus
+                    onChange={e => setEditingBatchCodeValue(e.target.value)}
+                    onBlur={() => handleBatchCodeSave("Flour (Caputo Red)")}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleBatchCodeSave("Flour (Caputo Red)");
+                      if (e.key === 'Escape') setEditingBatchCode(null);
+                    }}
+                    style={{ width: 80 }}
+                  />
+                ) : (
+                  <span
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setEditingBatchCode("Flour (Caputo Red)");
+                      setEditingBatchCodeValue(getBatchCodesForIngredient("Flour (Caputo Red)"));
+                    }}
+                  >
+                    {getBatchCodesForIngredient("Flour (Caputo Red)") || <span className='red'>--</span>}
+                  </span>
+                )}
+              </td>
             </tr>
             <tr>
               <td>Salt</td>
-              <td>{(getBatchCodesForIngredient("Salt"))?(getBatchCodesForIngredient("Salt")) : (<p className='red'>--</p>)}</td>
+              <td>
+                {editingBatchCode === "Salt" ? (
+                  <input
+                    type="text"
+                    value={editingBatchCodeValue}
+                    autoFocus
+                    onChange={e => setEditingBatchCodeValue(e.target.value)}
+                    onBlur={() => handleBatchCodeSave("Salt")}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleBatchCodeSave("Salt");
+                      if (e.key === 'Escape') setEditingBatchCode(null);
+                    }}
+                    style={{ width: 80 }}
+                  />
+                ) : (
+                  <span
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setEditingBatchCode("Salt");
+                      setEditingBatchCodeValue(getBatchCodesForIngredient("Salt"));
+                    }}
+                  >
+                    {getBatchCodesForIngredient("Salt") || <span className='red'>--</span>}
+                  </span>
+                )}
+              </td>
             </tr>
           </tbody>
+    
+      {/* Extra Prep Checklist */}
+      <div className="extraPrepBox">
+          <th>Other Prep:</th>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {extraPrep.map((item, idx) => (
+              <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => handleTogglePrepItem(idx)}
+                  style={{ marginRight: 8 }}
+                />
+                <span
+                  style={{
+                    textDecoration: item.done ? 'line-through' : 'none',
+                    flex: 1
+                  }}
+                >
+                  {item.text}
+                </span>
+                {/* Only allow remove for non-static items */}
+                {idx !== 0 && (
+                  <button
+                    onClick={() => handleRemovePrepItem(idx)}
+                    style={{
+                      marginLeft: 8,
+                      background: 'none',
+                      border: 'none',
+                      color: '#c00',
+                      cursor: 'pointer',
+                      fontSize: '1.1em'
+                    }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div style={{ display: 'flex', marginTop: 8 }}>
+            <input
+              type="text"
+              value={newPrepItem}
+              onChange={e => setNewPrepItem(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddPrepItem(); }}
+              placeholder="Add prep item..."
+              style={{ flex: 1, marginRight: 8 }}
+            />
+            <button onClick={handleAddPrepItem}>Add</button>
+          </div>
+        </div>
+
+
         </table>
         </div>
         {/* <div className='prepBox'>
@@ -394,14 +809,15 @@ function Prep() {
             </table>
           )}
         </div> */}
-{/* 
+
          <div className='doughBox'>
           <h2 className='dayTitles'>Dough</h2>
           <DoughCalculator/>
-        </div> */}
+        </div>
 
         </div>
       )}
+
     </div>
   );
 }
