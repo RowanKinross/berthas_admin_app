@@ -1301,37 +1301,39 @@ function getPizzaAllocatedTally(pizzaData) {
 
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
             <div className='flexRow'>
-              <strong className='space'>Delivery Day:</strong>{" "}
-              {editingDeliveryDate ? (
-                <>
-                  <input
-                    type="date"
-                    value={deliveryDateInput}
-                    onChange={(e) => setDeliveryDateInput(e.target.value)}
-                    onBlur={() => {
-                      if (deliveryDateInput) {
-                        updateDeliveryDate(selectedOrder.id, deliveryDateInput);
-                      } else {
-                        setEditingDeliveryDate(false);
-                      }
-                    }}
-                    autoFocus
-                  />
-                </>
-              ) : (
-                <span
-                  className="clickable "
-                  onClick={() => {
-                    setEditingDeliveryDate(true);
-                    setDeliveryDateInput(selectedOrder.delivery_day || '');
+            <strong className='space'>Delivery Day:</strong>{" "}
+            {editingDeliveryDate ? (
+              <>
+                <input
+                  type="date"
+                  value={deliveryDateInput}
+                  onChange={(e) => setDeliveryDateInput(e.target.value)}
+                  onBlur={() => {
+                    if (deliveryDateInput) {
+                      updateDeliveryDate(selectedOrder.id, deliveryDateInput);
+                    } else {
+                      setEditingDeliveryDate(false);
+                    }
                   }}
-                >
-                <div className={`${selectedOrder.delivery_day === 'tbc'? 'tbc' : ''}`}>
-                  {selectedOrder.delivery_day ==='tbc'? 'select day' : formatDeliveryDay(selectedOrder.delivery_day)}
+                  autoFocus
+                />
+              </>
+            ) : (
+              <span
+                className="clickable"
+                onClick={() => {
+                  setEditingDeliveryDate(true);
+                  setDeliveryDateInput(selectedOrder.delivery_day || '');
+                }}
+              >
+                <div className={`${selectedOrder.delivery_day === 'tbc' ? 'tbc' : ''}`}>
+                  {selectedOrder.delivery_day === 'tbc' || !selectedOrder.delivery_day
+                    ? 'select day'
+                    : formatDeliveryDay(selectedOrder.delivery_day)}
                 </div>
-                </span>
-              )}
-            </div>
+              </span>
+            )}
+          </div>
             <div className='split'>
             <strong>Pizzas Ordered:</strong>
               <FontAwesomeIcon
