@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../firebase/firebase';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, setDoc, getDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import DoughCalculator from './Dough.jsx';
 
 function getWeekYear(date) {
@@ -204,13 +204,38 @@ function Prep() {
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
 
 
-  // Handler for checkbox toggle
-  const handleCheckboxChange = (name) => {
-    setCheckedIngredients(prev => ({
-      ...prev,
-      [name]: !prev[name]
-    }));
+  // Save checkedIngredients for this week
+  const savePrepStatus = async (checkedIngredients) => {
+    const today = new Date();
+    const { year, week } = getWeekYear(today);
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { checkedIngredients, year, week },
+      { merge: true }
+    );
   };
+
+  // On checkbox change:
+  const handleCheckboxChange = (name) => {
+    setCheckedIngredients(prev => {
+      const updated = { ...prev, [name]: !prev[name] };
+      savePrepStatus(updated);
+      return updated;
+    });
+  };
+
+  // On mount, load checkedIngredients for this week:
+  useEffect(() => {
+    const fetchChecked = async () => {
+      const today = new Date();
+      const { year, week } = getWeekYear(today);
+      const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+      if (docSnap.exists()) {
+        setCheckedIngredients(docSnap.data().checkedIngredients || {});
+      }
+    };
+    fetchChecked();
+  }, []);
 
   // Returns a comma-separated string of unique batch codes for a given ingredient name
   function getBatchCodesForIngredient(ingredientName) {
@@ -310,6 +335,23 @@ function Prep() {
     });
     setBatchCodeSuggestions(mapAsArrays);
   }, [batches]);
+
+  useEffect(() => {
+    const cleanupOldPrepStatus = async () => {
+      const today = new Date();
+      const { year, week } = getWeekYear(today);
+      const currentDocId = `${year}-W${week}`;
+      const prepStatusSnap = await getDocs(collection(db, "prepStatus"));
+      const deletions = [];
+      prepStatusSnap.forEach(docSnap => {
+        if (docSnap.id !== currentDocId) {
+          deletions.push(deleteDoc(doc(db, "prepStatus", docSnap.id)));
+        }
+      });
+      await Promise.all(deletions);
+    };
+    cleanupOldPrepStatus();
+  }, []);
 
   return (
     <div className="prep navContent">
