@@ -992,6 +992,12 @@ const isSplitToggleDisabled = selectedOrder && Object.values(selectedOrder.pizza
   return false;
 });
 
+useEffect(() => {
+  if (!isSplitToggleDisabled) {
+    setSplitToggleError("");
+  }
+}, [isSplitToggleDisabled]);
+
 function getAllocatedTally(order) {
   if (!order || !order.pizzas) return { allocated: 0, total: 0 };
   let allocated = 0;
