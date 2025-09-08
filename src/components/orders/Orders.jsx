@@ -621,6 +621,7 @@ const handleBatchClick = async (pizzaName, batchCode) => {
   const handleOrderClick = useCallback((order) => {
     setSelectedOrder(order);
     setViewModal(true)
+    setSplitToggleError("");
   }, [])
 
   const handleCloseModal = useCallback(() => {
