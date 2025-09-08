@@ -75,7 +75,9 @@ function Prep() {
   const [loading, setLoading] = useState(true);
   const [ingredientTotals, setIngredientTotals] = useState([]);
   const [checkedIngredients, setCheckedIngredients] = useState({});
-  const [openNote, setOpenNote] = useState(null); // Add this line
+  const [openNote, setOpenNote] = useState(null);
+  const [editingBatchCode, setEditingBatchCode] = useState(null); // ingredient name
+  const [editingBatchCodeValue, setEditingBatchCodeValue] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -250,6 +252,43 @@ function Prep() {
     };
   }, [openNote]);
 
+  const handleBatchCodeSave = async (ingredientName) => {
+    setEditingBatchCode(null);
+    const newCode = editingBatchCodeValue.trim();
+
+    // Get this week's batches (Sat-Fri)
+    const today = new Date();
+    const { year: thisYear, week: thisWeek } = getWeekYear(today);
+    const weekBatches = batches.filter(batch => {
+      if (!batch.batch_date) return false;
+      const batchDate = new Date(batch.batch_date);
+      const { year, week } = getWeekYear(batchDate);
+      return year === thisYear && week === thisWeek;
+    });
+
+    // Update all batches that use this ingredient
+    for (const batch of weekBatches) {
+      let updated = false;
+      const pizzas = (batch.pizzas || []).map(pizza => {
+        if ((pizza.ingredients || []).includes(ingredientName)) {
+          if (!pizza.ingredientBatchCodes) pizza.ingredientBatchCodes = {};
+          if (newCode === "") {
+            // Remove the property entirely if cleared
+            delete pizza.ingredientBatchCodes[ingredientName];
+          } else {
+            pizza.ingredientBatchCodes[ingredientName] = newCode;
+          }
+          updated = true;
+        }
+        return pizza;
+      });
+      if (updated) {
+        const batchRef = doc(db, "batches", batch.id);
+        await updateDoc(batchRef, { pizzas });
+      }
+    }
+  };
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -328,7 +367,32 @@ function Prep() {
                         </span>
                       )}
                     </td>
-                    <td>{getBatchCodesForIngredient(ing.name) ? getBatchCodesForIngredient(ing.name) : (<p className='red'>--</p>)}</td>
+                    <td>
+                      {editingBatchCode === ing.name ? (
+                        <input
+                          type="text"
+                          value={editingBatchCodeValue}
+                          autoFocus
+                          onChange={e => setEditingBatchCodeValue(e.target.value)}
+                          onBlur={() => handleBatchCodeSave(ing.name)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleBatchCodeSave(ing.name);
+                            if (e.key === 'Escape') setEditingBatchCode(null);
+                          }}
+                          style={{ width: 80 }}
+                        />
+                      ) : (
+                        <span
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => {
+                            setEditingBatchCode(ing.name);
+                            setEditingBatchCodeValue(getBatchCodesForIngredient(ing.name));
+                          }}
+                        >
+                          {getBatchCodesForIngredient(ing.name) || <span className='red'>--</span>}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
