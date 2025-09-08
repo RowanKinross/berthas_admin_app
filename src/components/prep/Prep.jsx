@@ -78,6 +78,7 @@ function Prep() {
   const [openNote, setOpenNote] = useState(null);
   const [editingBatchCode, setEditingBatchCode] = useState(null); // ingredient name
   const [editingBatchCodeValue, setEditingBatchCodeValue] = useState('');
+  const [batchCodeSuggestions, setBatchCodeSuggestions] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -289,6 +290,27 @@ function Prep() {
     }
   };
 
+  useEffect(() => {
+    // Collect batch code suggestions from all batches
+    const ingredientCodeMap = {};
+    batches.forEach(batch => {
+      batch.pizzas?.forEach(pizza => {
+        Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+          if (code?.trim()) {
+            if (!ingredientCodeMap[ingredient]) ingredientCodeMap[ingredient] = new Set();
+            ingredientCodeMap[ingredient].add(code.trim());
+          }
+        });
+      });
+    });
+    // Convert sets to arrays for easier use in JSX
+    const mapAsArrays = {};
+    Object.entries(ingredientCodeMap).forEach(([ingredient, codes]) => {
+      mapAsArrays[ingredient] = Array.from(codes);
+    });
+    setBatchCodeSuggestions(mapAsArrays);
+  }, [batches]);
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -369,9 +391,11 @@ function Prep() {
                     </td>
                     <td>
                       {editingBatchCode === ing.name ? (
+                        <>
                         <input
                           type="text"
                           value={editingBatchCodeValue}
+                          list={`batch-code-suggestions-${ing.name}`}
                           autoFocus
                           onChange={e => setEditingBatchCodeValue(e.target.value)}
                           onBlur={() => handleBatchCodeSave(ing.name)}
@@ -381,6 +405,19 @@ function Prep() {
                           }}
                           style={{ width: 80 }}
                         />
+                        <datalist id={`batch-code-suggestions-${ing.name}`}>
+                          {(batchCodeSuggestions[ing.name] || [])
+                            .filter(code =>
+                              editingBatchCodeValue
+                                ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
+                                : true
+                            )
+                            .slice(0, 3) // Limit to 3 suggestions
+                            .map(code => (
+                              <option key={code} value={code} />
+                            ))}
+                        </datalist>
+                        </>
                       ) : (
                         <span
                           style={{ cursor: 'pointer' }}
