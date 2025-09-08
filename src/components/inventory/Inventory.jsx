@@ -440,7 +440,7 @@ return (
                             const allocations = (batch.pizza_allocations || []);
                             // Only include allocations for this pizza AND this batch
                             const batchAllocations = allocations.filter(
-                              a => a.pizzaId === p.id && a.batch_number === batch.batch_code
+                              a => a.pizzaId === p.id
                             );
 
                             const completed = batchAllocations
@@ -448,7 +448,7 @@ return (
                               .reduce((sum, a) => sum + a.quantity, 0);
 
                             const active = batchAllocations
-                              .filter(a => a.status !== "completed")
+                              .filter(a => a.status === "incomplete")
                               .reduce((sum, a) => sum + a.quantity, 0);
 
                             const effectiveQuantity = p.quantity - completed;
