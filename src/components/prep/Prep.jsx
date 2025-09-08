@@ -75,6 +75,7 @@ function Prep() {
   const [loading, setLoading] = useState(true);
   const [ingredientTotals, setIngredientTotals] = useState([]);
   const [checkedIngredients, setCheckedIngredients] = useState({});
+  const [checkedSleeves, setCheckedSleeves] = useState({});
   const [openNote, setOpenNote] = useState(null);
   const [editingBatchCode, setEditingBatchCode] = useState(null); // ingredient name
   const [editingBatchCodeValue, setEditingBatchCodeValue] = useState('');
@@ -214,12 +215,12 @@ function Prep() {
 
 
   // Save checkedIngredients for this week
-  const savePrepStatus = async (checkedIngredients) => {
+  const savePrepStatus = async (checkedIngredients, checkedSleeves) => {
     const today = new Date();
     const { year, week } = getWeekYear(today);
     await setDoc(
       doc(db, "prepStatus", `${year}-W${week}`),
-      { checkedIngredients, year, week },
+      { checkedIngredients, checkedSleeves, year, week },
       { merge: true }
     );
   };
@@ -228,7 +229,15 @@ function Prep() {
   const handleCheckboxChange = (name) => {
     setCheckedIngredients(prev => {
       const updated = { ...prev, [name]: !prev[name] };
-      savePrepStatus(updated);
+      savePrepStatus(updated, checkedSleeves);
+      return updated;
+    });
+  };
+
+  const handleSleeveCheckboxChange = (id) => {
+    setCheckedSleeves(prev => {
+      const updated = { ...prev, [id]: !prev[id] };
+      savePrepStatus(checkedIngredients, updated);
       return updated;
     });
   };
@@ -240,7 +249,9 @@ function Prep() {
       const { year, week } = getWeekYear(today);
       const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
       if (docSnap.exists()) {
-        setCheckedIngredients(docSnap.data().checkedIngredients || {});
+        const data = docSnap.data();
+        setCheckedIngredients(data.checkedIngredients || {});
+        setCheckedSleeves(data.checkedSleeves || {});
       }
     };
     fetchChecked();
@@ -579,22 +590,24 @@ function Prep() {
               });
               return Object.entries(pizzaCounts)
                 .filter(([id, data]) => data.count > 0)
-                .map(([id, data]) => (
-                  <tr key={id}>
-                    <td colSpan={2}>
-                      <input
-                        type="checkbox"
-                        id={`sleeve-checkbox-${id}`}
-                        // Optionally, add state to track checked/unchecked for sleeves
-                        // checked={!!checkedSleeves[id]}
-                        // onChange={() => handleSleeveCheckboxChange(id)}
-                      />
-                      <label htmlFor={`sleeve-checkbox-${id}`} style={{ marginLeft: 6 }}>
-                        {data.pizza_title} x {data.count}
-                      </label>
-                    </td>
-                  </tr>
-                ));
+                .map(([id, data]) => {
+                  const displayCount = Math.max(0, data.count - 20);
+                  return (
+                    <tr key={id}>
+                      <td colSpan={2}>
+                        <input
+                          type="checkbox"
+                          id={`sleeve-checkbox-${id}`}
+                          checked={!!checkedSleeves[id]}
+                          onChange={() => handleSleeveCheckboxChange(id)}
+                        />
+                        <label htmlFor={`sleeve-checkbox-${id}`} style={{ marginLeft: 6 }}>
+                          {data.pizza_title} x {displayCount}
+                        </label>
+                      </td>
+                    </tr>
+                  );
+                });
             })()}
           </tbody>
 
