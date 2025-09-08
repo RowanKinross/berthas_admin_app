@@ -177,6 +177,9 @@
   cursor: pointer;
   color: var(--darkLight);
 }
+.doughHeader {
+  font-size: 16px;
+}
 
 
   @media (max-width: 1200px) {
@@ -195,7 +198,7 @@
       flex-direction: column;
     }
     .calculatorContainer {
-      width: 98%;
+      width: 94%;
     }
     .prepContainers {
       margin: 0;
@@ -208,5 +211,8 @@
     }
     .mixBreakdown {
       flex-direction: column;
+    }
+    .sub-result {
+      font-size: 14px;
     }
   }
