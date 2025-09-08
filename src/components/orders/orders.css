@@ -288,7 +288,9 @@ input:checked + .slider:before {
   font-style: italic;
   font-size: 12pt;
 }
-
+.toggleError {
+  text-align: right;
+}
 .button:hover {
   background-color: var(--Marg);
   color: white;
