@@ -792,7 +792,7 @@ const handlePrintClick = () => {
 
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <div style="margin-bottom: 20px;">
-        <strong>Invoice Date:</strong> ${date}<br/>
+        <strong>Delivery Date:</strong> ${date}<br/>
         <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
         <strong>Reference:</strong> PO ${po}
       </div>
@@ -916,7 +916,7 @@ const handleBulkPrintPackingSlips = () => {
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
           <div style="margin-bottom: 20px;">
-            <strong>Invoice Date:</strong> ${date}<br/>
+            <strong>Delivery Date:</strong> ${date}<br/>
             <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
             <strong>Reference:</strong> PO ${po}
           </div>
