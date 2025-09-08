@@ -406,11 +406,61 @@ function Prep() {
           <tbody>
             <tr>
               <td>Flour</td>
-              <td>{(getBatchCodesForIngredient("Flour (Caputo Red)"))?(getBatchCodesForIngredient("Flour (Caputo Red)")) : (<p className='red'>--</p>)}</td>
+              <td>
+                {editingBatchCode === "Flour (Caputo Red)" ? (
+                  <input
+                    type="text"
+                    value={editingBatchCodeValue}
+                    autoFocus
+                    onChange={e => setEditingBatchCodeValue(e.target.value)}
+                    onBlur={() => handleBatchCodeSave("Flour (Caputo Red)")}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleBatchCodeSave("Flour (Caputo Red)");
+                      if (e.key === 'Escape') setEditingBatchCode(null);
+                    }}
+                    style={{ width: 80 }}
+                  />
+                ) : (
+                  <span
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setEditingBatchCode("Flour (Caputo Red)");
+                      setEditingBatchCodeValue(getBatchCodesForIngredient("Flour (Caputo Red)"));
+                    }}
+                  >
+                    {getBatchCodesForIngredient("Flour (Caputo Red)") || <span className='red'>--</span>}
+                  </span>
+                )}
+              </td>
             </tr>
             <tr>
               <td>Salt</td>
-              <td>{(getBatchCodesForIngredient("Salt"))?(getBatchCodesForIngredient("Salt")) : (<p className='red'>--</p>)}</td>
+              <td>
+                {editingBatchCode === "Salt" ? (
+                  <input
+                    type="text"
+                    value={editingBatchCodeValue}
+                    autoFocus
+                    onChange={e => setEditingBatchCodeValue(e.target.value)}
+                    onBlur={() => handleBatchCodeSave("Salt")}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleBatchCodeSave("Salt");
+                      if (e.key === 'Escape') setEditingBatchCode(null);
+                    }}
+                    style={{ width: 80 }}
+                  />
+                ) : (
+                  <span
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setEditingBatchCode("Salt");
+                      setEditingBatchCodeValue(getBatchCodesForIngredient("Salt"));
+                    }}
+                  >
+                    {getBatchCodesForIngredient("Salt") || <span className='red'>--</span>}
+                  </span>
+                )}
+              </td>
             </tr>
           </tbody>
         </table>
