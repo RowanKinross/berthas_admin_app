@@ -81,6 +81,34 @@ function Prep() {
   const [editingBatchCodeValue, setEditingBatchCodeValue] = useState('');
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState({});
   const [pizzaCatalog, setPizzaCatalog] = useState([]);
+  const [extraPrep, setExtraPrep] = useState([]);
+  const [newPrepItem, setNewPrepItem] = useState('');
+
+  // Always present static item
+  const staticPrepItem = { text: 'organise freezer', done: false };
+
+  // Load extraPrep from Firestore for this week
+  useEffect(() => {
+    const fetchExtraPrep = async () => {
+      const today = new Date();
+      const { year, week } = getWeekYear(today);
+      const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+      let loaded = [];
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        loaded = data.extraPrep || [];
+      }
+      // Ensure 'organise freezer' is always first
+      if (!loaded.length || loaded[0].text !== staticPrepItem.text) {
+        // If it's missing, add it at the start (preserve checked if present)
+        const found = loaded.find(i => i.text === staticPrepItem.text);
+        const freezerItem = found || staticPrepItem;
+        loaded = [freezerItem, ...loaded.filter(i => i.text !== staticPrepItem.text)];
+      }
+      setExtraPrep(loaded);
+    };
+    fetchExtraPrep();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -373,6 +401,50 @@ function Prep() {
     cleanupOldPrepStatus();
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('extraPrep', JSON.stringify(extraPrep));
+  }, [extraPrep]);
+
+  // When saving, always ensure 'organise freezer' is first
+  const saveExtraPrep = async (newList) => {
+    let list = newList;
+    // Ensure 'organise freezer' is always first and unique
+    if (!list.length || list[0].text !== staticPrepItem.text) {
+      const found = list.find(i => i.text === staticPrepItem.text) || staticPrepItem;
+      list = [found, ...list.filter(i => i.text !== staticPrepItem.text)];
+    }
+    setExtraPrep(list);
+    const today = new Date();
+    const { year, week } = getWeekYear(today);
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { extraPrep: list },
+      { merge: true }
+    );
+  };
+
+  const handleAddPrepItem = async () => {
+    if (newPrepItem.trim()) {
+      const newList = [...extraPrep, { text: newPrepItem.trim(), done: false }];
+      await saveExtraPrep(newList);
+      setNewPrepItem('');
+    }
+  };
+
+  const handleTogglePrepItem = async idx => {
+    const newList = extraPrep.map((item, i) =>
+      i === idx ? { ...item, done: !item.done } : item
+    );
+    await saveExtraPrep(newList);
+  };
+
+  const handleRemovePrepItem = async idx => {
+    // Prevent removing the first item ("organise freezer")
+    if (idx === 0) return;
+    const newList = extraPrep.filter((_, i) => i !== idx);
+    await saveExtraPrep(newList);
+  };
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -384,12 +456,12 @@ function Prep() {
       ) : (
         <div className='prepContainers'>
         <div className='prepBox'>
-        <h2 className='dayTitles'>To do:</h2>
+        <h2 className='dayTitles'>To do</h2>
           <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
         <table className='prepTable'>
           <thead>
             <tr>
-              <th>Ingredients</th>
+              <th>Prep Ingredients:</th>
               <th>Batch Code</th>
             </tr>
           </thead>
@@ -501,7 +573,7 @@ function Prep() {
           </tbody>
           <thead>
             <tr>
-              <th colSpan={2}>Write Sleeves</th>
+              <th colSpan={2}>Write Sleeves:</th>
             </tr>
           </thead>
           <tbody>
@@ -573,7 +645,7 @@ function Prep() {
 
           <thead>
             <tr>
-              <th>Mixes</th>
+              <th>Mixes:</th>
               <th>Batch Code</th>
             </tr>
           </thead>
@@ -637,6 +709,59 @@ function Prep() {
               </td>
             </tr>
           </tbody>
+    
+      {/* Extra Prep Checklist */}
+      <div className="extraPrepBox">
+          <th>Other Prep:</th>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {extraPrep.map((item, idx) => (
+              <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={item.done}
+                  onChange={() => handleTogglePrepItem(idx)}
+                  style={{ marginRight: 8 }}
+                />
+                <span
+                  style={{
+                    textDecoration: item.done ? 'line-through' : 'none',
+                    flex: 1
+                  }}
+                >
+                  {item.text}
+                </span>
+                {/* Only allow remove for non-static items */}
+                {idx !== 0 && (
+                  <button
+                    onClick={() => handleRemovePrepItem(idx)}
+                    style={{
+                      marginLeft: 8,
+                      background: 'none',
+                      border: 'none',
+                      color: '#c00',
+                      cursor: 'pointer',
+                      fontSize: '1.1em'
+                    }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div style={{ display: 'flex', marginTop: 8 }}>
+            <input
+              type="text"
+              value={newPrepItem}
+              onChange={e => setNewPrepItem(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAddPrepItem(); }}
+              placeholder="Add new prep item..."
+              style={{ flex: 1, marginRight: 8 }}
+            />
+            <button onClick={handleAddPrepItem}>Add</button>
+          </div>
+        </div>
 
 
         </table>
@@ -692,6 +817,7 @@ function Prep() {
 
         </div>
       )}
+
     </div>
   );
 }
