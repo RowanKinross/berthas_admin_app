@@ -297,16 +297,15 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
   return (
     <div className='doughCalcWrapper'>
     <div className="calculatorContainer calcBlue">
-      <h2>Restaurant</h2>
+      <h2 className='doughHeader'>Restaurant:</h2>
       {userRole === 'unit' ? (
         <div className="sub-result">
-          <p>Make on <strong>Tuesday:</strong> {tuesdayMakeAhead} trays</p>
+          <p><strong>Tuesday:</strong></p>
           {mixPlan.length > 0 ? (
             <div className='ul'>
-              <p className='paddingGeneral'>total flour: <strong>{roundedKg}kg</strong></p>
               <div className='mixBreakdown'>
                 <div className='redBlueContainer paddingGeneral'>
-                  <p>mix breakdown: <strong className='paddingGeneral strong'> {mixPlan.join('kg  + ')}kg </strong> </p>
+                  <p>mix: <strong className='paddingGeneral strong'> {mixPlan.join('kg  + ')}kg </strong> </p>
                 </div>  
                 <div className='redBlueContainer paddingGeneral' >
                   <p>- all caputo </p>
@@ -319,12 +318,11 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
               ⚠️ No valid mix plan for {kgNeeded}kg. Try adjusting trays slightly.
             </p>
           )}
-          <p>Make on <strong>Thursday:</strong> {thursdayBatch} trays<br /></p>
+          <p><strong>Thursday:</strong><br /></p>
           <div className='ul'>
-            <p className='paddingGeneral'> total flour: <strong> 30kg</strong></p>
             <div className='mixBreakdown'>
               <div className='redBlueContainer paddingGeneral'>
-                <p>mix breakdown: <strong className='paddingGeneral strong'> 30kg </strong> </p>
+                <p>mix: <strong className='paddingGeneral strong'> 30kg </strong> </p>
               </div>  
               <div className='redBlueContainer paddingGeneral' >
                 <p> - half caputo </p>
@@ -430,18 +428,16 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
       )}
     </div>
     <div className='calculatorContainer calcRed'>
-      <h2>Frozen</h2>
+      <h2 className='doughHeader'>Frozen:</h2>
       {userRole === 'unit' ? (
   <div className="result">
     <div className="sub-result paddingGeneral">
-      <p>Make on <strong>Tuesday:</strong> ~{frozenWith10Percent} dough balls</p>
+      <p><strong>Tuesday:</strong></p>
       <div className='ul'>
-        <p className='paddingGeneral'>total flour: <strong>{frozenPlan.totalFlour}kg</strong></p>
-        <p className='paddingGeneral'> (makes {frozenPlan.totalBalls} dough balls)</p>
         <div className='mixBreakdown'>
           <div className='redBlueContainer paddingGeneral'>
             <p>
-              mix breakdown:
+              mixes:
               <strong className='paddingGeneral strong'>
                 {frozenPlan.plan.map((kg, i) => (
                   <span key={i}>
