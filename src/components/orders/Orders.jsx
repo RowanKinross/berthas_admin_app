@@ -48,6 +48,7 @@ function Orders() {
   const [lastCheckedIndex, setLastCheckedIndex] = useState(null);
   const [packingHtml, setPackingHtml] = useState('');
   const [draftBatchQuantities, setDraftBatchQuantities] = useState({});
+  const [splitToggleError, setSplitToggleError] = useState("");
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -1343,15 +1344,45 @@ function getPizzaAllocatedTally(pizzaData) {
                 style={{ marginLeft: 8 }}
                 onClick={() => setEditQuantities(q => !q)}
               />
-              <label className="switch" title='fulfil with multiple batch codes?'>
-                <input 
-                  type="checkbox"
-                  checked={isSplitChecked}
-                  onChange={(e) => setIsSplitChecked(e.target.checked)}
-                />
-                <span className="slider round"></span>
-              </label>
+              <div
+                style={{ display: "inline-block" }}
+                onClick={e => {
+                  const isDisabled = Object.values(selectedOrder.pizzas || {}).some(
+                    pizza =>
+                      Array.isArray(pizza.batchesUsed) &&
+                      pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0).length > 1
+                  );
+                  if (isDisabled) {
+                    setSplitToggleError("*toggle disabled on already split batches");
+                    e.preventDefault();
+                    e.stopPropagation();
+                  } else {
+                    setSplitToggleError("");
+                  }
+                }}
+              >
+                <label className="switch" title='fulfil with multiple batch codes?'>
+                  <input 
+                    type="checkbox"
+                    checked={isSplitChecked}
+                    disabled={
+                      Object.values(selectedOrder.pizzas || {}).some(
+                        pizza =>
+                          Array.isArray(pizza.batchesUsed) &&
+                          pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0).length > 1
+                      )
+                    }
+                    onChange={e => setIsSplitChecked(e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
             </div>
+              {splitToggleError && (
+                <div className="tbc toggleError">
+                  {splitToggleError}
+                </div>
+              )}
             {Object.entries(selectedOrder.pizzas)
               .sort(([a], [b]) => {
                 const nameA = pizzaTitles[a] || a;
