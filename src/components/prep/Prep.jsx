@@ -406,6 +406,7 @@ function Prep() {
                     <td>
                       <input
                         type="checkbox"
+                        className='prepCheckbox'
                         id={`checkbox-${ing.name}`}
                         checked={!!checkedIngredients[ing.name]}
                         onChange={() => handleCheckboxChange(ing.name)}
@@ -420,7 +421,8 @@ function Prep() {
                       {/* Info icon and click handler OUTSIDE the label */}
                       {ingredientData && ingredientData.prep_notes && (
                         <span
-                          style={{ marginLeft: 8, cursor: 'pointer', color: '#007bff' }}
+                          className='infoIcon'
+                          
                           onClick={e => {
                             e.stopPropagation();
                             setOpenNote(openNote === ing.name ? null : ing.name);
@@ -498,6 +500,78 @@ function Prep() {
           </tbody>
           <thead>
             <tr>
+              <th colSpan={2}>Write Sleeves</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(() => {
+              // Get this week's batches (Sat-Fri)
+              const today = new Date();
+              const { year: thisYear, week: thisWeek } = getWeekYear(today);
+              const weekBatches = batches
+                .filter(batch => {
+                  if (!batch.batch_date) return false;
+                  const batchDate = new Date(batch.batch_date);
+                  const { year, week } = getWeekYear(batchDate);
+                  return year === thisYear && week === thisWeek;
+                })
+                // Sort by batch_date ascending
+                .sort((a, b) => new Date(a.batch_date) - new Date(b.batch_date));
+
+              // Helper to format best before date (9 months from batch date)
+              const getBestBefore = (batchDateStr) => {
+                const batchDate = new Date(batchDateStr);
+                const bestBefore = new Date(batchDate);
+                bestBefore.setMonth(bestBefore.getMonth() + 9);
+                // Adjust for month overflow
+                if (bestBefore.getDate() !== batchDate.getDate()) {
+                  bestBefore.setDate(0);
+                }
+                return bestBefore.toLocaleDateString('en-GB');
+              };
+
+              return weekBatches.map(batch => {
+                // Get all sleeved pizzas in this batch
+                const sleevedPizzas = (batch.pizzas || []).filter(pizza => pizza.sleeve && pizza.quantity > 0);
+                if (sleevedPizzas.length === 0) return null;
+                return (
+                  <React.Fragment key={batch.id}>
+                    <tr>
+                      <td colSpan={2}>
+                      <div className="sleeveLabel">
+                        {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} – {getBestBefore(batch.batch_date).replace(/\//g, '.')}
+                      </div>
+                      </td>
+                    </tr>
+                    {sleevedPizzas.map(pizza => {
+                      const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
+                      return (
+                        <tr key={pizza.id}>
+                          <td colSpan={2}>
+                            <input
+                              type="checkbox"
+                              className='prepCheckbox'
+                              id={`sleeve-checkbox-${batch.id}-${pizza.id}`}
+                              checked={!!checkedSleeves[`${batch.id}-${pizza.id}`]}
+                              onChange={() => handleSleeveCheckboxChange(`${batch.id}-${pizza.id}`)}
+                              />
+                            <label 
+                            htmlFor={`sleeve-checkbox-${batch.id}-${pizza.id}`} 
+                            className={checkedSleeves[`${batch.id}-${pizza.id}`] ? 'sleeve-strikethrough' : ''}>
+                              {pizza.pizza_title} x {displayCount}
+                            </label>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              });
+            })()}
+          </tbody>
+
+          <thead>
+            <tr>
               <th>Mixes</th>
               <th>Batch Code</th>
             </tr>
@@ -561,54 +635,6 @@ function Prep() {
                 )}
               </td>
             </tr>
-          </tbody>
-          <thead>
-            <tr>
-              <th colSpan={2}>Write Sleeves</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(() => {
-              // Get this week's batches (Sat-Fri)
-              const today = new Date();
-              const { year: thisYear, week: thisWeek } = getWeekYear(today);
-              const weekBatches = batches.filter(batch => {
-                if (!batch.batch_date) return false;
-                const batchDate = new Date(batch.batch_date);
-                const { year, week } = getWeekYear(batchDate);
-                return year === thisYear && week === thisWeek;
-              });
-              // Flatten all pizzas and count by pizza name, only if sleeve === true in batch pizza
-              const pizzaCounts = {};
-              weekBatches.forEach(batch => {
-                (batch.pizzas || []).forEach(pizza => {
-                  if (pizza.sleeve) {
-                    if (!pizzaCounts[pizza.id]) pizzaCounts[pizza.id] = { count: 0, pizza_title: pizza.pizza_title };
-                    pizzaCounts[pizza.id].count += pizza.quantity || 0;
-                  }
-                });
-              });
-              return Object.entries(pizzaCounts)
-                .filter(([id, data]) => data.count > 0)
-                .map(([id, data]) => {
-                  const displayCount = Math.max(0, data.count - 20);
-                  return (
-                    <tr key={id}>
-                      <td colSpan={2}>
-                        <input
-                          type="checkbox"
-                          id={`sleeve-checkbox-${id}`}
-                          checked={!!checkedSleeves[id]}
-                          onChange={() => handleSleeveCheckboxChange(id)}
-                        />
-                        <label htmlFor={`sleeve-checkbox-${id}`} style={{ marginLeft: 6 }}>
-                          {data.pizza_title} x {displayCount}
-                        </label>
-                      </td>
-                    </tr>
-                  );
-                });
-            })()}
           </tbody>
 
 

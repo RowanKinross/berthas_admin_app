@@ -169,15 +169,26 @@
   color: blue;
   padding: 2px;
 }
-@media (max-width: 530px) {
-  .mixBreakdown {
-    flex-direction: column;
-  }
+.sleeveLabel {
+  background: var(--paleGrey);
+  padding: 5px;
+  display: inline-block;
+  border: 1px solid var(--grey)
+}
+.prepCheckbox {
+  margin: 0 5px 0 20px;
+}
+.sleeve-strikethrough {
+  text-decoration: line-through;
+}
+.infoIcon {
+  margin-left: 8;
+  cursor: pointer;
+  color: var(--darkLight);
 }
 
-  
 
-    @media (max-width: 1200px) {
+  @media (max-width: 1200px) {
       /* Tablet */
     .prepBox {
       width: 48%;
@@ -189,8 +200,16 @@
     .prepBox {
       width: 100%;
     }
+    .prepContainers {
+      margin: 0;
+    }
+    .prepCheckbox {
+      margin: 0;
+    }
     .prepTable {
       font-size: 12px;
     }
-    
+    .mixBreakdown {
+      flex-direction: column;
+    }
   }
