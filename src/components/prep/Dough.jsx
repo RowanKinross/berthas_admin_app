@@ -30,19 +30,19 @@ const DoughCalculator = () => {
 
   useEffect(() => {
   const loadFromFirestore = async () => {
-    const docRef = doc(db, 'doughPlans', 'currentWeek');
+    const today = new Date();
+    const { year, week } = getWeekYear(today);
+    const docRef = doc(db, 'prepStatus', `${year}-W${week}`);
     const snap = await getDoc(docRef);
 
     if (snap.exists()) {
       const data = snap.data();
-      if (data.projections) setProjections(data.projections);
-      if (data.leftover !== undefined) setLeftover(data.leftover);
-      if (data.updatedAt) setLastEdit(data.updatedAt.toDate());
-
-      // Save original data for comparison later
+      if (data.dough && data.dough.projections) setProjections(data.dough.projections);
+      if (data.dough && data.dough.leftover !== undefined) setLeftover(data.dough.leftover);
+      if (data.dough && data.dough.updatedAt) setLastEdit(data.dough.updatedAt.toDate());
       originalDataRef.current = {
-        projections: data.projections || {},
-        leftover: data.leftover ?? null,
+        projections: data.dough?.projections || {},
+        leftover: data.dough?.leftover ?? null,
       };
     }
   };
@@ -61,13 +61,17 @@ useEffect(() => {
 
     if (!isEqual(currentData, original)) {
       const saveToFirestore = async () => {
-        const docRef = doc(db, 'doughPlans', 'currentWeek');
+        const today = new Date();
+        const { year, week } = getWeekYear(today);
+        const docRef = doc(db, 'prepStatus', `${year}-W${week}`);
         await setDoc(docRef, {
-          ...currentData,
-          updatedAt: serverTimestamp(),
-        });
+          dough: {
+            ...currentData,
+            updatedAt: serverTimestamp(),
+          }
+        }, { merge: true });
         setLastEdit(new Date());
-        originalDataRef.current = currentData; // update the original data
+        originalDataRef.current = currentData;
       };
 
       saveToFirestore();
