@@ -706,7 +706,7 @@ const formatDateDisplay = (dateStr) => {
   
   return (
     <div className='batchCodes navContent'>
-      <h2>BATCH CODES</h2>
+      <h2>BATCHES</h2>
       {/* Only show batch search if not unit and there are batches */}
       {userRole !== 'unit' && filteredBatches.length > 0 && (
         <div className="alignRight">

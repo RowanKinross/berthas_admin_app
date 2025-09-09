@@ -234,7 +234,7 @@ const generateAccountID = ({ name, postcode }) => {
           </NavLink>          
           <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h3 className="navTab">BATCH CODES</h3>
+            <h3 className="navTab">BATCHES</h3>
           </NavLink>
           <NavLink to="/prep" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
