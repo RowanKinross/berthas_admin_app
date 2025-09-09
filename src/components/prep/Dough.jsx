@@ -353,7 +353,7 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
           </div>
 
           <hr className="dotted-divider" />
-          <p><strong>Next Week:</strong></p>
+          <p><strong>Week Ahead:</strong></p>
 
           {/* Dough projections */}
           <div className="inputs-section">
@@ -375,7 +375,7 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
                       Week subtotal: <strong>{currentWeekTotal}</strong> trays
                     </div>
                     <hr className="dotted-divider" />
-                    <p><strong>Following Week:</strong></p>
+                    <p><strong>Next Week:</strong></p>
                   </>
                 )}
               </React.Fragment>
