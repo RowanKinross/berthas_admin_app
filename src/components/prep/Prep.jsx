@@ -462,7 +462,6 @@ function Prep() {
           <thead>
             <tr>
               <th>Prep Ingredients:</th>
-              <th>Batch Code</th>
             </tr>
           </thead>
             {/* <p>*Subtract any already prepped in the walk-in</p> */}
@@ -474,100 +473,108 @@ function Prep() {
               })
               .map(ing => {
                 const ingredientData = ingredients.find(i => i.name === ing.name);
+                const batchCodes = getBatchCodesForIngredient(ing.name);
                 return (
-                  <tr key={ing.name} style={{ position: 'relative' }}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        className='prepCheckbox'
-                        id={`checkbox-${ing.name}`}
-                        checked={!!checkedIngredients[ing.name]}
-                        onChange={() => handleCheckboxChange(ing.name)}
-                        />
-                      <label
-                        htmlFor={`checkbox-${ing.name}`}
-                        className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
-                        style={{ marginLeft: 6, marginRight: 4 }}
-                        >
-                        {ing.name} x {ing.unitsNeeded} {ing.unit}
-                      </label>
-                      {/* Info icon and click handler OUTSIDE the label */}
-                      {ingredientData && ingredientData.prep_notes && (
-                        <span
-                        className='infoIcon'
-                        
-                        onClick={e => {
-                          e.stopPropagation();
-                          setOpenNote(openNote === ing.name ? null : ing.name);
-                        }}
-                        >
-                          <FontAwesomeIcon icon={faCircleInfo} />
-                        </span>
-                      )}
-                      {/* Prep notes popup */}
-                      {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
-                        <span
-                        style={{
-                          position: 'absolute',
-                          background: '#222',
-                          color: '#fff',
-                          padding: '8px 12px',
-                          borderRadius: 6,
-                          left: 40,
-                            zIndex: 10,
-                            fontSize: '0.95em',
-                            minWidth: 180,
-                            maxWidth: 260,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                          }}
-                          onClick={e => e.stopPropagation()}
-                          >
-                          {ingredientData.prep_notes}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      {editingBatchCode === ing.name ? (
-                        <>
+                  <React.Fragment key={ing.name}>
+                    <tr style={{ position: 'relative' }}>
+                      <td>
                         <input
-                          type="text"
-                          value={editingBatchCodeValue}
-                          list={`batch-code-suggestions-${ing.name}`}
-                          autoFocus
-                          onChange={e => setEditingBatchCodeValue(e.target.value)}
-                          onBlur={() => handleBatchCodeSave(ing.name)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') handleBatchCodeSave(ing.name);
-                            if (e.key === 'Escape') setEditingBatchCode(null);
-                          }}
-                          style={{ width: 80 }}
+                          type="checkbox"
+                          className='prepCheckbox'
+                          id={`checkbox-${ing.name}`}
+                          checked={!!checkedIngredients[ing.name]}
+                          onChange={() => handleCheckboxChange(ing.name)}
                         />
-                        <datalist id={`batch-code-suggestions-${ing.name}`}>
-                          {(batchCodeSuggestions[ing.name] || [])
-                            .filter(code =>
-                              editingBatchCodeValue
-                                ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
-                                : true
-                            )
-                            .slice(0, 3) // Limit to 3 suggestions
-                            .map(code => (
-                              <option key={code} value={code} />
-                            ))}
-                        </datalist>
-                        </>
-                      ) : (
-                        <span
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => {
-                          setEditingBatchCode(ing.name);
-                          setEditingBatchCodeValue(getBatchCodesForIngredient(ing.name));
-                        }}
+                        <label
+                          htmlFor={`checkbox-${ing.name}`}
+                          className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
+                          style={{ marginLeft: 6, marginRight: 4 }}
                         >
-                          {getBatchCodesForIngredient(ing.name) || <span className='red'>--</span>}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
+                          {ing.name} x {ing.unitsNeeded} {ing.unit}
+                        </label>
+                        {/* Info icon and click handler OUTSIDE the label */}
+                        {ingredientData && ingredientData.prep_notes && (
+                          <span
+                            className='infoIcon'
+                            onClick={e => {
+                              e.stopPropagation();
+                              setOpenNote(openNote === ing.name ? null : ing.name);
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faCircleInfo} />
+                          </span>
+                        )}
+                        {/* Prep notes popup */}
+                        {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
+                          <span
+                            style={{
+                              position: 'absolute',
+                              background: '#222',
+                              color: '#fff',
+                              padding: '8px 12px',
+                              borderRadius: 6,
+                              left: 40,
+                              zIndex: 10,
+                              fontSize: '0.95em',
+                              minWidth: 180,
+                              maxWidth: 260,
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {ingredientData.prep_notes}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        {/* Empty cell for alignment */}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
+                        {editingBatchCode === ing.name ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editingBatchCodeValue}
+                              list={`batch-code-suggestions-${ing.name}`}
+                              autoFocus
+                              onChange={e => setEditingBatchCodeValue(e.target.value)}
+                              onBlur={() => handleBatchCodeSave(ing.name)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') handleBatchCodeSave(ing.name);
+                                if (e.key === 'Escape') setEditingBatchCode(null);
+                              }}
+                              style={{ width: 80 }}
+                            />
+                            <datalist id={`batch-code-suggestions-${ing.name}`}>
+                              {(batchCodeSuggestions[ing.name] || [])
+                                .filter(code =>
+                                  editingBatchCodeValue
+                                    ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
+                                    : true
+                                )
+                                .slice(0, 3)
+                                .map(code => (
+                                  <option key={code} value={code} />
+                                ))}
+                            </datalist>
+                          </>
+                        ) : (
+                          <span
+                            style={{ cursor: 'pointer', color: '#555' }}
+                            onClick={() => {
+                              setEditingBatchCode(ing.name);
+                              setEditingBatchCodeValue(batchCodes);
+                            }}
+                          >
+                            <strong>Batch Code:</strong>{' '}
+                            {batchCodes || <span className='red'>--</span>}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
           </tbody>
