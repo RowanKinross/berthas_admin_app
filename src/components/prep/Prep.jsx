@@ -446,17 +446,23 @@ function Prep() {
   };
 
   // Get all ingredient names with prep_ahead: false used in this week's batches
-  const nonPrepAheadIngredients = ingredients
-    .filter(ing => ing.prep_ahead === false)
-    .filter(ing => ing.name !== "Flour (Caputo Red)" && ing.name !== "Salt")
-    .filter(ing => {
-      // Only include if used in any pizza in this week's batches
-      const used = batches.some(batch =>
-        (batch.pizzas || []).some(pizza =>
-          (pizza.ingredients || []).includes(ing.name)
-        )
+  const nonPrepAheadIngredients = ingredientTotals
+    .filter(ingTotal => {
+      const ingredientData = ingredients.find(i => i.name === ingTotal.name);
+      return (
+        ingredientData &&
+        ingredientData.prep_ahead === false &&
+        ingTotal.unitsNeeded > 0 &&
+        ingTotal.name !== "Flour (Caputo Red)" &&
+        ingTotal.name !== "Salt"
       );
-      return used;
+    })
+    .map(ingTotal => {
+      // Attach ingredientData for later use if needed
+      return {
+        ...ingTotal,
+        ingredientData: ingredients.find(i => i.name === ingTotal.name)
+      };
     });
 
   return (
@@ -600,43 +606,53 @@ function Prep() {
             </tr>
           </thead>
           <tbody>
-            {["Flour (Caputo Red)", "Salt"].map((ingredient) => (
-              <React.Fragment key={ingredient}>
-                <tr>
-                  <td colSpan={2}>{ingredient}</td>
-                </tr>
-                <tr>
-                  <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
-                    {editingBatchCode === ingredient ? (
-                      <input
-                        type="text"
-                        value={editingBatchCodeValue}
-                        autoFocus
-                        onChange={e => setEditingBatchCodeValue(e.target.value)}
-                        onBlur={() => handleBatchCodeSave(ingredient)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleBatchCodeSave(ingredient);
-                          if (e.key === 'Escape') setEditingBatchCode(null);
-                        }}
-                        style={{ width: 80 }}
-                      />
-                    ) : (
-                      <span
-                        style={{ cursor: 'pointer', color: '#555' }}
-                        onClick={() => {
-                          setEditingBatchCode(ingredient);
-                          setEditingBatchCodeValue(getBatchCodesForIngredient(ingredient));
-                        }}
-                        className="batchCode"
-                      >
-                        <strong>Batch Code:</strong>{' '}
-                        {getBatchCodesForIngredient(ingredient) || <span className='red'>--</span>}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              </React.Fragment>
-            ))}
+            {["Flour (Caputo Red)", "Salt"].map((ingredient) => {
+              // Find totals for this ingredient
+              const total = ingredientTotals.find(i => i.name === ingredient);
+              const batchCodes = getBatchCodesForIngredient(ingredient);
+              return (
+                <React.Fragment key={ingredient}>
+                  <tr>
+                    <td colSpan={2}>
+                      {ingredient}
+                      {total && typeof total.unitsNeeded === 'number' && total.unit && (
+                        <> x {total.unitsNeeded} {total.unit}</>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
+                      {editingBatchCode === ingredient ? (
+                        <input
+                          type="text"
+                          value={editingBatchCodeValue}
+                          autoFocus
+                          onChange={e => setEditingBatchCodeValue(e.target.value)}
+                          onBlur={() => handleBatchCodeSave(ingredient)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleBatchCodeSave(ingredient);
+                            if (e.key === 'Escape') setEditingBatchCode(null);
+                          }}
+                          style={{ width: 80 }}
+                        />
+                      ) : (
+                        <span
+                          style={{ cursor: 'pointer', color: '#555' }}
+                          onClick={() => {
+                            setEditingBatchCode(ingredient);
+                            setEditingBatchCodeValue(batchCodes);
+                          }}
+                          className="batchCode"
+                        >
+                          <strong>Batch Code:</strong>{' '}
+                          {batchCodes || <span className='red'>--</span>}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
 
             {/* Render all non-prep-ahead ingredients used this week */}
             {nonPrepAheadIngredients.map(ing => {
@@ -644,7 +660,12 @@ function Prep() {
               return (
                 <React.Fragment key={ing.name}>
                   <tr>
-                    <td colSpan={2}>{ing.name}</td>
+                    <td colSpan={2}>
+                      {ing.name}
+                      {typeof ing.unitsNeeded === 'number' && ing.unit && (
+                        <> x {ing.unitsNeeded} {ing.unit}</>
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
