@@ -588,7 +588,7 @@ function Prep() {
                               setEditingBatchCodeValue(batchCodes);
                             }}
                           >
-                            <strong>Batch Code:</strong>{' '}
+                            <strong>#</strong>{' '}
                             {batchCodes || <span className='red'>--</span>}
                           </span>
                         )}
@@ -644,7 +644,7 @@ function Prep() {
                           }}
                           className="batchCode"
                         >
-                          <strong>Batch Code:</strong>{' '}
+                          <strong>#</strong>{' '}
                           {batchCodes || <span className='red'>--</span>}
                         </span>
                       )}
@@ -691,7 +691,7 @@ function Prep() {
                           }}
                           className="batchCode"
                         >
-                          <strong>Batch Code:</strong>{' '}
+                          <strong>#</strong>{' '}
                           {batchCodes || <span className='red'>--</span>}
                         </span>
                       )}
@@ -703,7 +703,7 @@ function Prep() {
           </tbody>
 
 
-                    <thead>
+          <thead>
             <tr>
               <th colSpan={2}>Write Sleeves:</th>
             </tr>
@@ -776,7 +776,7 @@ function Prep() {
           </tbody>
     
       {/* Extra Prep Checklist */}
-      <div className="extraPrepBox">
+      <div >
           <th>Other Prep:</th>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {extraPrep.map((item, idx) => (

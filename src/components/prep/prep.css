@@ -38,6 +38,10 @@
   .prepTable {
     margin: 5%;
   }
+  .prepTable th {
+  border-top: 1px solid #ccc;
+  padding: 20px 0
+}
   .dayTitles {
     margin: 3% 3% 0 3%;
     text-align: center;
