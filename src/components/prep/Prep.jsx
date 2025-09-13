@@ -85,6 +85,10 @@ function Prep() {
   // Always present static item
   const staticPrepItem = { text: 'organise freezer', done: false };
 
+
+
+
+  
   // --- Week navigation handlers ---
   const goToPrevWeek = () => {
     let { year, week } = selectedYearWeek;
@@ -108,26 +112,24 @@ function Prep() {
   };
 
   // --- Date helpers for selected week ---
-  const mondayDate = (() => {
-    // Find the Monday for the selected week
-    const d = new Date();
-    d.setFullYear(selectedYearWeek.year);
-    // Find the first Saturday of the year
-    const jan1 = new Date(selectedYearWeek.year, 0, 1);
-    const jan1Day = jan1.getDay();
-    const firstSaturday =
-      jan1Day === 6
-        ? jan1
-        : new Date(jan1.setDate(jan1.getDate() + ((6 - jan1Day + 7) % 7)));
-    // Get the Saturday for this week
-    const saturday = new Date(firstSaturday);
-    saturday.setDate(firstSaturday.getDate() + (selectedYearWeek.week - 1) * 7);
-    // Monday is 2 days after Saturday
-    const monday = new Date(saturday);
-    monday.setDate(saturday.getDate() + 2);
-    return monday;
-  })();
-  const tuesdayDate = getRelativeWeekdayDate(mondayDate, 2);
+const mondayDate = (() => {
+  // Find the first Saturday of the year (without mutating jan1)
+  const jan1 = new Date(selectedYearWeek.year, 0, 1);
+  const jan1Day = jan1.getDay();
+  const daysToSaturday = (6 - jan1Day + 7) % 7;
+  const firstSaturday = new Date(selectedYearWeek.year, 0, 1 + daysToSaturday);
+
+  // Get the Saturday for this week
+  const saturday = new Date(firstSaturday);
+  saturday.setDate(firstSaturday.getDate() + (selectedYearWeek.week) * 7);
+
+  // Monday is 2 days after Saturday
+  const monday = new Date(saturday);
+  monday.setDate(saturday.getDate() + 2);
+  return monday;
+})();
+const tuesdayDate = new Date(mondayDate);
+tuesdayDate.setDate(mondayDate.getDate() + 1);
   const wednesdayDate = getRelativeWeekdayDate(mondayDate, 3);
   const thursdayDate = getRelativeWeekdayDate(mondayDate, 4);
 
