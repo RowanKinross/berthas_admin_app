@@ -1744,4 +1744,21 @@ function getPizzaAllocatedTally(pizzaData) {
   )
 }
 
+function cleanEmptyBatchAllocations(order) {
+  const updatedOrder = { ...order, pizzas: { ...order.pizzas } };
+  let changed = false;
+  Object.entries(updatedOrder.pizzas).forEach(([pizzaName, pizzaData]) => {
+    if (Array.isArray(pizzaData.batchesUsed)) {
+      const filtered = pizzaData.batchesUsed.filter(
+        b => b.batch_number && b.quantity > 0
+      );
+      if (filtered.length !== pizzaData.batchesUsed.length) {
+        updatedOrder.pizzas[pizzaName] = { ...pizzaData, batchesUsed: filtered };
+        changed = true;
+      }
+    }
+  });
+  return changed ? updatedOrder : order;
+}
+
 export default Orders;
