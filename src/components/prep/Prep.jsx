@@ -40,19 +40,7 @@ function getOrdinalDay(date) {
     default: return day + 'th';
   }
 }
-function getCurrentOrNextMonday(date = new Date()) {
-  const day = date.getDay();
-  const monday = new Date(date);
-  if (day === 6) {
-    monday.setDate(date.getDate() + 2);
-  } else if (day === 0) {
-    monday.setDate(date.getDate() + 1);
-  } else {
-    monday.setDate(date.getDate() - (day - 1));
-  }
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
+
 function getRelativeWeekdayDate(monday, weekday) {
   const date = new Date(monday);
   date.setDate(monday.getDate() + (weekday - 1));
@@ -718,7 +706,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
             </table>
             {/* Extra Prep Checklist */}
             <div className='prepTable'>
-              <th>Other Prep:</th>
+              <p><strong>Other Prep:</strong></p>
               <ul style={{ listStyle: 'none', padding: 0 }}>
                 {extraPrep.map((item, idx) => (
                   <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
@@ -770,7 +758,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
           </div>
           <div className='doughBox'>
             <h2 className='dayTitles'>Dough</h2>
-            <DoughCalculator selectedYearWeek={selectedYearWeek} />
+            <DoughCalculator selectedYearWeek={selectedYearWeek} getWeekYear={getWeekYear} />
           </div>
         </div>
       )}
