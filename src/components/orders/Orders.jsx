@@ -4,10 +4,10 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt, faTrash, faSort} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
-import { onSnapshot } from 'firebase/firestore';
+import { onSnapshot, deleteField } from 'firebase/firestore';
 import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -48,7 +48,14 @@ function Orders() {
   const [lastCheckedIndex, setLastCheckedIndex] = useState(null);
   const [packingHtml, setPackingHtml] = useState('');
   const [draftBatchQuantities, setDraftBatchQuantities] = useState({});
+  const [pizzaCatalog, setPizzaCatalog] = useState([]);
+  
+  // split toggle
   const [splitToggleError, setSplitToggleError] = useState("");
+  const [showSplitHint, setShowSplitHint] = useState(true);
+  
+  // edit qty hint
+  const [showEditQtyHint, setShowEditQtyHint] = useState(true);
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -86,6 +93,30 @@ useEffect(() => {
   };
 
   fetchAllCustomers();
+}, []);
+
+
+
+useEffect(() => {
+  const fetchPizzaCatalog = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "pizzas"));
+      const catalog = [];
+      const titlesMap = {};
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.id && data.pizza_title) {
+          titlesMap[data.id] = data.pizza_title;
+          catalog.push(data);
+        }
+      });
+      setPizzaTitles(titlesMap);
+      setPizzaCatalog(catalog);
+    } catch (error) {
+      console.error("Error fetching pizza catalog:", error);
+    }
+  };
+  fetchPizzaCatalog();
 }, []);
 
 
@@ -991,7 +1022,7 @@ if (!selectedOrder) return;
   setIsSplitChecked(hasSplit);
 }, [selectedOrder]);
 
-// Add this before your return (
+
 const isSplitToggleDisabled = selectedOrder && Object.values(selectedOrder.pizzas || {}).some(pizza => {
   if (!Array.isArray(pizza.batchesUsed)) return false;
   const nonZeroBatches = pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0);
@@ -1030,6 +1061,12 @@ function getPizzaAllocatedTally(pizzaData) {
   }
   return { allocated, total };
 }
+
+
+
+  const customerDefaultView = selectedOrder
+  ? allCustomers[selectedOrder.account_ID]?.default_pizza_view || null
+  : null;
 
   return (
   <div className='orders navContent'>
@@ -1368,13 +1405,27 @@ function getPizzaAllocatedTally(pizzaData) {
           </div>
             <div className='split'>
             <strong>Pizzas Ordered:</strong>
+            <div 
+              className='button pencil clickable'
+              title="edit order quantities"
+              onClick={() =>{
+                setEditQuantities(q => !q)
+                setShowEditQtyHint(false);
+              }}>
               <FontAwesomeIcon
                 icon={faPencilAlt}
-                className="icon clickable"
-                title="Edit quantities"
-                style={{ marginLeft: 8 }}
-                onClick={() => setEditQuantities(q => !q)}
+                className="icon"
               />
+            </div>
+            {showEditQtyHint && (
+              <div className='editOrderQtyContainer'>
+                <FontAwesomeIcon
+                    icon={faArrowLeft}
+                    className='orderQtyHintArrow'
+                />
+                <p className='orderQtyHint'>edit ordered quantities</p>
+              </div>
+            )}
               <div
                 style={{ display: "inline-block" }}
                 onClick={e => {
@@ -1392,7 +1443,12 @@ function getPizzaAllocatedTally(pizzaData) {
                     type="checkbox"
                     checked={isSplitChecked}
                     disabled={isSplitToggleDisabled}
-                    onChange={e => setIsSplitChecked(e.target.checked)}
+                    onChange={e => {
+                      setIsSplitChecked(e.target.checked);
+                      if (showSplitHint) {
+                        setShowSplitHint(false);
+                      }
+                    }}
                   />
                   <span className="slider round"></span>
                 </label>
@@ -1403,7 +1459,22 @@ function getPizzaAllocatedTally(pizzaData) {
                   {splitToggleError}
                 </div>
               )}
+
+              {showSplitHint && (
+                <div className="split-hint-container">
+                  <div className="split-hint-tooltip">
+                    Toggle to fulfill with multiple batch codes
+                  </div>
+                  <FontAwesomeIcon
+                    icon={faArrowTurnUp}
+                    className='split-hint-arrow'
+                  />
+                </div>
+              )}
+
+
             {Object.entries(selectedOrder.pizzas)
+              .filter(([_, pizzaData]) => pizzaData.quantity > 0)
               .sort(([a], [b]) => {
                 const nameA = pizzaTitles[a] || a;
                 const nameB = pizzaTitles[b] || b;
@@ -1414,6 +1485,7 @@ function getPizzaAllocatedTally(pizzaData) {
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
                 <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
+                <p>allocated {getPizzaAllocatedTally(pizzaData).allocated} / </p>
                 {editQuantities ? (
                   <input
                     type="number"
@@ -1464,13 +1536,13 @@ function getPizzaAllocatedTally(pizzaData) {
                     style={{ width: 60 }}
                   />
                 ) : (
-                  <p>allocated {getPizzaAllocatedTally(pizzaData).allocated}/{pizzaData.quantity}
+                  <p>{pizzaData.quantity}
                   </p>
                 )}
               </div>    
               {(() => {
                 const totalOrdered = pizzaData.quantity;
-                const batchesUsed = pizzaData.batchesUsed;
+                const batchesUsed = pizzaData.batchesUsed || [];
                 const selectedBatches = batchesUsed.filter(b => b.batch_number);
                 const totalAssigned = selectedBatches.reduce((sum, b) => sum + (b.quantity || 0), 0);
                 let errorType = null;
@@ -1516,11 +1588,11 @@ function getPizzaAllocatedTally(pizzaData) {
                 })
                 .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
                 .map((batch, i) => {
-                  const isSelected = pizzaData.batchesUsed.some(b => b.batch_number === batch.batch_code);
-                  const selectedBatch = pizzaData.batchesUsed.find(b => b.batch_number === batch.batch_code);
+                  const isSelected = (pizzaData.batchesUsed || []).some(b => b.batch_number === batch.batch_code);
+                  const selectedBatch = (pizzaData.batchesUsed || []).find(b => b.batch_number === batch.batch_code);
                   const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
                   const quantity = selectedBatch?.quantity || 0;
-                  const hasSelection = pizzaData.batchesUsed.some(b => !!b.batch_number);
+                  const hasSelection = (pizzaData.batchesUsed || []).some(b => !!b.batch_number);
 
                   return (
                     <div
@@ -1574,80 +1646,86 @@ function getPizzaAllocatedTally(pizzaData) {
 
             </div>
           ))}
-          {editQuantities && (() => {
-            //pizza IDs for customer's default view
-            const allPossiblePizzas = Object.keys(pizzaTitles).filter(id => {
-              if (customerInfo?.default_pizza_view === "withSleeve") return id.endsWith("1");
-              if (customerInfo?.default_pizza_view === "noSleeve") return id.endsWith("0");
-              return true;
-            });
-            const pizzasInOrder = Object.keys(selectedOrder.pizzas);
-            const missingPizzas = allPossiblePizzas.filter(id => !pizzasInOrder.includes(id));
-
-            if (missingPizzas.length === 0) return null;
-            return (
-              <div className="missingPizzas">
-                {missingPizzas.map((pizzaId) => (
-                  <div key={pizzaId} className="flexRow">
-                    <p className="space">{pizzaTitles[pizzaId] || pizzaId}:</p>
+          {editQuantities && (
+            pizzaCatalog
+            .filter(pizza => {
+            // Only show pizzas not already in the order
+                if (selectedOrder.pizzas[pizza.id] && selectedOrder.pizzas[pizza.id].quantity) return false;
+                // Only show pizzas matching the customer's default view
+                if (customerDefaultView === "withSleeve" && !pizza.sleeve) return false;
+                if (customerDefaultView === "withoutSleeve" && pizza.sleeve) return false;
+                // If 'all', show all pizzas
+                return true;
+              })
+              .map(pizza => {
+                const pizzaId = pizza.id;
+                const pizzaData = selectedOrder.pizzas[pizzaId] || {};
+                return (
+                  <div key={pizzaId} className='flexRow'>
+                    <p className='space'>{pizzaTitles[pizzaId] || pizzaId}:</p>
                     <input
                       type="number"
                       min={0}
-                      value={0}
-                      onChange={async (e) => {
-                        const newQty = parseInt(e.target.value, 10) || 0;
-                        if (!pizzaData.original_quantity) {
+                      value={draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0}
+                      onChange={e => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        setDraftQuantities(prev => ({ ...prev, [pizzaId]: val }));
+                      }}
+                      onBlur={async () => {
+                        const newQty = draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0;
+                        if (newQty > 0) {
+                          // Add or update pizza in Firestore
                           await updateDoc(doc(db, "orders", selectedOrder.id), {
-                            [`pizzas.${pizzaName}.original_quantity`]: pizzaData.quantity,
+                            [`pizzas.${pizzaId}.quantity`]: newQty,
+                            pizzaTotal: calculatePizzaTotal({
+                              ...selectedOrder.pizzas,
+                              [pizzaId]: { ...pizzaData, quantity: newQty }
+                            }),
+                          });
+                          setSelectedOrder(prev => ({
+                            ...prev,
+                            pizzas: {
+                              ...prev.pizzas,
+                              [pizzaId]: {
+                                ...prev.pizzas[pizzaId],
+                                quantity: newQty,
+                              }
+                            },
+                            pizzaTotal: calculatePizzaTotal({
+                              ...prev.pizzas,
+                              [pizzaId]: { ...prev.pizzas[pizzaId], quantity: newQty }
+                            }),
+                          }));
+                        } else {
+                          // Remove pizza from Firestore and local state if set to 0
+                          await updateDoc(doc(db, "orders", selectedOrder.id), {
+                            [`pizzas.${pizzaId}`]: deleteField(),
+                            pizzaTotal: calculatePizzaTotal(
+                              Object.fromEntries(
+                                Object.entries(selectedOrder.pizzas).filter(([id]) => id !== pizzaId)
+                              )
+                            ),
+                          });
+                          setSelectedOrder(prev => {
+                            const newPizzas = { ...prev.pizzas };
+                            delete newPizzas[pizzaId];
+                            return {
+                              ...prev,
+                              pizzas: newPizzas,
+                              pizzaTotal: calculatePizzaTotal(newPizzas),
+                            };
                           });
                         }
-                        const updatedPizzas = {
-                          ...selectedOrder.pizzas,
-                          [pizzaName]: {
-                            ...selectedOrder.pizzas[pizzaName],
-                            quantity: newQty,
-                            original_quantity: pizzaData.original_quantity || pizzaData.quantity,
-                          }
-                        };
-                        const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
-                        await updateDoc(doc(db, "orders", selectedOrder.id), {
-                          [`pizzas.${pizzaName}.quantity`]: newQty,
-                          pizzaTotal: newPizzaTotal,
-                        });
-                        // Update local state
-                        setSelectedOrder(prev => ({
-                          ...prev,
-                          pizzas: {
-                            ...prev.pizzas,
-                            [pizzaName]: {
-                              ...prev.pizzas[pizzaName],
-                              quantity: newQty,
-                              original_quantity: prev.pizzas[pizzaName].original_quantity || prev.pizzas[pizzaName].quantity,
-                            }
-                          },
-                          pizzaTotal: newPizzaTotal,
-                        }));
-
-                        // --- Sync allocation(s) ---
-                        const batchesUsed = pizzaData.batchesUsed || [];
-                        if (batchesUsed.length > 0) {
-                          for (const batch of batchesUsed) {
-                            await syncPizzaAllocation({
-                              pizzaId: pizzaName,
-                              batchCode: batch.batch_number,
-                              quantity: isSplitChecked ? batch.quantity : newQty
-                            });
-                          }
-                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") e.target.blur();
                       }}
                       style={{ width: 60 }}
                     />
                   </div>
-                ))}
-              </div>
-            );
-          })()}
-
+                );
+              })
+          )}
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
@@ -1742,6 +1820,23 @@ function getPizzaAllocatedTally(pizzaData) {
       )}
   </div>
   )
+}
+
+function cleanEmptyBatchAllocations(order) {
+  const updatedOrder = { ...order, pizzas: { ...order.pizzas } };
+  let changed = false;
+  Object.entries(updatedOrder.pizzas).forEach(([pizzaName, pizzaData]) => {
+    if (Array.isArray(pizzaData.batchesUsed)) {
+      const filtered = pizzaData.batchesUsed.filter(
+        b => b.batch_number && b.quantity > 0
+      );
+      if (filtered.length !== pizzaData.batchesUsed.length) {
+        updatedOrder.pizzas[pizzaName] = { ...pizzaData, batchesUsed: filtered };
+        changed = true;
+      }
+    }
+  });
+  return changed ? updatedOrder : order;
 }
 
 export default Orders;

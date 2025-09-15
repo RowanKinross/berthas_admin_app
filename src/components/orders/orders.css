@@ -246,6 +246,42 @@ input:checked + .slider:before {
   margin-bottom: 8px;
 }
 
+
+/* Split toggle hint*/
+.split-hint-container {
+  position: relative;
+}
+.split-hint-arrow {
+  position: absolute;
+  right: 20px;
+  top: 0px;
+  z-index: 10;
+}
+.split-hint-tooltip {
+  font-size: 12px;
+  position: relative;
+  text-align: right;
+  right: 38px;
+  top: 3px;
+}
+
+/* order quantities edit hint */
+.editOrderQtyContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+}
+.orderQtyHint {
+  font-size: 12px !important;
+  padding: 2px;
+}
+.orderQtyHintArrow {
+  font-size: 16px !important;
+}
+
+
+
 .batchButtonContainer {
   display: flex;
   flex-wrap: wrap;
@@ -304,6 +340,14 @@ input:checked + .slider:before {
 .displayAddress, .pizzasOrdered {
   padding-left: 20px;
 }
+
+.pencil {
+  padding: 3px 6px;
+  margin-left: 10px;
+}
+
+
+
 
 
 @media (max-width: 530px) {

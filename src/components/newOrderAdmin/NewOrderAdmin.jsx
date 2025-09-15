@@ -292,9 +292,7 @@ const handleSubmit = async (event) => {
     if (quantityRequired > 0) {
       acc[pizza.id] = {
         quantity: quantityRequired,
-        batchesUsed: [{ 
-          quantity: quantityRequired, 
-          batch_number: null }],
+        batchesUsed: [],
       };
     }
     return acc;
