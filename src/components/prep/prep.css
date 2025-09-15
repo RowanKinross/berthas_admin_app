@@ -57,6 +57,9 @@
     font-weight: bold;
     margin: 0;
   }
+  .sleeveContainer {
+    display: flex;
+  }
 
 
 
@@ -179,9 +182,6 @@
   border: 1px solid var(--dark);
   border-radius: 3px;
 }
-.sleeveDateRow {
-  text-align: center;
-}
 .prepCheckbox {
   margin: 0 5px 0 20px;
 }
@@ -195,6 +195,10 @@
 }
 .doughHeader {
   font-size: 16px;
+}
+.betweenDates {
+  margin: 2px;
+  text-align: center;
 }
 
 

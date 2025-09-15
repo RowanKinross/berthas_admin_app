@@ -669,19 +669,18 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                     if (sleevedPizzas.length === 0) return null;
                     return (
                       <React.Fragment key={batch.id}>
-                        <tr>
-                          <td colSpan={2} className='sleeveDateRow'>
-                            <div className="sleeveLabel">
-                              {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
-
-                            </div>
-                          </td>
-                        </tr>
+                        <div  className='sleeveContainer'>
+                        <div>
+                          <div className="sleeveLabel">
+                            {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
+                          </div>
+                        </div>
+                        <div>
                         {sleevedPizzas.map(pizza => {
                           const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
                           return (
                             <tr key={pizza.id}>
-                              <td colSpan={2}>
+                              <td >
                                 <input
                                   type="checkbox"
                                   className='prepCheckbox'
@@ -698,6 +697,9 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                             </tr>
                           );
                         })}
+                        </div>
+                        </div>
+                        <div className='betweenDates'>. . .</div>
                       </React.Fragment>
                     );
                   });
