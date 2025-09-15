@@ -18,6 +18,8 @@ const DoughCalculator = () => {
   const [lastEdit, setLastEdit] = useState(null);
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
   const [thursdayMixSize, setThursdayMixSize] = useState(30); // default 30kg
+  const [loaded, setLoaded] = useState(false);
+
 
   // Calculations
   const currentWeekKeys = ['wed', 'thurs', 'fri', 'sat', 'sun'];
@@ -49,12 +51,15 @@ const DoughCalculator = () => {
         thursdayMixSize: data.dough?.thursdayMixSize ?? 30,
       };
     }
+    setLoaded(true);
   };
 
   loadFromFirestore();
 }, []);
 
 useEffect(() => {
+   if (!loaded) return;
+
   const timeout = setTimeout(() => {
     const currentData = {
       projections,
