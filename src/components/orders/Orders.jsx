@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faPrint, faPencilAlt, faTrash, faSort} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
-import { onSnapshot } from 'firebase/firestore';
+import { onSnapshot, deleteField } from 'firebase/firestore';
 import dayjs from 'dayjs';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -1435,6 +1435,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 </div>
               )}
             {Object.entries(selectedOrder.pizzas)
+              .filter(([_, pizzaData]) => pizzaData.quantity > 0)
               .sort(([a], [b]) => {
                 const nameA = pizzaTitles[a] || a;
                 const nameB = pizzaTitles[b] || b;
@@ -1445,6 +1446,7 @@ function getPizzaAllocatedTally(pizzaData) {
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
                 <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
+                <p>allocated {getPizzaAllocatedTally(pizzaData).allocated} / </p>
                 {editQuantities ? (
                   <input
                     type="number"
@@ -1495,7 +1497,7 @@ function getPizzaAllocatedTally(pizzaData) {
                     style={{ width: 60 }}
                   />
                 ) : (
-                  <p>allocated {getPizzaAllocatedTally(pizzaData).allocated}/{pizzaData.quantity}
+                  <p>{pizzaData.quantity}
                   </p>
                 )}
               </div>    
@@ -1655,6 +1657,25 @@ function getPizzaAllocatedTally(pizzaData) {
                               [pizzaId]: { ...prev.pizzas[pizzaId], quantity: newQty }
                             }),
                           }));
+                        } else {
+                          // Remove pizza from Firestore and local state if set to 0
+                          await updateDoc(doc(db, "orders", selectedOrder.id), {
+                            [`pizzas.${pizzaId}`]: deleteField(),
+                            pizzaTotal: calculatePizzaTotal(
+                              Object.fromEntries(
+                                Object.entries(selectedOrder.pizzas).filter(([id]) => id !== pizzaId)
+                              )
+                            ),
+                          });
+                          setSelectedOrder(prev => {
+                            const newPizzas = { ...prev.pizzas };
+                            delete newPizzas[pizzaId];
+                            return {
+                              ...prev,
+                              pizzas: newPizzas,
+                              pizzaTotal: calculatePizzaTotal(newPizzas),
+                            };
+                          });
                         }
                       }}
                       onKeyDown={e => {
