@@ -191,15 +191,13 @@ const DoughCalculator = ({ selectedYearWeek, getWeekYear}) => {
   const [batches, setBatches] = useState([]);
 
   useEffect(() => {
-    // Fetch batches for this week from Firestore
+    if (!selectedYearWeek) return;
     const fetchBatches = async () => {
-      // You may need to adjust this query to match your Firestore structure
       const batchSnap = await getDocs(collection(db, "batches"));
       const allBatches = batchSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Filter for this week
-      const today = new Date();
-      const { year: thisYear, week: thisWeek } = getWeekYear(today);
+      // Use selectedYearWeek, not today's week
+      const { year: thisYear, week: thisWeek } = selectedYearWeek;
       const weekBatches = allBatches.filter(batch => {
         if (!batch.batch_date) return false;
         const batchDate = new Date(batch.batch_date);
@@ -210,7 +208,7 @@ const DoughCalculator = ({ selectedYearWeek, getWeekYear}) => {
       setBatches(weekBatches);
     };
     fetchBatches();
-  }, []);
+  }, [selectedYearWeek, getWeekYear]);
 
   // --- Calculate frozen pizza numbers ---
   const totalFrozenPizzas = batches.reduce((sum, batch) => {
@@ -481,7 +479,7 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
     ) : (
       <>
     <hr className="dotted-divider" />
-    <p><strong>Next Week:</strong></p>
+    <p><strong>Week Ahead:</strong></p>
     <div className="inputs-section">
       <div className="input-row">
         <label>Total pizzas this week:</label>
