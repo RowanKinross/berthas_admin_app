@@ -1115,7 +1115,6 @@ const formatDateDisplay = (dateStr) => {
       {filteredBatches.length > 0 && (
         <div className='batchHeader container'>
           <p>Batch Date:</p>
-          <p>Pizzas:</p>
           <p>Ingredients Ordered?</p>
         </div>
       )}
