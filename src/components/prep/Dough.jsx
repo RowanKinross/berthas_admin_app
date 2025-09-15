@@ -41,10 +41,12 @@ const DoughCalculator = () => {
       const data = snap.data();
       if (data.dough && data.dough.projections) setProjections(data.dough.projections);
       if (data.dough && data.dough.leftover !== undefined) setLeftover(data.dough.leftover);
+      if (data.dough && data.dough.thursdayMixSize !== undefined) setThursdayMixSize(data.dough.thursdayMixSize);
       if (data.dough && data.dough.updatedAt) setLastEdit(data.dough.updatedAt.toDate());
       originalDataRef.current = {
         projections: data.dough?.projections || {},
         leftover: data.dough?.leftover ?? null,
+        thursdayMixSize: data.dough?.thursdayMixSize ?? 30,
       };
     }
   };
@@ -57,6 +59,7 @@ useEffect(() => {
     const currentData = {
       projections,
       leftover,
+      thursdayMixSize,
     };
 
     const original = originalDataRef.current;
@@ -81,7 +84,7 @@ useEffect(() => {
   }, 500);
 
   return () => clearTimeout(timeout);
-}, [projections, leftover]);
+}, [projections, leftover, thursdayMixSize]);
 
 
 
@@ -332,7 +335,7 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
           <div className='ul'>
             <div className='mixBreakdown'>
               <div className='redBlueContainer paddingGeneral'>
-                <p>mix: <strong className='paddingGeneral strong'> 30kg </strong> </p>
+                <p>mix: <strong className='paddingGeneral strong'> {thursdayMixSize}kg </strong> </p>
               </div>  
               <div className='redBlueContainer paddingGeneral' >
                 <p> - half caputo </p>
