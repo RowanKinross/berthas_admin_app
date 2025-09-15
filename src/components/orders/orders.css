@@ -245,6 +245,8 @@ input:checked + .slider:before {
   align-items: center;
   margin-bottom: 8px;
 }
+
+
 /* Split toggle hint*/
 .split-hint-container {
   position: relative;
@@ -262,6 +264,23 @@ input:checked + .slider:before {
   right: 38px;
   top: 3px;
 }
+
+/* order quantities edit hint */
+.editOrderQtyContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+}
+.orderQtyHint {
+  font-size: 12px !important;
+  padding: 2px;
+}
+.orderQtyHintArrow {
+  font-size: 16px !important;
+}
+
+
 
 .batchButtonContainer {
   display: flex;

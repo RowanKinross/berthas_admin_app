@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt, faTrash, faSort, faArrowTurnUp} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot, deleteField } from 'firebase/firestore';
@@ -52,9 +52,10 @@ function Orders() {
   
   // split toggle
   const [splitToggleError, setSplitToggleError] = useState("");
-  const [showSplitHint, setShowSplitHint] = useState(() => {
-  return sessionStorage.getItem('splitHintDismissed') !== 'true';
-});
+  const [showSplitHint, setShowSplitHint] = useState(true);
+  
+  // edit qty hint
+  const [showEditQtyHint, setShowEditQtyHint] = useState(true);
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -1407,12 +1408,24 @@ function getPizzaAllocatedTally(pizzaData) {
             <div 
               className='button pencil clickable'
               title="edit order quantities"
-              onClick={() => setEditQuantities(q => !q)}>
+              onClick={() =>{
+                setEditQuantities(q => !q)
+                setShowEditQtyHint(false);
+              }}>
               <FontAwesomeIcon
                 icon={faPencilAlt}
                 className="icon"
               />
             </div>
+            {showEditQtyHint && (
+              <div className='editOrderQtyContainer'>
+                <FontAwesomeIcon
+                    icon={faArrowLeft}
+                    className='orderQtyHintArrow'
+                />
+                <p className='orderQtyHint'>edit ordered quantities</p>
+              </div>
+            )}
               <div
                 style={{ display: "inline-block" }}
                 onClick={e => {
@@ -1434,7 +1447,6 @@ function getPizzaAllocatedTally(pizzaData) {
                       setIsSplitChecked(e.target.checked);
                       if (showSplitHint) {
                         setShowSplitHint(false);
-                        sessionStorage.setItem('splitHintDismissed', 'true');
                       }
                     }}
                   />
@@ -1451,7 +1463,7 @@ function getPizzaAllocatedTally(pizzaData) {
               {showSplitHint && (
                 <div className="split-hint-container">
                   <div className="split-hint-tooltip">
-                    Toggle to split over multiple batches
+                    Toggle to fulfill with multiple batch codes
                   </div>
                   <FontAwesomeIcon
                     icon={faArrowTurnUp}
