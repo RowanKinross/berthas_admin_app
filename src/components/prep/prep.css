@@ -163,9 +163,7 @@
   align-items: center;
   font-style: italic;
 }
-.mixBreakdown {
-  display: flex;
-}
+
 .text-red {
   color: red;
   padding: 2px;

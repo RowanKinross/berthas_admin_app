@@ -1,25 +1,107 @@
-import React, { useState, useEffect, useRef} from 'react';
-import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase/firebase'; 
-import { isEqual } from 'lodash'; // Import deep comparison util
+import React, { useState, useEffect, useRef } from 'react';
+import { doc, getDoc, getDocs, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
+import { isEqual } from 'lodash';
 
-const DoughCalculator = () => {
-  const [projections, setProjections] = useState({
-    wed: 0,
-    thurs: 0,
-    fri: 0,
-    sat: 0,
-    sun: 0,
-    wed_fw: 0,
-  });
-
+const DoughCalculator = ({ selectedYearWeek, getWeekYear}) => {
+  const [projections, setProjections] = useState({});
   const [leftover, setLeftover] = useState(0);
-  const originalDataRef = useRef({ projections: {}, leftover: null });
+  const [thursdayMixSize, setThursdayMixSize] = useState(30);
   const [lastEdit, setLastEdit] = useState(null);
-  const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
-  const [thursdayMixSize, setThursdayMixSize] = useState(30); // default 30kg
   const [loaded, setLoaded] = useState(false);
+  const originalDataRef = useRef({});
+  const userRole = localStorage.getItem('userRole');
 
+  // Helper to get previous week
+  function getPrevYearWeek({ year, week }) {
+    if (week > 1) return { year, week: week - 1 };
+    // Handle year wrap
+    const lastYear = year - 1;
+    const lastWeek = 52; // You may want to calculate the actual last week of the year
+    return { year: lastYear, week: lastWeek };
+  }
+
+  // Load logic
+  useEffect(() => {
+    if (!selectedYearWeek) return;
+    setLoaded(false);
+
+    const loadWeek = async () => {
+      const { year, week } = selectedYearWeek;
+      const docRef = doc(db, 'prepStatus', `${year}-W${week}`);
+      const snap = await getDoc(docRef);
+
+      if (snap.exists() && snap.data().dough) {
+        const data = snap.data().dough;
+        setProjections(data.projections || {});
+        setLeftover(data.leftover ?? 0);
+        setThursdayMixSize(data.thursdayMixSize ?? 30);
+        setLastEdit(data.updatedAt ? data.updatedAt.toDate() : null);
+        originalDataRef.current = {
+          projections: data.projections || {},
+          leftover: data.leftover ?? 0,
+          thursdayMixSize: data.thursdayMixSize ?? 30,
+        };
+        setLoaded(true);
+      } else {
+        // Try to load last week's data
+        const prev = getPrevYearWeek({ year, week });
+        const prevDocRef = doc(db, 'prepStatus', `${prev.year}-W${prev.week}`);
+        const prevSnap = await getDoc(prevDocRef);
+        if (prevSnap.exists() && prevSnap.data().dough) {
+          const prevData = prevSnap.data().dough;
+          setProjections(prevData.projections || {});
+          setLeftover(prevData.leftover ?? 0);
+          setThursdayMixSize(prevData.thursdayMixSize ?? 30);
+          setLastEdit(prevData.updatedAt ? prevData.updatedAt.toDate() : null);
+          originalDataRef.current = {
+            projections: prevData.projections || {},
+            leftover: prevData.leftover ?? 0,
+            thursdayMixSize: prevData.thursdayMixSize ?? 30,
+          };
+        } else {
+          // No data at all, just use defaults (but do NOT reset to 0 on week change)
+          setProjections({});
+          setLeftover(0);
+          setThursdayMixSize(30);
+          setLastEdit(null);
+          originalDataRef.current = {
+            projections: {},
+            leftover: 0,
+            thursdayMixSize: 30,
+          };
+        }
+        setLoaded(true);
+      }
+    };
+
+    loadWeek();
+  }, [selectedYearWeek]);
+
+  // Save logic
+  useEffect(() => {
+    if (!loaded || !selectedYearWeek) return;
+
+    const currentData = { projections, leftover, thursdayMixSize };
+    const original = originalDataRef.current;
+
+    if (!isEqual(currentData, original)) {
+      const timeout = setTimeout(() => {
+        const { year, week } = selectedYearWeek;
+        const docRef = doc(db, 'prepStatus', `${year}-W${week}`);
+        setDoc(docRef, {
+          dough: {
+            ...currentData,
+            updatedAt: serverTimestamp(),
+          }
+        }, { merge: true });
+        setLastEdit(new Date());
+        originalDataRef.current = currentData;
+      }, 500);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [projections, leftover, thursdayMixSize, loaded, selectedYearWeek]);
 
   // Calculations
   const currentWeekKeys = ['wed', 'thurs', 'fri', 'sat', 'sun'];
@@ -31,69 +113,6 @@ const DoughCalculator = () => {
   const traysPerKg = 17 / 30; 
   const thursdayBatch = Math.round(thursdayMixSize * traysPerKg);
   const tuesdayMakeAhead = Math.max(totalToMake - thursdayBatch, 0);
-
-  useEffect(() => {
-  const loadFromFirestore = async () => {
-    const today = new Date();
-    const { year, week } = getWeekYear(today);
-    const docRef = doc(db, 'prepStatus', `${year}-W${week}`);
-    const snap = await getDoc(docRef);
-
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data.dough && data.dough.projections) setProjections(data.dough.projections);
-      if (data.dough && data.dough.leftover !== undefined) setLeftover(data.dough.leftover);
-      if (data.dough && data.dough.thursdayMixSize !== undefined) setThursdayMixSize(data.dough.thursdayMixSize);
-      if (data.dough && data.dough.updatedAt) setLastEdit(data.dough.updatedAt.toDate());
-      originalDataRef.current = {
-        projections: data.dough?.projections || {},
-        leftover: data.dough?.leftover ?? null,
-        thursdayMixSize: data.dough?.thursdayMixSize ?? 30,
-      };
-    }
-    setLoaded(true);
-  };
-
-  loadFromFirestore();
-}, []);
-
-useEffect(() => {
-   if (!loaded) return;
-
-  const timeout = setTimeout(() => {
-    const currentData = {
-      projections,
-      leftover,
-      thursdayMixSize,
-    };
-
-    const original = originalDataRef.current;
-
-    if (!isEqual(currentData, original)) {
-      const saveToFirestore = async () => {
-        const today = new Date();
-        const { year, week } = getWeekYear(today);
-        const docRef = doc(db, 'prepStatus', `${year}-W${week}`);
-        await setDoc(docRef, {
-          dough: {
-            ...currentData,
-            updatedAt: serverTimestamp(),
-          }
-        }, { merge: true });
-        setLastEdit(new Date());
-        originalDataRef.current = currentData;
-      };
-
-      saveToFirestore();
-    }
-  }, 500);
-
-  return () => clearTimeout(timeout);
-}, [projections, leftover, thursdayMixSize]);
-
-
-
-  
 
   // Labels
   const dayLabels = {
@@ -115,99 +134,80 @@ useEffect(() => {
     }));
   };
 
+  const getTuesdayMixPlan = (trayCount) => {
+    const kgPerTray = 5 / 2.78;
+    const exactKg = trayCount * kgPerTray;
 
+    const mixBlocks = trayCount / 2.78;
+    const roundedKg = Math.round(mixBlocks) * 5; // closest multiple of 5
 
+    const mixSizes = [50, 45, 35, 30, 15];
+    const memo = {};
 
-const getTuesdayMixPlan = (trayCount) => {
-  const kgPerTray = 5 / 2.78;
-  const exactKg = trayCount * kgPerTray;
+    const helper = (remaining) => {
+      if (remaining === 0) return [[]];
+      if (remaining < 0) return [];
+      if (memo[remaining]) return memo[remaining];
 
-  const mixBlocks = trayCount / 2.78;
-  const roundedKg = Math.round(mixBlocks) * 5; // closest multiple of 5
+      let plans = [];
 
-  const mixSizes = [50, 45, 35, 30, 15];
-  const memo = {};
-
-  const helper = (remaining) => {
-    if (remaining === 0) return [[]];
-    if (remaining < 0) return [];
-    if (memo[remaining]) return memo[remaining];
-
-    let plans = [];
-
-    for (let size of mixSizes) {
-      const subplans = helper(remaining - size);
-      for (let plan of subplans) {
-        plans.push([size, ...plan]);
+      for (let size of mixSizes) {
+        const subplans = helper(remaining - size);
+        for (let plan of subplans) {
+          plans.push([size, ...plan]);
+        }
       }
+
+      memo[remaining] = plans;
+      return plans;
+    };
+
+    const allPlans = helper(roundedKg);
+
+    if (allPlans.length === 0) {
+      return {
+        kgNeeded: Math.round(exactKg),
+        roundedKg,
+        mixPlan: [],
+      };
     }
 
-    memo[remaining] = plans;
-    return plans;
-  };
+    // Find all shortest plans
+    const minLength = Math.min(...allPlans.map(plan => plan.length));
+    const shortestPlans = allPlans.filter(plan => plan.length === minLength);
 
-  const allPlans = helper(roundedKg);
+    // Prefer the plan with the most 45kg mixes, then fewest 50kg mixes
+    let bestPlan = shortestPlans.reduce((best, plan) => {
+      const count45 = plan.filter(x => x === 45).length;
+      const count50 = plan.filter(x => x === 50).length;
+      if (!best) return plan;
+      const best45 = best.filter(x => x === 45).length;
+      const best50 = best.filter(x => x === 50).length;
+      if (count45 > best45) return plan;
+      if (count45 === best45 && count50 < best50) return plan;
+      return best;
+    }, null);
 
-  if (allPlans.length === 0) {
     return {
       kgNeeded: Math.round(exactKg),
       roundedKg,
-      mixPlan: [],
+      mixPlan: bestPlan,
     };
-  }
-
-  // Pick shortest plan
-  let bestPlan = allPlans.reduce((best, plan) =>
-    !best || plan.length < best.length ? plan : best,
-    null
-  );
-
-  return {
-    kgNeeded: Math.round(exactKg),
-    roundedKg,
-    mixPlan: bestPlan,
   };
-};
 
-
-
-
-
-
-  
   const { kgNeeded, roundedKg, mixPlan } = getTuesdayMixPlan(tuesdayMakeAhead);
-
-
-  // Helper to get week number and year (reuse your getWeekYear function if available)
-  function getWeekYear(date) {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    const day = d.getDay();
-    const diffToSaturday = (day + 1) % 7;
-    d.setDate(d.getDate() - diffToSaturday);
-    const yearStart = new Date(d.getFullYear(), 0, 1);
-    const yearStartDay = yearStart.getDay();
-    const firstSaturday =
-      yearStartDay === 6
-        ? yearStart
-        : new Date(yearStart.setDate(yearStart.getDate() + ((6 - yearStartDay + 7) % 7)));
-    const week = Math.floor((d - firstSaturday) / (7 * 24 * 60 * 60 * 1000)) + 1;
-    return { year: d.getFullYear(), week };
-  }
 
   // --- Add this state and effect to fetch batches ---
   const [batches, setBatches] = useState([]);
 
   useEffect(() => {
-    // Fetch batches for this week from Firestore
+    if (!selectedYearWeek) return;
     const fetchBatches = async () => {
-      // You may need to adjust this query to match your Firestore structure
       const batchSnap = await getDocs(collection(db, "batches"));
       const allBatches = batchSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Filter for this week
-      const today = new Date();
-      const { year: thisYear, week: thisWeek } = getWeekYear(today);
+      // Use selectedYearWeek, not today's week
+      const { year: thisYear, week: thisWeek } = selectedYearWeek;
       const weekBatches = allBatches.filter(batch => {
         if (!batch.batch_date) return false;
         const batchDate = new Date(batch.batch_date);
@@ -218,7 +218,7 @@ const getTuesdayMixPlan = (trayCount) => {
       setBatches(weekBatches);
     };
     fetchBatches();
-  }, []);
+  }, [selectedYearWeek, getWeekYear]);
 
   // --- Calculate frozen pizza numbers ---
   const totalFrozenPizzas = batches.reduce((sum, batch) => {
@@ -248,30 +248,21 @@ const frozenMixYields = {
 // Calculate frozen mix plan (greedy, largest first)
 function getFrozenMixPlan(pizzaTarget) {
   const minTarget = pizzaTarget - 12;
-  const mixSizes = [50, 45, 35, 30, 15];
-  const mixYields = { 50: 314, 45: 282, 35: 220, 30: 188, 15: 94 };
 
   // Limit search depth to avoid infinite loops
   const MAX_MIXES = 10;
-  let best = null;
+  let allPlans = [];
 
   function search(plan, totalBalls, totalFlour) {
     if (plan.length > MAX_MIXES) return;
     if (totalBalls >= minTarget) {
-      // If this plan is closer (but not under minTarget), or uses fewer mixes, use it
-      if (
-        !best ||
-        totalBalls < best.totalBalls ||
-        (totalBalls === best.totalBalls && plan.length < best.plan.length)
-      ) {
-        best = { plan: [...plan], totalBalls, totalFlour };
-      }
+      allPlans.push({ plan: [...plan], totalBalls, totalFlour });
       return;
     }
-    for (let size of mixSizes) {
+    for (let size of frozenMixSizes) {
       search(
         [...plan, size],
-        totalBalls + mixYields[size],
+        totalBalls + frozenMixYields[size],
         totalFlour + size
       );
     }
@@ -280,28 +271,48 @@ function getFrozenMixPlan(pizzaTarget) {
   search([], 0, 0);
 
   // If no plan found (shouldn't happen), fallback to greedy
-  if (!best) {
+  if (allPlans.length === 0) {
     let totalBalls = 0;
     let totalFlour = 0;
     const plan = [];
     while (pizzaTarget - totalBalls > 12) {
       const needed = pizzaTarget - totalBalls;
-      const possible = mixSizes.filter(size => mixYields[size] >= needed);
+      const possible = frozenMixSizes.filter(size => frozenMixYields[size] >= needed);
       if (possible.length > 0) {
         const smallest = possible[possible.length - 1];
         plan.push(smallest);
-        totalBalls += mixYields[smallest];
+        totalBalls += frozenMixYields[smallest];
         totalFlour += smallest;
         break;
       } else {
-        const largest = mixSizes[0];
+        const largest = frozenMixSizes[0];
         plan.push(largest);
-        totalBalls += mixYields[largest];
+        totalBalls += frozenMixYields[largest];
         totalFlour += largest;
       }
     }
-    best = { plan, totalBalls, totalFlour };
+    return { plan, totalBalls, totalFlour };
   }
+
+  // Find all shortest plans
+  const minLength = Math.min(...allPlans.map(p => p.plan.length));
+  const shortestPlans = allPlans.filter(p => p.plan.length === minLength);
+
+  // Among those, find the ones with the smallest overshoot (totalBalls - pizzaTarget)
+  const minOvershoot = Math.min(...shortestPlans.map(p => p.totalBalls - pizzaTarget));
+  const closestPlans = shortestPlans.filter(p => (p.totalBalls - pizzaTarget) === minOvershoot);
+
+  // Prefer the plan with the most 45kg mixes, then fewest 50kg mixes
+  let best = closestPlans.reduce((best, p) => {
+    const count45 = p.plan.filter(x => x === 45).length;
+    const count50 = p.plan.filter(x => x === 50).length;
+    if (!best) return p;
+    const best45 = best.plan.filter(x => x === 45).length;
+    const best50 = best.plan.filter(x => x === 50).length;
+    if (count45 > best45) return p;
+    if (count45 === best45 && count50 < best50) return p;
+    return best;
+  }, null);
 
   return best;
 }
@@ -488,8 +499,8 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
       </div>
     ) : (
       <>
-    <hr className="dotted-divider" />
-    <p><strong>Next Week:</strong></p>
+    <br/>
+    <p><strong>Week Ahead:</strong></p>
     <div className="inputs-section">
       <div className="input-row">
         <label>Total pizzas this week:</label>
