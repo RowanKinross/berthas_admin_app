@@ -298,12 +298,8 @@ function getFrozenMixPlan(pizzaTarget) {
   const minLength = Math.min(...allPlans.map(p => p.plan.length));
   const shortestPlans = allPlans.filter(p => p.plan.length === minLength);
 
-  // Among those, find the ones with the smallest overshoot (totalBalls - pizzaTarget)
-  const minOvershoot = Math.min(...shortestPlans.map(p => p.totalBalls - pizzaTarget));
-  const closestPlans = shortestPlans.filter(p => (p.totalBalls - pizzaTarget) === minOvershoot);
-
   // Prefer the plan with the most 45kg mixes, then fewest 50kg mixes
-  let best = closestPlans.reduce((best, p) => {
+  let best = shortestPlans.reduce((best, p) => {
     const count45 = p.plan.filter(x => x === 45).length;
     const count50 = p.plan.filter(x => x === 50).length;
     if (!best) return p;
@@ -380,7 +376,6 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
               onChange={(e) => setLeftover(Number(e.target.value))}
             />
           </div>
-
           <hr className="dotted-divider" />
           <p><strong>Week Ahead:</strong></p>
 
