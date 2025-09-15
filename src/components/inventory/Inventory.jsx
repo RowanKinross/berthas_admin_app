@@ -12,6 +12,8 @@ function Inventory() {
   const [hexColour, setHexColour] = useState(''); // colour of new pizza
   const [pizzaData, setPizzaData] = useState([]); // pizza data from storage
   const [sleeve, setSleeve] = useState(false);
+  // sleeve radio
+  const [sleeveFilter, setSleeveFilter] = useState('all');
 
   // ingredients
   const [ingredientsArr, setIngredientsArr] = useState([]); // an array of saved ingredients for the dropdown
@@ -366,6 +368,40 @@ const adjustArchive = async (delta) => {
   return (
     <div className='inventory navContent'>
       <h2>INVENTORY</h2>
+
+        <div className="sleeveFilter" style={{ marginBottom: 16 }}>
+          <label>
+            <input
+              type="radio"
+              value="all"
+              className='sleeveRadio'
+              checked={sleeveFilter === 'all'}
+              onChange={() => setSleeveFilter('all')}
+            />
+            All
+          </label>
+          <label style={{ marginLeft: 12 }}>
+            <input
+              type="radio"
+              value="sleeve"
+              className='sleeveRadio'
+              checked={sleeveFilter === 'sleeve'}
+              onChange={() => setSleeveFilter('sleeve')}
+            />
+            Sleeve
+          </label>
+          <label style={{ marginLeft: 12 }}>
+            <input
+              type="radio"
+              value="noSleeve"
+              className='sleeveRadio'
+              checked={sleeveFilter === 'noSleeve'}
+              onChange={() => setSleeveFilter('noSleeve')}
+            />
+            No Sleeve
+          </label>
+        </div>
+
         <div className='inventoryBox' id='totals'>
         <p>Total Stock: {totalStockOverall}</p>
         <p>Total On Order: {totalOnOrderOverall}</p>
@@ -376,6 +412,11 @@ const adjustArchive = async (delta) => {
       {pizzaData.length > 0 ? (
         <div className='inventoryContainer'>
           {pizzaData
+          .filter(pizza => {
+            if (sleeveFilter === 'sleeve') return pizza.sleeve === true;
+            if (sleeveFilter === 'noSleeve') return pizza.sleeve === false;
+            return true; // 'all'
+          })
           .slice() // make a copy so you don't mutate state
           .sort((a, b) => {
             // Sleeved first, then sleeveless

@@ -9,6 +9,13 @@
     box-sizing: border-box;
   }
 
+  .sleeveFilter {
+    margin-bottom: 16px;
+  }
+  .sleeveRadio {
+    margin: 1px;
+  }
+
 
 /* individual pizza squares */
   .pizzas {

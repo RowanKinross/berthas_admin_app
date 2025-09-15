@@ -22,6 +22,8 @@ function Archive() {
   const [selectedPizzaId, setSelectedPizzaId] = useState(null);
   const [orders, setOrders] = useState([]);
 
+  const [sleeveFilter, setSleeveFilter] = useState('all');
+
 
   // FETCHES
   // fetch pizza data e.g what pizzas we offer & their hex codes
@@ -199,6 +201,40 @@ const adjustArchive = async (delta) => {
   return (
     <div className='inventory navContent'>
       <h2>ARCHIVE</h2>
+
+      <div className="sleeveFilter">
+        <label>
+          <input
+            type="radio"
+            value="all"
+            checked={sleeveFilter === 'all'}
+            onChange={() => setSleeveFilter('all')}
+            className='sleeveRadio'
+          />
+          All
+        </label>
+        <label style={{ marginLeft: 12 }}>
+          <input
+            type="radio"
+            value="sleeve"
+            checked={sleeveFilter === 'sleeve'}
+            onChange={() => setSleeveFilter('sleeve')}
+            className='sleeveRadio'
+          />
+          Sleeve
+        </label>
+        <label style={{ marginLeft: 12 }}>
+          <input
+            type="radio"
+            value="noSleeve"
+            checked={sleeveFilter === 'noSleeve'}
+            onChange={() => setSleeveFilter('noSleeve')}
+            className='sleeveRadio'
+          />
+          No Sleeve
+        </label>
+      </div>
+
         <div className='archiveBox' id='totals'>
           <p>Total: {totalStockOverall}</p>
         </div>
@@ -208,6 +244,11 @@ const adjustArchive = async (delta) => {
       {pizzaData.length > 0 ? (
         <div className='inventoryContainer'>
           {pizzaData
+            .filter(pizza => {
+              if (sleeveFilter === 'sleeve') return pizza.sleeve === true;
+              if (sleeveFilter === 'noSleeve') return pizza.sleeve === false;
+              return true; // 'all'
+            })
             .slice() // make a copy so you don't mutate state
             .sort((a, b) => {
               // Sleeved first, then sleeveless
