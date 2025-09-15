@@ -478,7 +478,7 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
       </div>
     ) : (
       <>
-    <hr className="dotted-divider" />
+    <br/>
     <p><strong>Week Ahead:</strong></p>
     <div className="inputs-section">
       <div className="input-row">
