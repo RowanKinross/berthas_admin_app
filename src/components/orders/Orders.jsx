@@ -1399,13 +1399,15 @@ function getPizzaAllocatedTally(pizzaData) {
           </div>
             <div className='split'>
             <strong>Pizzas Ordered:</strong>
+            <div 
+              className='button pencil clickable'
+              title="edit order quantities"
+              onClick={() => setEditQuantities(q => !q)}>
               <FontAwesomeIcon
                 icon={faPencilAlt}
-                className="icon clickable"
-                title="Edit quantities"
-                style={{ marginLeft: 8 }}
-                onClick={() => setEditQuantities(q => !q)}
+                className="icon"
               />
+            </div>
               <div
                 style={{ display: "inline-block" }}
                 onClick={e => {

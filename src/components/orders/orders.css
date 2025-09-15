@@ -305,6 +305,11 @@ input:checked + .slider:before {
   padding-left: 20px;
 }
 
+.pencil {
+  padding: 3px 6px;
+  margin-left: 10px;
+}
+
 
 @media (max-width: 530px) {
   .orderButton {
