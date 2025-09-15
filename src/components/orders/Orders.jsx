@@ -49,6 +49,7 @@ function Orders() {
   const [packingHtml, setPackingHtml] = useState('');
   const [draftBatchQuantities, setDraftBatchQuantities] = useState({});
   const [splitToggleError, setSplitToggleError] = useState("");
+  const [pizzaCatalog, setPizzaCatalog] = useState([]);
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -86,6 +87,30 @@ useEffect(() => {
   };
 
   fetchAllCustomers();
+}, []);
+
+
+
+useEffect(() => {
+  const fetchPizzaCatalog = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "pizzas"));
+      const catalog = [];
+      const titlesMap = {};
+      querySnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.id && data.pizza_title) {
+          titlesMap[data.id] = data.pizza_title;
+          catalog.push(data);
+        }
+      });
+      setPizzaTitles(titlesMap);
+      setPizzaCatalog(catalog);
+    } catch (error) {
+      console.error("Error fetching pizza catalog:", error);
+    }
+  };
+  fetchPizzaCatalog();
 }, []);
 
 
@@ -991,7 +1016,7 @@ if (!selectedOrder) return;
   setIsSplitChecked(hasSplit);
 }, [selectedOrder]);
 
-// Add this before your return (
+
 const isSplitToggleDisabled = selectedOrder && Object.values(selectedOrder.pizzas || {}).some(pizza => {
   if (!Array.isArray(pizza.batchesUsed)) return false;
   const nonZeroBatches = pizza.batchesUsed.filter(b => b.batch_number && Number(b.quantity) > 0);
@@ -1030,6 +1055,12 @@ function getPizzaAllocatedTally(pizzaData) {
   }
   return { allocated, total };
 }
+
+
+
+  const customerDefaultView = selectedOrder
+  ? allCustomers[selectedOrder.account_ID]?.default_pizza_view || null
+  : null;
 
   return (
   <div className='orders navContent'>
@@ -1575,68 +1606,66 @@ function getPizzaAllocatedTally(pizzaData) {
             </div>
           ))}
           {editQuantities && (
-  Object.keys(pizzaTitles).map(pizzaId => {
-    const pizzaData = selectedOrder.pizzas[pizzaId] || {};
-    return (
-      <div key={pizzaId} className='flexRow'>
-        <p className='space'>{pizzaTitles[pizzaId] || pizzaId}:</p>
-        <input
-          type="number"
-          min={0}
-          value={draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0}
-          onChange={e => {
-            const val = parseInt(e.target.value, 10) || 0;
-            setDraftQuantities(prev => ({ ...prev, [pizzaId]: val }));
-          }}
-          onBlur={async () => {
-            const newQty = draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0;
-            if (newQty > 0) {
-              // Add or update pizza in Firestore
-              await updateDoc(doc(db, "orders", selectedOrder.id), {
-                [`pizzas.${pizzaId}.quantity`]: newQty,
-                pizzaTotal: calculatePizzaTotal({
-                  ...selectedOrder.pizzas,
-                  [pizzaId]: { ...pizzaData, quantity: newQty }
-                }),
-              });
-              setSelectedOrder(prev => ({
-                ...prev,
-                pizzas: {
-                  ...prev.pizzas,
-                  [pizzaId]: {
-                    ...prev.pizzas[pizzaId],
-                    quantity: newQty,
-                  }
-                },
-                pizzaTotal: calculatePizzaTotal({
-                  ...prev.pizzas,
-                  [pizzaId]: { ...prev.pizzas[pizzaId], quantity: newQty }
-                }),
-              }));
-            } else {
-              // Remove pizza from order if quantity is 0
-              const updatedPizzas = { ...selectedOrder.pizzas };
-              delete updatedPizzas[pizzaId];
-              await updateDoc(doc(db, "orders", selectedOrder.id), {
-                [`pizzas.${pizzaId}`]: firebase.firestore.FieldValue.delete(),
-                pizzaTotal: calculatePizzaTotal(updatedPizzas),
-              });
-              setSelectedOrder(prev => ({
-                ...prev,
-                pizzas: updatedPizzas,
-                pizzaTotal: calculatePizzaTotal(updatedPizzas),
-              }));
-            }
-          }}
-          onKeyDown={e => {
-            if (e.key === "Enter") e.target.blur();
-          }}
-          style={{ width: 60 }}
-        />
-      </div>
-    );
-  })
-)}
+            pizzaCatalog
+            .filter(pizza => {
+            // Only show pizzas not already in the order
+                if (selectedOrder.pizzas[pizza.id] && selectedOrder.pizzas[pizza.id].quantity) return false;
+                // Only show pizzas matching the customer's default view
+                if (customerDefaultView === "withSleeve" && !pizza.sleeve) return false;
+                if (customerDefaultView === "withoutSleeve" && pizza.sleeve) return false;
+                // If 'all', show all pizzas
+                return true;
+              })
+              .map(pizza => {
+                const pizzaId = pizza.id;
+                const pizzaData = selectedOrder.pizzas[pizzaId] || {};
+                return (
+                  <div key={pizzaId} className='flexRow'>
+                    <p className='space'>{pizzaTitles[pizzaId] || pizzaId}:</p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0}
+                      onChange={e => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        setDraftQuantities(prev => ({ ...prev, [pizzaId]: val }));
+                      }}
+                      onBlur={async () => {
+                        const newQty = draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0;
+                        if (newQty > 0) {
+                          // Add or update pizza in Firestore
+                          await updateDoc(doc(db, "orders", selectedOrder.id), {
+                            [`pizzas.${pizzaId}.quantity`]: newQty,
+                            pizzaTotal: calculatePizzaTotal({
+                              ...selectedOrder.pizzas,
+                              [pizzaId]: { ...pizzaData, quantity: newQty }
+                            }),
+                          });
+                          setSelectedOrder(prev => ({
+                            ...prev,
+                            pizzas: {
+                              ...prev.pizzas,
+                              [pizzaId]: {
+                                ...prev.pizzas[pizzaId],
+                                quantity: newQty,
+                              }
+                            },
+                            pizzaTotal: calculatePizzaTotal({
+                              ...prev.pizzas,
+                              [pizzaId]: { ...prev.pizzas[pizzaId], quantity: newQty }
+                            }),
+                          }));
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") e.target.blur();
+                      }}
+                      style={{ width: 60 }}
+                    />
+                  </div>
+                );
+              })
+          )}
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
