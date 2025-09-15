@@ -172,11 +172,21 @@ const DoughCalculator = ({ selectedYearWeek, getWeekYear}) => {
       };
     }
 
-    // Pick shortest plan
-    let bestPlan = allPlans.reduce((best, plan) =>
-      !best || plan.length < best.length ? plan : best,
-      null
-    );
+    // Find all shortest plans
+    const minLength = Math.min(...allPlans.map(plan => plan.length));
+    const shortestPlans = allPlans.filter(plan => plan.length === minLength);
+
+    // Prefer the plan with the most 45kg mixes, then fewest 50kg mixes
+    let bestPlan = shortestPlans.reduce((best, plan) => {
+      const count45 = plan.filter(x => x === 45).length;
+      const count50 = plan.filter(x => x === 50).length;
+      if (!best) return plan;
+      const best45 = best.filter(x => x === 45).length;
+      const best50 = best.filter(x => x === 50).length;
+      if (count45 > best45) return plan;
+      if (count45 === best45 && count50 < best50) return plan;
+      return best;
+    }, null);
 
     return {
       kgNeeded: Math.round(exactKg),
@@ -238,30 +248,21 @@ const frozenMixYields = {
 // Calculate frozen mix plan (greedy, largest first)
 function getFrozenMixPlan(pizzaTarget) {
   const minTarget = pizzaTarget - 12;
-  const mixSizes = [50, 45, 35, 30, 15];
-  const mixYields = { 50: 314, 45: 282, 35: 220, 30: 188, 15: 94 };
 
   // Limit search depth to avoid infinite loops
   const MAX_MIXES = 10;
-  let best = null;
+  let allPlans = [];
 
   function search(plan, totalBalls, totalFlour) {
     if (plan.length > MAX_MIXES) return;
     if (totalBalls >= minTarget) {
-      // If this plan is closer (but not under minTarget), or uses fewer mixes, use it
-      if (
-        !best ||
-        totalBalls < best.totalBalls ||
-        (totalBalls === best.totalBalls && plan.length < best.plan.length)
-      ) {
-        best = { plan: [...plan], totalBalls, totalFlour };
-      }
+      allPlans.push({ plan: [...plan], totalBalls, totalFlour });
       return;
     }
-    for (let size of mixSizes) {
+    for (let size of frozenMixSizes) {
       search(
         [...plan, size],
-        totalBalls + mixYields[size],
+        totalBalls + frozenMixYields[size],
         totalFlour + size
       );
     }
@@ -270,28 +271,48 @@ function getFrozenMixPlan(pizzaTarget) {
   search([], 0, 0);
 
   // If no plan found (shouldn't happen), fallback to greedy
-  if (!best) {
+  if (allPlans.length === 0) {
     let totalBalls = 0;
     let totalFlour = 0;
     const plan = [];
     while (pizzaTarget - totalBalls > 12) {
       const needed = pizzaTarget - totalBalls;
-      const possible = mixSizes.filter(size => mixYields[size] >= needed);
+      const possible = frozenMixSizes.filter(size => frozenMixYields[size] >= needed);
       if (possible.length > 0) {
         const smallest = possible[possible.length - 1];
         plan.push(smallest);
-        totalBalls += mixYields[smallest];
+        totalBalls += frozenMixYields[smallest];
         totalFlour += smallest;
         break;
       } else {
-        const largest = mixSizes[0];
+        const largest = frozenMixSizes[0];
         plan.push(largest);
-        totalBalls += mixYields[largest];
+        totalBalls += frozenMixYields[largest];
         totalFlour += largest;
       }
     }
-    best = { plan, totalBalls, totalFlour };
+    return { plan, totalBalls, totalFlour };
   }
+
+  // Find all shortest plans
+  const minLength = Math.min(...allPlans.map(p => p.plan.length));
+  const shortestPlans = allPlans.filter(p => p.plan.length === minLength);
+
+  // Among those, find the ones with the smallest overshoot (totalBalls - pizzaTarget)
+  const minOvershoot = Math.min(...shortestPlans.map(p => p.totalBalls - pizzaTarget));
+  const closestPlans = shortestPlans.filter(p => (p.totalBalls - pizzaTarget) === minOvershoot);
+
+  // Prefer the plan with the most 45kg mixes, then fewest 50kg mixes
+  let best = closestPlans.reduce((best, p) => {
+    const count45 = p.plan.filter(x => x === 45).length;
+    const count50 = p.plan.filter(x => x === 50).length;
+    if (!best) return p;
+    const best45 = best.plan.filter(x => x === 45).length;
+    const best50 = best.plan.filter(x => x === 50).length;
+    if (count45 > best45) return p;
+    if (count45 === best45 && count50 < best50) return p;
+    return best;
+  }, null);
 
   return best;
 }
