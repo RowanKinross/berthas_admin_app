@@ -245,6 +245,23 @@ input:checked + .slider:before {
   align-items: center;
   margin-bottom: 8px;
 }
+/* Split toggle hint*/
+.split-hint-container {
+  position: relative;
+}
+.split-hint-arrow {
+  position: absolute;
+  right: 20px;
+  top: 0px;
+  z-index: 10;
+}
+.split-hint-tooltip {
+  font-size: 12px;
+  position: relative;
+  text-align: right;
+  right: 38px;
+  top: 3px;
+}
 
 .batchButtonContainer {
   display: flex;
@@ -309,6 +326,9 @@ input:checked + .slider:before {
   padding: 3px 6px;
   margin-left: 10px;
 }
+
+
+
 
 
 @media (max-width: 530px) {

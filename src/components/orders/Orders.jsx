@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt, faTrash, faSort} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faPencilAlt, faTrash, faSort, faArrowTurnUp} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot, deleteField } from 'firebase/firestore';
@@ -48,8 +48,13 @@ function Orders() {
   const [lastCheckedIndex, setLastCheckedIndex] = useState(null);
   const [packingHtml, setPackingHtml] = useState('');
   const [draftBatchQuantities, setDraftBatchQuantities] = useState({});
-  const [splitToggleError, setSplitToggleError] = useState("");
   const [pizzaCatalog, setPizzaCatalog] = useState([]);
+  
+  // split toggle
+  const [splitToggleError, setSplitToggleError] = useState("");
+  const [showSplitHint, setShowSplitHint] = useState(() => {
+  return sessionStorage.getItem('splitHintDismissed') !== 'true';
+});
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -1425,7 +1430,13 @@ function getPizzaAllocatedTally(pizzaData) {
                     type="checkbox"
                     checked={isSplitChecked}
                     disabled={isSplitToggleDisabled}
-                    onChange={e => setIsSplitChecked(e.target.checked)}
+                    onChange={e => {
+                      setIsSplitChecked(e.target.checked);
+                      if (showSplitHint) {
+                        setShowSplitHint(false);
+                        sessionStorage.setItem('splitHintDismissed', 'true');
+                      }
+                    }}
                   />
                   <span className="slider round"></span>
                 </label>
@@ -1436,6 +1447,20 @@ function getPizzaAllocatedTally(pizzaData) {
                   {splitToggleError}
                 </div>
               )}
+
+              {showSplitHint && (
+                <div className="split-hint-container">
+                  <div className="split-hint-tooltip">
+                    Toggle to split over multiple batches
+                  </div>
+                  <FontAwesomeIcon
+                    icon={faArrowTurnUp}
+                    className='split-hint-arrow'
+                  />
+                </div>
+              )}
+
+
             {Object.entries(selectedOrder.pizzas)
               .filter(([_, pizzaData]) => pizzaData.quantity > 0)
               .sort(([a], [b]) => {
