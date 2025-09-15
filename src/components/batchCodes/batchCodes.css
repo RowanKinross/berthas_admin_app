@@ -39,14 +39,8 @@
 .draft {
   background-color: var(--grey);
 }
-.batchHeader {
-  background-color: var(--pale);
-  display: flex;
-  justify-content: space-between;
-  margin: 2px;
-}
+
 .batchTextBoxEnd{
-  width: 150px;
   text-align: end;
 }
 .total, .pizzaNumbers {

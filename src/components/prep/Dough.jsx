@@ -431,17 +431,7 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
         {[15, 30, 35, 45, 50].map(size => (
           <option key={size} value={size}>{size}kg</option>
         ))}
-        <option value="custom">Custom</option>
       </select>
-      {thursdayMixSize === 'custom' && (
-        <input
-          type="number"
-          min="1"
-          value={typeof thursdayMixSize === 'number' ? thursdayMixSize : ''}
-          onChange={e => setThursdayMixSize(Number(e.target.value))}
-          style={{ width: 60, marginLeft: 8 }}
-        />
-      )}
         </label>
         <div className='ul'>
           <div className='mixBreakdown'>
