@@ -717,7 +717,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
               </tbody>
             </table>
             {/* Extra Prep Checklist */}
-            <div>
+            <div className='prepTable'>
               <th>Other Prep:</th>
               <ul style={{ listStyle: 'none', padding: 0 }}>
                 {extraPrep.map((item, idx) => (
