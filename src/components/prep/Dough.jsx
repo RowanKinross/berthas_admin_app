@@ -17,6 +17,7 @@ const DoughCalculator = () => {
   const originalDataRef = useRef({ projections: {}, leftover: null });
   const [lastEdit, setLastEdit] = useState(null);
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
+  const [thursdayMixSize, setThursdayMixSize] = useState(30); // default 30kg
 
   // Calculations
   const currentWeekKeys = ['wed', 'thurs', 'fri', 'sat', 'sun'];
@@ -25,7 +26,8 @@ const DoughCalculator = () => {
   const totalProjected = Object.values(projections).reduce((a, b) => a + b, 0);
   const totalToMake = Math.max(totalProjected - leftover, 0);
 
-  const thursdayBatch = 17;
+  const traysPerKg = 17 / 30; 
+  const thursdayBatch = Math.round(thursdayMixSize * traysPerKg);
   const tuesdayMakeAhead = Math.max(totalToMake - thursdayBatch, 0);
 
   useEffect(() => {
@@ -322,6 +324,10 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
               ⚠️ No valid mix plan for {kgNeeded}kg. Try adjusting trays slightly.
             </p>
           )}
+
+
+
+
           <p><strong>Thursday:</strong><br /></p>
           <div className='ul'>
             <div className='mixBreakdown'>
@@ -411,21 +417,43 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
                   ⚠️ No valid mix plan for {kgNeeded}kg. Try adjusting trays slightly.
                 </p>
               )}
-              <p>Make on<strong> Thursday:</strong> {thursdayBatch} trays<br /></p>
-              <div className='ul'>
-                <p className='paddingGeneral'> total flour: <strong> 30kg</strong></p>
-                <div className='mixBreakdown'>
-                  <div className='redBlueContainer paddingGeneral'>
-                    <p>mix breakdown: <strong className='paddingGeneral strong'> 30kg </strong> </p>
-                  </div>  
-                  <div className='redBlueContainer paddingGeneral' >
-                    <p> - half caputo </p>
-                    <p className="text-red"> red</p>
-                    <p>/ half</p>
-                    <p className="text-blue">blue</p>
-                  </div>
-                </div>
-              </div>
+              <div>
+    <label>
+      <p>Make on <strong>Thursday:</strong> {totalToMake - tuesdayMakeAhead} trays </p>
+      <select
+        value={thursdayMixSize}
+        onChange={e => setThursdayMixSize(Number(e.target.value))}
+        style={{ marginLeft: 8, marginRight: 8 }}
+      >
+        {[15, 30, 35, 45, 50].map(size => (
+          <option key={size} value={size}>{size}kg</option>
+        ))}
+        <option value="custom">Custom</option>
+      </select>
+      {thursdayMixSize === 'custom' && (
+        <input
+          type="number"
+          min="1"
+          value={typeof thursdayMixSize === 'number' ? thursdayMixSize : ''}
+          onChange={e => setThursdayMixSize(Number(e.target.value))}
+          style={{ width: 60, marginLeft: 8 }}
+        />
+      )}
+        </label>
+        <div className='ul'>
+          <div className='mixBreakdown'>
+            <div className='redBlueContainer paddingGeneral'>
+              <p>mix: <strong className='paddingGeneral strong'> {thursdayMixSize}kg </strong> </p>
+            </div>  
+            <div className='redBlueContainer paddingGeneral' >
+              <p> - half caputo </p>
+              <p className="text-red"> red</p>
+              <p>/ half</p>
+              <p className="text-blue">blue</p>
+            </div>
+          </div>
+        </div>
+      </div>
             </div>
           </div>
         </>
@@ -434,34 +462,34 @@ const frozenPlan = getFrozenMixPlan(frozenWith10Percent);
     <div className='calculatorContainer calcRed'>
       <h2 className='doughHeader'>Frozen:</h2>
       {userRole === 'unit' ? (
-  <div className="result">
-    <div className="sub-result paddingGeneral">
-      <p><strong>Tuesday:</strong></p>
-      <div className='ul'>
-        <div className='mixBreakdown'>
-          <div className='redBlueContainer paddingGeneral'>
-            <p>
-              mixes:
-              <strong className='paddingGeneral strong'>
-                {frozenPlan.plan.map((kg, i) => (
-                  <span key={i}>
-                    {kg}kg 
-                    {i < frozenPlan.plan.length - 1 ? ' + ' : ''}
-                  </span>
-                ))}
-              </strong>
-            </p>
-          </div>
-          <div className='redBlueContainer paddingGeneral'>
-            <p>- all caputo</p>
-            <p className="text-red">red</p>
+      <div className="result">
+        <div className="sub-result paddingGeneral">
+          <p><strong>Tuesday:</strong></p>
+          <div className='ul'>
+            <div className='mixBreakdown'>
+              <div className='redBlueContainer paddingGeneral'>
+                <p>
+                  mixes:
+                  <strong className='paddingGeneral strong'>
+                    {frozenPlan.plan.map((kg, i) => (
+                      <span key={i}>
+                        {kg}kg 
+                        {i < frozenPlan.plan.length - 1 ? ' + ' : ''}
+                      </span>
+                    ))}
+                  </strong>
+                </p>
+              </div>
+              <div className='redBlueContainer paddingGeneral'>
+                <p>- all caputo</p>
+                <p className="text-red">red</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-) : (
-  <>
+    ) : (
+      <>
     <hr className="dotted-divider" />
     <p><strong>Next Week:</strong></p>
     <div className="inputs-section">
