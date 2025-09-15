@@ -1470,7 +1470,7 @@ function getPizzaAllocatedTally(pizzaData) {
               </div>    
               {(() => {
                 const totalOrdered = pizzaData.quantity;
-                const batchesUsed = pizzaData.batchesUsed;
+                const batchesUsed = pizzaData.batchesUsed || [];
                 const selectedBatches = batchesUsed.filter(b => b.batch_number);
                 const totalAssigned = selectedBatches.reduce((sum, b) => sum + (b.quantity || 0), 0);
                 let errorType = null;
@@ -1516,11 +1516,11 @@ function getPizzaAllocatedTally(pizzaData) {
                 })
                 .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
                 .map((batch, i) => {
-                  const isSelected = pizzaData.batchesUsed.some(b => b.batch_number === batch.batch_code);
-                  const selectedBatch = pizzaData.batchesUsed.find(b => b.batch_number === batch.batch_code);
+                  const isSelected = (pizzaData.batchesUsed || []).some(b => b.batch_number === batch.batch_code);
+                  const selectedBatch = (pizzaData.batchesUsed || []).find(b => b.batch_number === batch.batch_code);
                   const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
                   const quantity = selectedBatch?.quantity || 0;
-                  const hasSelection = pizzaData.batchesUsed.some(b => !!b.batch_number);
+                  const hasSelection = (pizzaData.batchesUsed || []).some(b => !!b.batch_number);
 
                   return (
                     <div
@@ -1574,80 +1574,69 @@ function getPizzaAllocatedTally(pizzaData) {
 
             </div>
           ))}
-          {editQuantities && (() => {
-            //pizza IDs for customer's default view
-            const allPossiblePizzas = Object.keys(pizzaTitles).filter(id => {
-              if (customerInfo?.default_pizza_view === "withSleeve") return id.endsWith("1");
-              if (customerInfo?.default_pizza_view === "noSleeve") return id.endsWith("0");
-              return true;
-            });
-            const pizzasInOrder = Object.keys(selectedOrder.pizzas);
-            const missingPizzas = allPossiblePizzas.filter(id => !pizzasInOrder.includes(id));
-
-            if (missingPizzas.length === 0) return null;
-            return (
-              <div className="missingPizzas">
-                {missingPizzas.map((pizzaId) => (
-                  <div key={pizzaId} className="flexRow">
-                    <p className="space">{pizzaTitles[pizzaId] || pizzaId}:</p>
-                    <input
-                      type="number"
-                      min={0}
-                      value={0}
-                      onChange={async (e) => {
-                        const newQty = parseInt(e.target.value, 10) || 0;
-                        if (!pizzaData.original_quantity) {
-                          await updateDoc(doc(db, "orders", selectedOrder.id), {
-                            [`pizzas.${pizzaName}.original_quantity`]: pizzaData.quantity,
-                          });
-                        }
-                        const updatedPizzas = {
-                          ...selectedOrder.pizzas,
-                          [pizzaName]: {
-                            ...selectedOrder.pizzas[pizzaName],
-                            quantity: newQty,
-                            original_quantity: pizzaData.original_quantity || pizzaData.quantity,
-                          }
-                        };
-                        const newPizzaTotal = calculatePizzaTotal(updatedPizzas);
-                        await updateDoc(doc(db, "orders", selectedOrder.id), {
-                          [`pizzas.${pizzaName}.quantity`]: newQty,
-                          pizzaTotal: newPizzaTotal,
-                        });
-                        // Update local state
-                        setSelectedOrder(prev => ({
-                          ...prev,
-                          pizzas: {
-                            ...prev.pizzas,
-                            [pizzaName]: {
-                              ...prev.pizzas[pizzaName],
-                              quantity: newQty,
-                              original_quantity: prev.pizzas[pizzaName].original_quantity || prev.pizzas[pizzaName].quantity,
-                            }
-                          },
-                          pizzaTotal: newPizzaTotal,
-                        }));
-
-                        // --- Sync allocation(s) ---
-                        const batchesUsed = pizzaData.batchesUsed || [];
-                        if (batchesUsed.length > 0) {
-                          for (const batch of batchesUsed) {
-                            await syncPizzaAllocation({
-                              pizzaId: pizzaName,
-                              batchCode: batch.batch_number,
-                              quantity: isSplitChecked ? batch.quantity : newQty
-                            });
-                          }
-                        }
-                      }}
-                      style={{ width: 60 }}
-                    />
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-
+          {editQuantities && (
+  Object.keys(pizzaTitles).map(pizzaId => {
+    const pizzaData = selectedOrder.pizzas[pizzaId] || {};
+    return (
+      <div key={pizzaId} className='flexRow'>
+        <p className='space'>{pizzaTitles[pizzaId] || pizzaId}:</p>
+        <input
+          type="number"
+          min={0}
+          value={draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0}
+          onChange={e => {
+            const val = parseInt(e.target.value, 10) || 0;
+            setDraftQuantities(prev => ({ ...prev, [pizzaId]: val }));
+          }}
+          onBlur={async () => {
+            const newQty = draftQuantities[pizzaId] ?? pizzaData.quantity ?? 0;
+            if (newQty > 0) {
+              // Add or update pizza in Firestore
+              await updateDoc(doc(db, "orders", selectedOrder.id), {
+                [`pizzas.${pizzaId}.quantity`]: newQty,
+                pizzaTotal: calculatePizzaTotal({
+                  ...selectedOrder.pizzas,
+                  [pizzaId]: { ...pizzaData, quantity: newQty }
+                }),
+              });
+              setSelectedOrder(prev => ({
+                ...prev,
+                pizzas: {
+                  ...prev.pizzas,
+                  [pizzaId]: {
+                    ...prev.pizzas[pizzaId],
+                    quantity: newQty,
+                  }
+                },
+                pizzaTotal: calculatePizzaTotal({
+                  ...prev.pizzas,
+                  [pizzaId]: { ...prev.pizzas[pizzaId], quantity: newQty }
+                }),
+              }));
+            } else {
+              // Remove pizza from order if quantity is 0
+              const updatedPizzas = { ...selectedOrder.pizzas };
+              delete updatedPizzas[pizzaId];
+              await updateDoc(doc(db, "orders", selectedOrder.id), {
+                [`pizzas.${pizzaId}`]: firebase.firestore.FieldValue.delete(),
+                pizzaTotal: calculatePizzaTotal(updatedPizzas),
+              });
+              setSelectedOrder(prev => ({
+                ...prev,
+                pizzas: updatedPizzas,
+                pizzaTotal: calculatePizzaTotal(updatedPizzas),
+              }));
+            }
+          }}
+          onKeyDown={e => {
+            if (e.key === "Enter") e.target.blur();
+          }}
+          style={{ width: 60 }}
+        />
+      </div>
+    );
+  })
+)}
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
           </div>
