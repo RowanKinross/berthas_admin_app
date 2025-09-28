@@ -528,21 +528,31 @@ const formatDateDisplay = (dateStr) => {
       }
 
       if (type === "pizza") {
-        const updatedPizzas = (() => {
-          const exists = currentData.pizzas.some(p => p.id === id);
-          if (exists) {
-            return currentData.pizzas.map(pizza => {
+        let updatedPizzas;
+        const exists = currentData.pizzas.some(p => p.id === id);
+
+        if (exists) {
+          updatedPizzas = currentData.pizzas
+            .map(pizza => {
               if (pizza.id === id) {
+                // If setting quantity to 0 or empty, remove this pizza from array
+                const newQty = field === "quantity" ? Number(value) : pizza.quantity;
+                if (field === "quantity" && (!value || newQty === 0)) {
+                  return null; // Mark for removal
+                }
                 return {
                   ...pizza,
                   [field]: value === "" ? null : Number(value)
                 };
               }
               return pizza;
-            });
-          } else {
+            })
+            .filter(pizza => pizza && (pizza.quantity === undefined || pizza.quantity > 0));
+        } else {
+          // Add new pizza if not present and quantity > 0
+          if (field === "quantity" && Number(value) > 0) {
             const newPizza = pizzas.find(p => p.id === id);
-            return [
+            updatedPizzas = [
               ...currentData.pizzas,
               {
                 id: newPizza.id,
@@ -560,18 +570,19 @@ const formatDateDisplay = (dateStr) => {
                 lastPizzaWeight: null
               }
             ];
+          } else {
+            updatedPizzas = [...currentData.pizzas];
           }
-        })();
+        }
 
-        
         const totalPizzas = updatedPizzas.reduce(
           (sum, pizza) => sum + (parseInt(pizza.quantity) || 0),
           0
         );
         await updateDoc(batchRef, { 
-        pizzas: updatedPizzas,
-        num_pizzas: totalPizzas,
-      });
+          pizzas: updatedPizzas,
+          num_pizzas: totalPizzas,
+        });
       }
   
       const freshSnap = await getDoc(batchRef);
