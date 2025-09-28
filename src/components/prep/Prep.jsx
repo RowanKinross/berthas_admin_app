@@ -186,17 +186,22 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
     const fetchChecked = async () => {
       const { year, week } = selectedYearWeek;
       const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+      let checked = {};
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setCheckedIngredients(data.checkedIngredients || {});
-        setCheckedSleeves(data.checkedSleeves || {});
-      } else {
-        setCheckedIngredients({});
-        setCheckedSleeves({});
+        checked = data.checkedIngredients || {};
       }
+      // Only keep checked ingredients that are needed this week
+      const neededIngredients = ingredientTotals
+        .filter(i => i.unitsNeeded > 0)
+        .map(i => i.name);
+      const filteredChecked = Object.fromEntries(
+        Object.entries(checked).filter(([name]) => neededIngredients.includes(name))
+      );
+      setCheckedIngredients(filteredChecked);
     };
     fetchChecked();
-  }, [selectedYearWeek]);
+  }, [selectedYearWeek, ingredientTotals]);
 
   // --- Extra prep for selected week ---
   useEffect(() => {
@@ -221,9 +226,15 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
   // --- Save checked ingredients/sleeves ---
   const savePrepStatus = async (checkedIngredients, checkedSleeves) => {
     const { year, week } = selectedYearWeek;
+    const neededIngredients = ingredientTotals
+      .filter(i => i.unitsNeeded > 0)
+      .map(i => i.name);
+    const filteredChecked = Object.fromEntries(
+      Object.entries(checkedIngredients).filter(([name]) => neededIngredients.includes(name))
+    );
     await setDoc(
       doc(db, "prepStatus", `${year}-W${week}`),
-      { checkedIngredients, checkedSleeves, year, week },
+      { checkedIngredients: filteredChecked, checkedSleeves, year, week },
       { merge: true }
     );
   };
@@ -436,7 +447,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                 {ingredientTotals
                   .filter(ing => {
                     const ingredientData = ingredients.find(i => i.name === ing.name);
-                    return ingredientData && ingredientData.prep_ahead === true;
+                    return ingredientData && ingredientData.prep_ahead === true && ing.unitsNeeded > 0;
                   })
                   .map(ing => {
                     const ingredientData = ingredients.find(i => i.name === ing.name);
