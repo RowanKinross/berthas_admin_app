@@ -574,18 +574,33 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                       <tr>
                         <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
                           {editingBatchCode === ingredient ? (
-                            <input
-                              type="text"
-                              value={editingBatchCodeValue}
-                              autoFocus
-                              onChange={e => setEditingBatchCodeValue(e.target.value)}
-                              onBlur={() => handleBatchCodeSave(ingredient)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') handleBatchCodeSave(ingredient);
-                                if (e.key === 'Escape') setEditingBatchCode(null);
-                              }}
-                              style={{ width: 80 }}
-                            />
+                            <>
+                              <input
+                                type="text"
+                                value={editingBatchCodeValue}
+                                list={`batch-code-suggestions-${ingredient}`}
+                                autoFocus
+                                onChange={e => setEditingBatchCodeValue(e.target.value)}
+                                onBlur={() => handleBatchCodeSave(ingredient)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleBatchCodeSave(ingredient);
+                                  if (e.key === 'Escape') setEditingBatchCode(null);
+                                }}
+                                style={{ width: 80 }}
+                              />
+                              <datalist id={`batch-code-suggestions-${ingredient}`}>
+                                {(batchCodeSuggestions[ingredient] || [])
+                                  .filter(code =>
+                                    editingBatchCodeValue
+                                      ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
+                                      : true
+                                  )
+                                  .slice(0, 3)
+                                  .map(code => (
+                                    <option key={code} value={code} />
+                                  ))}
+                              </datalist>
+                            </>
                           ) : (
                             <span
                               style={{ cursor: 'pointer', color: '#555' }}
