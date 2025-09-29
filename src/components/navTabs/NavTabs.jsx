@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate} from 'react-router-dom';
 import './navtabs.css';
-import { app, db } from '../firebase/firebase';
+import { app, db, auth, signInWithEmailAndPassword } from '../firebase/firebase';
+import { signOut } from 'firebase/auth'; 
 import { collection, query, where, getDocs, addDoc } from '@firebase/firestore';
 import { Dropdown, Button, Form } from 'react-bootstrap';
 import { nanoid } from 'nanoid';
-import bcrypt from 'bcryptjs';
 
 
 function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
@@ -43,20 +43,24 @@ function NavTabs({ customerName, setCustomerName, accountID, setAccountID }) {
   const [loginError, setLoginError] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null); // 'admin' | 'unit' | null
 
-  const login = async (username, password) => {
-  const q = query(collection(db, "users"), where("user", "==", username));
-  const snapshot = await getDocs(q);
+  const ROLE_EMAILS = {
+    admin: 'admin@berthasapp.com',
+    unit: 'unit@berthasapp.com',
+    customers: 'customers@berthasapp.com'
+  };
 
-  if (snapshot.empty) throw new Error("User not found");
+  const login = async (role, password) => {
+    const email = ROLE_EMAILS[role];
+    if (!email) throw new Error("Role not found");
 
-  const userData = snapshot.docs[0].data();
-  const isPasswordCorrect = await bcrypt.compare(password, userData.passwordHash);
-
-  if (!isPasswordCorrect) throw new Error("Incorrect password");
-
-  setUserRole(userData.role);
-  localStorage.setItem("userRole", userData.role);
-};
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setUserRole(role);
+      localStorage.setItem("userRole", role);
+    } catch (error) {
+      throw new Error("Incorrect password");
+    }
+  };
 
   const handleAddRegion = async () => {
     const region = newRegion.trim();
@@ -191,11 +195,16 @@ const generateAccountID = ({ name, postcode }) => {
     }
   }
   
-  const handleLogOut = () => {
+  const handleLogOut = async () => {
+    try {
+      await signOut(auth); // Sign out from Firebase Auth
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
     setUserRole(null); 
     setCustomerName(null);
-    setAccountID(null)
-    setModalVisible(false)
+    setAccountID(null);
+    setModalVisible(false);
 
     localStorage.removeItem('customerName');
     localStorage.removeItem('accountID');
@@ -380,9 +389,10 @@ useEffect(() => {
                       const value = e.target.value;
                       setLoginPassword(value);
 
-                      if (value.length === 4) {
+                      // Try login when password is at least 6 characters
+                      if (value.length >= 6) {
                         try {
-                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          await login(activeDropdown, value);
                           setDropdownOpen(false);
                           setActiveDropdown(null);
                           setLoginPassword('');
@@ -423,9 +433,10 @@ useEffect(() => {
                       const value = e.target.value;
                       setLoginPassword(value);
 
-                      if (value.length === 4) {
+                      // Try login when password is at least 6 characters
+                      if (value.length >= 6) {
                         try {
-                          await login(activeDropdown, value); // or "unit", "customers" based on dropdown
+                          await login(activeDropdown, value);
                           setDropdownOpen(false);
                           setActiveDropdown(null);
                           setLoginPassword('');
@@ -468,7 +479,8 @@ useEffect(() => {
                       const value = e.target.value;
                       setLoginPassword(value);
 
-                      if (value.length === 4) {
+                      // Try login when password is at least 6 characters
+                      if (value.length >= 6) {
                         try {
                           await login(activeDropdown, value); // or "unit", "customers" based on dropdown
                           setDropdownOpen(false);
