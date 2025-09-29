@@ -481,7 +481,32 @@ useEffect(() => {
   fetchPrepDay();
 }, [selectedYearWeek]);
 
+// get batch days to organise to do lists
+const weekBatchDays = Array.from(
+  new Set(
+    weekBatches
+      .map(batch => {
+        const batchDate = new Date(batch.batch_date);
+        return batchDate.toLocaleDateString('en-GB', { weekday: 'long' });
+      })
+  )
+);
 
+
+
+
+
+  // Local state for checkboxes (optional: you can persist to Firestore if needed)
+  const [checkedTomato, setCheckedTomato] = useState({});
+  const [checkedHoney, setCheckedHoney] = useState({});
+
+  // Handler functions
+  const handleTomatoCheckbox = () => {
+    setCheckedTomato(prev => ({ ...prev, [day]: !prev[day] }));
+  };
+  const handleHoneyCheckbox = () => {
+    setCheckedHoney(prev => ({ ...prev, [day]: !prev[day] }));
+  };
 
 
   return (
@@ -773,7 +798,6 @@ useEffect(() => {
                 <tr>
                   <th
                     className='writeSleevesHeader'
-                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => setCollapseWriteSleeves(c => !c)}
                   >
                     <input
@@ -908,10 +932,90 @@ useEffect(() => {
                 <button className='addButton' onClick={handleAddPrepItem}>Add</button>
               </li>
               </ul>
-
-
-
           </div>
+
+          {/* additional prep days */}
+          {weekBatchDays.map(day => {
+  // Find all batches for this day
+  const batchesForDay = weekBatches.filter(batch => {
+    const batchDate = new Date(batch.batch_date);
+    return batchDate.toLocaleDateString('en-GB', { weekday: 'long' }) === day;
+  });
+
+  // Calculate tomato quantity for this day
+  let tomatoGrams = 0;
+  let tomatoUnit = '';
+  let tomatoUnitWeight = 0;
+  batchesForDay.forEach(batch => {
+    (batch.pizzas || []).forEach(pizza => {
+      if ((pizza.ingredients || []).includes('Tomato')) {
+        const tomatoData = ingredients.find(i => i.name.toLowerCase() === 'tomato');
+        if (tomatoData) {
+          const { gramsPerPizza, unitWeight } = parseIngredientRatio(tomatoData.ratio);
+          tomatoGrams += gramsPerPizza * (pizza.quantity || 0);
+          tomatoUnit = tomatoData.packaging;
+          tomatoUnitWeight = unitWeight;
+        }
+      }
+    });
+  });
+  const tomatoKg = tomatoGrams / 1000;
+  const tomatoUnitsNeeded = tomatoUnitWeight ? Math.round((tomatoKg / tomatoUnitWeight) * 10) / 10 : 0;
+
+  // Check if honey is used in any pizza for this day
+  const honeyUsed = batchesForDay.some(batch =>
+    (batch.pizzas || []).some(pizza =>
+      (pizza.ingredients || []).includes('Honey')
+    )
+  );
+
+
+  return (
+    <div className='prepBox' key={day}>
+      <div className='toDoHeader'>
+        <h2 className='dayTitles toDo'>To do: </h2>
+        <p className='prepDay'>
+          {day} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(day) + 1))}
+        </p>
+      </div>
+      <table className='prepTable bold'>
+        <tbody>
+          {tomatoKg > 0 && (
+            <tr>
+              <td>
+                <input
+                  type="checkbox"
+                  id={`tomato-${day}`}
+                  checked={!!checkedTomato[day]}
+                  onChange={handleTomatoCheckbox}
+                  style={{ marginRight: 8 }}
+                />
+                <label htmlFor={`tomato-${day}`}>
+                  Tomato x {tomatoUnitsNeeded} {tomatoUnit} 
+                </label>
+              </td>
+            </tr>
+          )}
+          {honeyUsed && (
+            <tr>
+              <td>
+                <input
+                  type="checkbox"
+                  id={`honey-${day}`}
+                  checked={!!checkedHoney[day]}
+                  onChange={handleHoneyCheckbox}
+                  style={{ marginRight: 8 }}
+                />
+                <label htmlFor={`honey-${day}`}>Take honey out</label>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+})}
+
           <div className='doughBox'>
             <h2 className='dayTitles'>Dough</h2>
             <DoughCalculator selectedYearWeek={selectedYearWeek} getWeekYear={getWeekYear} />
