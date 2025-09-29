@@ -759,6 +759,9 @@ useEffect(() => {
                   })}
                 </tbody>
               )}
+
+              {allSleeveCheckboxIds.length > 0 && (
+              <>
               <thead>
                 <tr>
                   <th
@@ -848,6 +851,8 @@ useEffect(() => {
                   });
                 })()}
               </tbody>
+              )}
+              </>
               )}
             {/* Extra Prep Checklist */}
             </table>
