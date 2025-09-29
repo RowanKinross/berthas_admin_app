@@ -2,7 +2,7 @@
 import './prep.css'
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
+import { faCircleInfo,faCircleChevronRight, faCircleChevronDown } from '@fortawesome/free-solid-svg-icons';
 import { db } from '../firebase/firebase';
 import { collection, getDocs, setDoc, getDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import DoughCalculator from './Dough.jsx';
@@ -69,6 +69,7 @@ function Prep() {
   const [extraPrep, setExtraPrep] = useState([]);
   const [newPrepItem, setNewPrepItem] = useState('');
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
+  const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(false);
 
   // Always present static item
   const staticPrepItem = { text: 'organise freezer', done: false };
@@ -426,6 +427,12 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
   }, [openNote]);
 
 
+  const otherIngredientsList = ["Flour (Caputo Red)", "Salt"];
+  const allOtherBatchCodesFilled = otherIngredientsList.every(
+    ing => !!getBatchCodesForIngredient(ing).trim()
+  );
+
+
 
 
 
@@ -457,9 +464,6 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
             <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
             <table className='prepTable'>
               <thead>
-                <tr>
-                  <th>Prep Ahead Ingredients:</th>
-                </tr>
               </thead>
               <tbody>
                 {ingredientTotals
@@ -501,23 +505,10 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                             )}
                             {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
                               <span
-                                className="prep-note-popup"
-                                style={{
-                                  position: 'absolute',
-                                  background: '#222',
-                                  color: '#fff',
-                                  padding: '8px 12px',
-                                  borderRadius: 6,
-                                  left: 40,
-                                  zIndex: 10,
-                                  fontSize: '0.95em',
-                                  minWidth: 180,
-                                  maxWidth: 260,
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                                }}
+                                className="prepNotePopup"
                                 onClick={e => e.stopPropagation()}
                               >
-                                {ingredientData.prep_notes}
+                                <strong>{ing.name}:</strong> {ingredientData.prep_notes}
                               </span>
                             )}
                           </td>
@@ -573,117 +564,136 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
               </tbody>
               <thead>
                 <tr>
-                  <th>Other Ingredients:</th>
+                  <th
+                    style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center' }}
+                    onClick={() => setCollapseOtherIngredients(c => !c)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={allOtherBatchCodesFilled}
+                      readOnly
+                      style={{ pointerEvents: 'none'}}
+                      tabIndex={-1}
+                    />
+                    <span className='addBatchOtherHeader'>
+                      <div>Add Batch codes to other ingredients: </div>
+                      <span className='collapsibleArrow'>
+                        <FontAwesomeIcon icon={collapseOtherIngredients ? faCircleChevronRight : faCircleChevronDown} />
+                      </span>
+                    </span>
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {["Flour (Caputo Red)", "Salt"].map((ingredient) => {
-                  const total = ingredientTotals.find(i => i.name === ingredient);
-                  const batchCodes = getBatchCodesForIngredient(ingredient);
-                  return (
-                    <React.Fragment key={ingredient}>
-                      <tr>
-                        <td colSpan={2}>
-                          {ingredient}
-                          {total && typeof total.unitsNeeded === 'number' && total.unit && (
-                            <> x {total.unitsNeeded} {total.unit}</>
-                          )}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
-                          {editingBatchCode === ingredient ? (
-                            <>
+              {!collapseOtherIngredients && (
+                <tbody>
+                  {["Flour (Caputo Red)", "Salt"].map((ingredient) => {
+                    const total = ingredientTotals.find(i => i.name === ingredient);
+                    const batchCodes = getBatchCodesForIngredient(ingredient);
+                    return (
+                      <React.Fragment key={ingredient}>
+                        <tr>
+                          <td className='otherIngredientsSection'>
+                            {ingredient}
+                            {total && typeof total.unitsNeeded === 'number' && total.unit && (
+                              <> x {total.unitsNeeded} {total.unit}</>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td  style={{ paddingLeft: 52, paddingBottom: 8 }}>
+                            {editingBatchCode === ingredient ? (
+                              <>
+                                <input
+                                  type="text"
+                                  value={editingBatchCodeValue}
+                                  list={`batch-code-suggestions-${ingredient}`}
+                                  autoFocus
+                                  onChange={e => setEditingBatchCodeValue(e.target.value)}
+                                  onBlur={() => handleBatchCodeSave(ingredient)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleBatchCodeSave(ingredient);
+                                    if (e.key === 'Escape') setEditingBatchCode(null);
+                                  }}
+                                  style={{ width: 80 }}
+                                />
+                                <datalist id={`batch-code-suggestions-${ingredient}`}>
+                                  {(batchCodeSuggestions[ingredient] || [])
+                                    .filter(code =>
+                                      editingBatchCodeValue
+                                        ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
+                                        : true
+                                    )
+                                    .slice(0, 3)
+                                    .map(code => (
+                                      <option key={code} value={code} />
+                                    ))}
+                                </datalist>
+                              </>
+                            ) : (
+                              <span
+                                style={{ cursor: 'pointer', color: '#555' }}
+                                onClick={() => {
+                                  setEditingBatchCode(ingredient);
+                                  setEditingBatchCodeValue(batchCodes);
+                                }}
+                                className="batchCode"
+                              >
+                                <strong>#</strong>{' '}
+                                {batchCodes || <span className='red'>--</span>}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
+                  {nonPrepAheadIngredients.map(ing => {
+                    const batchCodes = getBatchCodesForIngredient(ing.name);
+                    return (
+                      <React.Fragment key={ing.name}>
+                        <tr>
+                          <td  className='otherIngredientsSection'>
+                            {ing.name}
+                            {typeof ing.unitsNeeded === 'number' && ing.unit && (
+                              <> x {ing.unitsNeeded} {ing.unit}</>
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2} style={{ paddingLeft: 52, paddingBottom: 8 }}>
+                            {editingBatchCode === ing.name ? (
                               <input
                                 type="text"
                                 value={editingBatchCodeValue}
-                                list={`batch-code-suggestions-${ingredient}`}
                                 autoFocus
                                 onChange={e => setEditingBatchCodeValue(e.target.value)}
-                                onBlur={() => handleBatchCodeSave(ingredient)}
+                                onBlur={() => handleBatchCodeSave(ing.name)}
                                 onKeyDown={e => {
-                                  if (e.key === 'Enter') handleBatchCodeSave(ingredient);
+                                  if (e.key === 'Enter') handleBatchCodeSave(ing.name);
                                   if (e.key === 'Escape') setEditingBatchCode(null);
                                 }}
                                 style={{ width: 80 }}
                               />
-                              <datalist id={`batch-code-suggestions-${ingredient}`}>
-                                {(batchCodeSuggestions[ingredient] || [])
-                                  .filter(code =>
-                                    editingBatchCodeValue
-                                      ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
-                                      : true
-                                  )
-                                  .slice(0, 3)
-                                  .map(code => (
-                                    <option key={code} value={code} />
-                                  ))}
-                              </datalist>
-                            </>
-                          ) : (
-                            <span
-                              style={{ cursor: 'pointer', color: '#555' }}
-                              onClick={() => {
-                                setEditingBatchCode(ingredient);
-                                setEditingBatchCodeValue(batchCodes);
-                              }}
-                              className="batchCode"
-                            >
-                              <strong>#</strong>{' '}
-                              {batchCodes || <span className='red'>--</span>}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    </React.Fragment>
-                  );
-                })}
-                {nonPrepAheadIngredients.map(ing => {
-                  const batchCodes = getBatchCodesForIngredient(ing.name);
-                  return (
-                    <React.Fragment key={ing.name}>
-                      <tr>
-                        <td colSpan={2}>
-                          {ing.name}
-                          {typeof ing.unitsNeeded === 'number' && ing.unit && (
-                            <> x {ing.unitsNeeded} {ing.unit}</>
-                          )}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
-                          {editingBatchCode === ing.name ? (
-                            <input
-                              type="text"
-                              value={editingBatchCodeValue}
-                              autoFocus
-                              onChange={e => setEditingBatchCodeValue(e.target.value)}
-                              onBlur={() => handleBatchCodeSave(ing.name)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') handleBatchCodeSave(ing.name);
-                                if (e.key === 'Escape') setEditingBatchCode(null);
-                              }}
-                              style={{ width: 80 }}
-                            />
-                          ) : (
-                            <span
-                              style={{ cursor: 'pointer', color: '#555' }}
-                              onClick={() => {
-                                setEditingBatchCode(ing.name);
-                                setEditingBatchCodeValue(batchCodes);
-                              }}
-                              className="batchCode"
-                            >
-                              <strong>#</strong>{' '}
-                              {batchCodes || <span className='red'>--</span>}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
+                            ) : (
+                              <span
+                                style={{ cursor: 'pointer', color: '#555' }}
+                                onClick={() => {
+                                  setEditingBatchCode(ing.name);
+                                  setEditingBatchCodeValue(batchCodes);
+                                }}
+                                className="batchCode"
+                              >
+                                <strong>#</strong>{' '}
+                                {batchCodes || <span className='red'>--</span>}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              )}
               <thead>
                 <tr>
                   <th colSpan={2}>Write Sleeves:</th>
@@ -714,37 +724,43 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                     if (sleevedPizzas.length === 0) return null;
                     return (
                       <React.Fragment key={batch.id}>
-                        <div  className='sleeveContainer'>
-                        <div>
-                          <div className="sleeveLabel">
-                            {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
-                          </div>
-                        </div>
-                        <div>
-                        {sleevedPizzas.map(pizza => {
-                          const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
-                          return (
-                            <tr key={pizza.id}>
-                              <td >
-                                <input
-                                  type="checkbox"
-                                  className='prepCheckbox'
-                                  id={`sleeve-checkbox-${batch.id}-${pizza.id}`}
-                                  checked={!!checkedSleeves[`${batch.id}-${pizza.id}`]}
-                                  onChange={() => handleSleeveCheckboxChange(`${batch.id}-${pizza.id}`)}
-                                />
-                                <label
-                                  htmlFor={`sleeve-checkbox-${batch.id}-${pizza.id}`}
-                                  className={checkedSleeves[`${batch.id}-${pizza.id}`] ? 'sleeve-strikethrough' : ''}>
-                                  {pizza.pizza_title} x {displayCount}
-                                </label>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                        </div>
-                        </div>
-                        <div className='betweenDates'>. . .</div>
+                        <tr>
+                          <td colSpan={2}>
+                            <div className='sleeveContainer'>
+                              <div>
+                                <div className="sleeveLabel">
+                                  {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
+                                </div>
+                              </div>
+                              <div>
+                                {sleevedPizzas.map(pizza => {
+                                  const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
+                                  return (
+                                    <div key={pizza.id}>
+                                      <input
+                                        type="checkbox"
+                                        className='prepCheckbox'
+                                        id={`sleeve-checkbox-${batch.id}-${pizza.id}`}
+                                        checked={!!checkedSleeves[`${batch.id}-${pizza.id}`]}
+                                        onChange={() => handleSleeveCheckboxChange(`${batch.id}-${pizza.id}`)}
+                                      />
+                                      <label
+                                        htmlFor={`sleeve-checkbox-${batch.id}-${pizza.id}`}
+                                        className={checkedSleeves[`${batch.id}-${pizza.id}`] ? 'sleeve-strikethrough' : ''}>
+                                        {pizza.pizza_title} x {displayCount}
+                                      </label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2}>
+                            <div className='betweenDates'>. . .</div>
+                          </td>
+                        </tr>
                       </React.Fragment>
                     );
                   });
@@ -753,7 +769,6 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
             </table>
             {/* Extra Prep Checklist */}
             <div className='prepTable'>
-              <p><strong>Other Prep:</strong></p>
               <ul style={{ listStyle: 'none', padding: 0 }}>
                 {extraPrep.map((item, idx) => (
                   <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
