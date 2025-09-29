@@ -69,8 +69,8 @@ function Prep() {
   const [extraPrep, setExtraPrep] = useState([]);
   const [newPrepItem, setNewPrepItem] = useState('');
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
-  const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(false);
-  const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(false);
+  const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(true);
+  const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(true);
 
   // Always present static item
   const staticPrepItem = { text: 'Organise Freezer', done: false };
