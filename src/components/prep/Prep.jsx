@@ -488,7 +488,7 @@ useEffect(() => {
     <div className="prep navContent">
       <h2>Prep</h2>
       {userRole === 'admin' && (
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+        <div className='weekViewing' >
           <button onClick={goToPrevWeek} style={{ fontSize: 20, marginRight: 12 }} title="Previous week">
             &#8592;
           </button>
@@ -508,25 +508,32 @@ useEffect(() => {
       ) : (
         <div className='prepContainers'>
           <div className='prepBox'>
-            <h2 className='dayTitles'>To do</h2>
-            {userRole === 'admin' ? (
+            <div className='toDoHeader'>
+              {userRole === 'admin' ? (
+                <>
+                <h2 className='dayTitles'>To do</h2>
                 <select
-                  className='prepDay'
-                  value={selectedPrepDay}
-                  onChange={e => setSelectedPrepDay(e.target.value)}
-                  style={{ fontSize: '1.1em', marginBottom: 8 }}
-                >
-                  {prepDays.map(day => (
-                    <option key={day} value={day}>
-                      {day} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(day) + 1))}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className='prepDay'>
-                  {selectedPrepDay} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(selectedPrepDay) + 1))}
-                </p>
-              )}
+                    className='prepDay'
+                    value={selectedPrepDay}
+                    onChange={e => setSelectedPrepDay(e.target.value)}
+                    
+                  >
+                    {prepDays.map(day => (
+                      <option key={day} value={day}>
+                        {day} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(day) + 1))}
+                      </option>
+                    ))}
+                  </select>
+                </>
+                ) : (
+                <>
+                <h2 className='dayTitles toDo'>To do</h2>
+                  <p className='prepDay'>
+                    {selectedPrepDay} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(selectedPrepDay) + 1))}
+                  </p>
+                </>
+                )}
+            </div>
             <table className='prepTable'>
               <thead>
               </thead>
@@ -552,7 +559,7 @@ useEffect(() => {
                             />
                             <label
                               htmlFor={`checkbox-${ing.name}`}
-                              className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
+                              className={checkedIngredients[ing.name] ? 'strikethrough bold' : 'bold'}
                               style={{ marginLeft: 6, marginRight: 4 }}
                             >
                               {ing.name} x {ing.unitsNeeded} {ing.unit}
@@ -580,7 +587,7 @@ useEffect(() => {
                           <td></td>
                         </tr>
                         <tr>
-                          <td colSpan={2} style={{ paddingLeft: 32}}>
+                          <td  style={{ paddingLeft: 32}}>
                             {editingBatchCode === ing.name ? (
                               <>
                                 <input
@@ -657,7 +664,7 @@ useEffect(() => {
                     return (
                       <React.Fragment key={ingredient}>
                         <tr>
-                          <td className='otherIngredientsSection'>
+                          <td className='otherIngredientsSection bold'>
                             {ingredient}
                             {total && typeof total.unitsNeeded === 'number' && total.unit && (
                               <> x {total.unitsNeeded} {total.unit}</>
@@ -717,7 +724,7 @@ useEffect(() => {
                     return (
                       <React.Fragment key={ing.name}>
                         <tr>
-                          <td  className='otherIngredientsSection'>
+                          <td  className='otherIngredientsSection bold'>
                             {ing.name}
                             {typeof ing.unitsNeeded === 'number' && ing.unit && (
                               <> x {ing.unitsNeeded} {ing.unit}</>
@@ -725,7 +732,7 @@ useEffect(() => {
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={2} style={{ paddingLeft: 50}}>
+                          <td  style={{ paddingLeft: 50}}>
                             {editingBatchCode === ing.name ? (
                               <input
                                 type="text"
@@ -810,14 +817,14 @@ useEffect(() => {
                     return (
                       <React.Fragment key={batch.id}>
                         <tr>
-                          <td colSpan={2}>
+                          <td >
                             <div className='sleeveContainer'>
                               <div>
                                 <div className="sleeveLabel">
                                   {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
                                 </div>
                               </div>
-                              <div className='writeSleevesList'>
+                              <div className='writeSleevesList bold'>
                                 {sleevedPizzas.map(pizza => {
                                   const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
                                   return (
@@ -842,7 +849,7 @@ useEffect(() => {
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={2}>
+                          <td >
                             <div className='betweenDates'>. . .</div>
                           </td>
                         </tr>
@@ -858,7 +865,7 @@ useEffect(() => {
             </table>
               <ul className='prepTable extraPrepTable'>
                 {extraPrep.map((item, idx) => (
-                  <li key={idx} className='extraPrepList' >
+                  <li key={idx} className='extraPrepList bold' >
                     <input
                       type="checkbox"
                       checked={item.done}
@@ -898,7 +905,7 @@ useEffect(() => {
                   placeholder="Add prep item..."
                   style={{ flex: 1, marginRight: 8 }}
                 />
-                <button onClick={handleAddPrepItem}>Add</button>
+                <button className='addButton' onClick={handleAddPrepItem}>Add</button>
               </li>
               </ul>
 
