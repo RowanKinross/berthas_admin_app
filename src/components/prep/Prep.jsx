@@ -492,6 +492,14 @@ const weekBatchDays = Array.from(
   )
 );
 
+// Order of weekdays
+const weekdayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// Sort batch days by weekday order
+const sortedWeekBatchDays = weekBatchDays.slice().sort(
+  (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
+);
+
 
 
 
@@ -935,7 +943,7 @@ const weekBatchDays = Array.from(
           </div>
 
           {/* additional prep days */}
-          {weekBatchDays.map(day => {
+          {sortedWeekBatchDays.map(day => {
   // Find all batches for this day
   const batchesForDay = weekBatches.filter(batch => {
     const batchDate = new Date(batch.batch_date);
