@@ -1021,7 +1021,7 @@ const handleRemovePrepItem = async (day, idx) => {
                   style={{ marginRight: 8 }}
                 />
                 <label htmlFor={`tomato-${day}`}>
-                  Tomato x {tomatoUnitsNeeded} {tomatoUnit} ({tomatoKg.toFixed(2)}kg)
+                  Tomato x {tomatoUnitsNeeded} {tomatoUnit}
                 </label>
               </td>
             </tr>
