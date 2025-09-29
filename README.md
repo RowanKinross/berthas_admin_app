@@ -27,7 +27,7 @@ Upon opening the project, the user is met with a navigatory home page displaying
 
 ## Demo
 ![demo]() 
-<!-- still to add -->
+(still to add)
 
 ## License
 MIT License
@@ -36,12 +36,12 @@ MIT License
 n/a
 
 ## Credits
-Bertha's Pizza, Bristol for the opportunity.
+Bertha's Pizza, Bristol, for the opportunity.
 
 ## Tests
 n/a
 
 ## Questions
-If you have any further questions you can find me here:
-GitHub - https://github.com/RowanKinross
+If you have any further questions you can find me here: <br>
+GitHub - https://github.com/RowanKinross <br>
 linkedIn - https://www.linkedin.com/in/rowan-kinross-512940284/
