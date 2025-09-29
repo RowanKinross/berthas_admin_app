@@ -70,9 +70,10 @@ function Prep() {
   const [newPrepItem, setNewPrepItem] = useState('');
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
   const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(false);
+  const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(false);
 
   // Always present static item
-  const staticPrepItem = { text: 'organise freezer', done: false };
+  const staticPrepItem = { text: 'Organise Freezer', done: false };
 
 
 
@@ -715,7 +716,11 @@ const allSleevesChecked =
               )}
               <thead>
                 <tr>
-                  <th className='writeSleevesHeader'>
+                  <th
+                    className='writeSleevesHeader'
+                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => setCollapseWriteSleeves(c => !c)}
+                  >
                     <input
                       type="checkbox"
                       checked={allSleevesChecked}
@@ -723,10 +728,14 @@ const allSleevesChecked =
                       style={{ pointerEvents: 'none' }}
                       tabIndex={-1}
                     />
-                    <span style={{marginLeft: '5px'}}>Write Sleeves:</span>
+                    <span className='writeSleevesTitle'>Write Sleeves:</span>
+                    <span className='collapsibleArrow'>
+                      <FontAwesomeIcon icon={collapseWriteSleeves ? faCircleChevronRight : faCircleChevronDown} />
+                    </span>
                   </th>
                 </tr>
               </thead>
+              {!collapseWriteSleeves && (
               <tbody>
                 {(() => {
                   const { year: thisYear, week: thisWeek } = selectedYearWeek;
@@ -794,22 +803,19 @@ const allSleevesChecked =
                   });
                 })()}
               </tbody>
-            </table>
+              )}
             {/* Extra Prep Checklist */}
-            <div className='prepTable'>
               <ul style={{ listStyle: 'none', padding: 0 }}>
                 {extraPrep.map((item, idx) => (
-                  <li key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+                  <li key={idx} className='extraPrepList' >
                     <input
                       type="checkbox"
                       checked={item.done}
                       onChange={() => handleTogglePrepItem(idx)}
-                      style={{ marginRight: 8 }}
                     />
                     <span
                       style={{
-                        textDecoration: item.done ? 'line-through' : 'none',
-                        flex: 1
+                        textDecoration: item.done ? 'line-through' : 'none', paddingLeft: 5,
                       }}
                     >
                       {item.text}
@@ -833,7 +839,7 @@ const allSleevesChecked =
                   </li>
                 ))}
               </ul>
-              <div style={{ display: 'flex', marginTop: 8 }}>
+              <div className='addPrep'>
                 <input
                   type="text"
                   value={newPrepItem}
@@ -844,7 +850,9 @@ const allSleevesChecked =
                 />
                 <button onClick={handleAddPrepItem}>Add</button>
               </div>
-            </div>
+            </table>
+
+
           </div>
           <div className='doughBox'>
             <h2 className='dayTitles'>Dough</h2>

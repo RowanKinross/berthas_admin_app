@@ -73,21 +73,31 @@
   .otherIngredientsSection {
     padding-left: 30px;
   }
-  .addBatchOtherHeader {
-    margin-left: 5px;
+  .addBatchOtherHeader, .writeSleevesTitle {
+    padding-left: 5px;
   }
   .addBatchOtherHeader, .writeSleevesHeader {
     display: flex;
     font-weight: 400;
   }
-  .writeSleevesHeader {
-    padding: 5px 0;
-  }
   .collapsibleArrow {
-    background-color: none !important;
     margin-left: 5px;
   }
+.extraPrepList {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
 
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.addPrep {
+  display: flex;
+  margin-top: 15px;
+}
 
 
 
