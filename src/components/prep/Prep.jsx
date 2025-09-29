@@ -69,8 +69,10 @@ function Prep() {
   const [extraPrep, setExtraPrep] = useState([]);
   const [newPrepItem, setNewPrepItem] = useState('');
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
-  const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(false);
-  const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(false);
+  const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(true);
+  const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(true);
+  const [selectedPrepDay, setSelectedPrepDay] = useState('Tuesday');
+  const prepDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   // Always present static item
   const staticPrepItem = { text: 'Organise Freezer', done: false };
@@ -207,6 +209,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
 
   // --- Extra prep for selected week ---
   useEffect(() => {
+    if (!batches.length || !ingredients.length) return;
     const fetchExtraPrep = async () => {
       const { year, week } = selectedYearWeek;
       const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
@@ -223,7 +226,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
       setExtraPrep(loaded);
     };
     fetchExtraPrep();
-  }, [selectedYearWeek]);
+  }, [selectedYearWeek, batches, ingredients]);
 
   // --- Save checked ingredients/sleeves ---
   const savePrepStatus = async (checkedIngredients, checkedSleeves) => {
@@ -451,7 +454,32 @@ const allSleevesChecked =
   allSleeveCheckboxIds.length > 0 &&
   allSleeveCheckboxIds.every(id => checkedSleeves[id]);
 
-
+// save selected prep day to firestore
+useEffect(() => {
+  const saveDay = async () => {
+    const { year, week } = selectedYearWeek;
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { selectedPrepDay },
+      { merge: true }
+    );
+  };
+  saveDay();
+}, [selectedPrepDay, selectedYearWeek]);
+useEffect(() => {
+  const fetchPrepDay = async () => {
+    const { year, week } = selectedYearWeek;
+    const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.selectedPrepDay) setSelectedPrepDay(data.selectedPrepDay);
+      else setSelectedPrepDay('Tuesday'); // default
+    } else {
+      setSelectedPrepDay('Tuesday'); // default
+    }
+  };
+  fetchPrepDay();
+}, [selectedYearWeek]);
 
 
 
@@ -460,7 +488,7 @@ const allSleevesChecked =
     <div className="prep navContent">
       <h2>Prep</h2>
       {userRole === 'admin' && (
-        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+        <div className='weekViewing' >
           <button onClick={goToPrevWeek} style={{ fontSize: 20, marginRight: 12 }} title="Previous week">
             &#8592;
           </button>
@@ -480,8 +508,32 @@ const allSleevesChecked =
       ) : (
         <div className='prepContainers'>
           <div className='prepBox'>
-            <h2 className='dayTitles'>To do</h2>
-            <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
+            <div className='toDoHeader'>
+              {userRole === 'admin' ? (
+                <>
+                <h2 className='dayTitles'>To do</h2>
+                <select
+                    className='prepDay'
+                    value={selectedPrepDay}
+                    onChange={e => setSelectedPrepDay(e.target.value)}
+                    
+                  >
+                    {prepDays.map(day => (
+                      <option key={day} value={day}>
+                        {day} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(day) + 1))}
+                      </option>
+                    ))}
+                  </select>
+                </>
+                ) : (
+                <>
+                <h2 className='dayTitles toDo'>To do</h2>
+                  <p className='prepDay'>
+                    {selectedPrepDay} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(selectedPrepDay) + 1))}
+                  </p>
+                </>
+                )}
+            </div>
             <table className='prepTable'>
               <thead>
               </thead>
@@ -507,7 +559,7 @@ const allSleevesChecked =
                             />
                             <label
                               htmlFor={`checkbox-${ing.name}`}
-                              className={checkedIngredients[ing.name] ? 'strikethrough' : ''}
+                              className={checkedIngredients[ing.name] ? 'strikethrough bold' : 'bold'}
                               style={{ marginLeft: 6, marginRight: 4 }}
                             >
                               {ing.name} x {ing.unitsNeeded} {ing.unit}
@@ -535,7 +587,7 @@ const allSleevesChecked =
                           <td></td>
                         </tr>
                         <tr>
-                          <td colSpan={2} style={{ paddingLeft: 32}}>
+                          <td  style={{ paddingLeft: 32}}>
                             {editingBatchCode === ing.name ? (
                               <>
                                 <input
@@ -612,7 +664,7 @@ const allSleevesChecked =
                     return (
                       <React.Fragment key={ingredient}>
                         <tr>
-                          <td className='otherIngredientsSection'>
+                          <td className='otherIngredientsSection bold'>
                             {ingredient}
                             {total && typeof total.unitsNeeded === 'number' && total.unit && (
                               <> x {total.unitsNeeded} {total.unit}</>
@@ -672,7 +724,7 @@ const allSleevesChecked =
                     return (
                       <React.Fragment key={ing.name}>
                         <tr>
-                          <td  className='otherIngredientsSection'>
+                          <td  className='otherIngredientsSection bold'>
                             {ing.name}
                             {typeof ing.unitsNeeded === 'number' && ing.unit && (
                               <> x {ing.unitsNeeded} {ing.unit}</>
@@ -680,7 +732,7 @@ const allSleevesChecked =
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={2} style={{ paddingLeft: 50}}>
+                          <td  style={{ paddingLeft: 50}}>
                             {editingBatchCode === ing.name ? (
                               <input
                                 type="text"
@@ -714,6 +766,9 @@ const allSleevesChecked =
                   })}
                 </tbody>
               )}
+
+              {allSleeveCheckboxIds.length > 0 && (
+              <>
               <thead>
                 <tr>
                   <th
@@ -762,14 +817,14 @@ const allSleevesChecked =
                     return (
                       <React.Fragment key={batch.id}>
                         <tr>
-                          <td colSpan={2}>
+                          <td >
                             <div className='sleeveContainer'>
                               <div>
                                 <div className="sleeveLabel">
                                   {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
                                 </div>
                               </div>
-                              <div>
+                              <div className='writeSleevesList bold'>
                                 {sleevedPizzas.map(pizza => {
                                   const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
                                   return (
@@ -794,7 +849,7 @@ const allSleevesChecked =
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={2}>
+                          <td >
                             <div className='betweenDates'>. . .</div>
                           </td>
                         </tr>
@@ -804,10 +859,13 @@ const allSleevesChecked =
                 })()}
               </tbody>
               )}
+              </>
+              )}
             {/* Extra Prep Checklist */}
-              <ul style={{ listStyle: 'none', padding: 0 }}>
+            </table>
+              <ul className='prepTable extraPrepTable'>
                 {extraPrep.map((item, idx) => (
-                  <li key={idx} className='extraPrepList' >
+                  <li key={idx} className='extraPrepList bold' >
                     <input
                       type="checkbox"
                       checked={item.done}
@@ -838,8 +896,7 @@ const allSleevesChecked =
                     )}
                   </li>
                 ))}
-              </ul>
-              <div className='addPrep'>
+              <li className='addPrep'>
                 <input
                   type="text"
                   value={newPrepItem}
@@ -848,9 +905,10 @@ const allSleevesChecked =
                   placeholder="Add prep item..."
                   style={{ flex: 1, marginRight: 8 }}
                 />
-                <button onClick={handleAddPrepItem}>Add</button>
-              </div>
-            </table>
+                <button className='addButton' onClick={handleAddPrepItem}>Add</button>
+              </li>
+              </ul>
+
 
 
           </div>
