@@ -71,6 +71,8 @@ function Prep() {
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
   const [collapseOtherIngredients, setCollapseOtherIngredients] = useState(true);
   const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(true);
+  const [selectedPrepDay, setSelectedPrepDay] = useState('Tuesday');
+  const prepDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   // Always present static item
   const staticPrepItem = { text: 'Organise Freezer', done: false };
@@ -207,6 +209,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
 
   // --- Extra prep for selected week ---
   useEffect(() => {
+    if (!batches.length || !ingredients.length) return;
     const fetchExtraPrep = async () => {
       const { year, week } = selectedYearWeek;
       const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
@@ -223,7 +226,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
       setExtraPrep(loaded);
     };
     fetchExtraPrep();
-  }, [selectedYearWeek]);
+  }, [selectedYearWeek, batches, ingredients]);
 
   // --- Save checked ingredients/sleeves ---
   const savePrepStatus = async (checkedIngredients, checkedSleeves) => {
@@ -451,7 +454,32 @@ const allSleevesChecked =
   allSleeveCheckboxIds.length > 0 &&
   allSleeveCheckboxIds.every(id => checkedSleeves[id]);
 
-
+// save selected prep day to firestore
+useEffect(() => {
+  const saveDay = async () => {
+    const { year, week } = selectedYearWeek;
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { selectedPrepDay },
+      { merge: true }
+    );
+  };
+  saveDay();
+}, [selectedPrepDay, selectedYearWeek]);
+useEffect(() => {
+  const fetchPrepDay = async () => {
+    const { year, week } = selectedYearWeek;
+    const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.selectedPrepDay) setSelectedPrepDay(data.selectedPrepDay);
+      else setSelectedPrepDay('Tuesday'); // default
+    } else {
+      setSelectedPrepDay('Tuesday'); // default
+    }
+  };
+  fetchPrepDay();
+}, [selectedYearWeek]);
 
 
 
@@ -481,7 +509,24 @@ const allSleevesChecked =
         <div className='prepContainers'>
           <div className='prepBox'>
             <h2 className='dayTitles'>To do</h2>
-            <p className='prepDay'>Tuesday {getOrdinalDay(tuesdayDate)}</p>
+            {userRole === 'admin' ? (
+                <select
+                  className='prepDay'
+                  value={selectedPrepDay}
+                  onChange={e => setSelectedPrepDay(e.target.value)}
+                  style={{ fontSize: '1.1em', marginBottom: 8 }}
+                >
+                  {prepDays.map(day => (
+                    <option key={day} value={day}>
+                      {day} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(day) + 1))}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className='prepDay'>
+                  {selectedPrepDay} {getOrdinalDay(getRelativeWeekdayDate(mondayDate, prepDays.indexOf(selectedPrepDay) + 1))}
+                </p>
+              )}
             <table className='prepTable'>
               <thead>
               </thead>
