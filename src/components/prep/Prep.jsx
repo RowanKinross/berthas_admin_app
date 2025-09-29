@@ -73,6 +73,8 @@ function Prep() {
   const [collapseWriteSleeves, setCollapseWriteSleeves] = useState(true);
   const [selectedPrepDay, setSelectedPrepDay] = useState('Tuesday');
   const prepDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const [extraPrepByDay, setExtraPrepByDay] = useState({});
+  const [newPrepItemByDay, setNewPrepItemByDay] = useState({});
 
   // Always present static item
   const staticPrepItem = { text: 'Organise Freezer', done: false };
@@ -347,24 +349,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
       { merge: true }
     );
   };
-  const handleAddPrepItem = async () => {
-    if (newPrepItem.trim()) {
-      const newList = [...extraPrep, { text: newPrepItem.trim(), done: false }];
-      await saveExtraPrep(newList);
-      setNewPrepItem('');
-    }
-  };
-  const handleTogglePrepItem = async idx => {
-    const newList = extraPrep.map((item, i) =>
-      i === idx ? { ...item, done: !item.done } : item
-    );
-    await saveExtraPrep(newList);
-  };
-  const handleRemovePrepItem = async idx => {
-    if (idx === 0) return;
-    const newList = extraPrep.filter((_, i) => i !== idx);
-    await saveExtraPrep(newList);
-  };
+  
 
   // --- Non-prep-ahead ingredients for this week ---
   const nonPrepAheadIngredients = ingredientTotals
@@ -480,6 +465,91 @@ useEffect(() => {
   };
   fetchPrepDay();
 }, [selectedYearWeek]);
+
+// get batch days to organise to do lists
+const weekBatchDays = Array.from(
+  new Set(
+    weekBatches
+      .map(batch => {
+        const batchDate = new Date(batch.batch_date);
+        return batchDate.toLocaleDateString('en-GB', { weekday: 'long' });
+      })
+  )
+);
+
+// Order of weekdays
+const weekdayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+// Sort batch days by weekday order
+const sortedWeekBatchDays = weekBatchDays.slice().sort(
+  (a, b) => weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b)
+);
+
+
+
+
+
+  // Local state for checkboxes (optional: you can persist to Firestore if needed)
+  const [checkedTomato, setCheckedTomato] = useState({});
+  const [checkedHoney, setCheckedHoney] = useState({});
+
+  // Handler functions
+  const handleTomatoCheckbox = () => {
+    setCheckedTomato(prev => ({ ...prev, [day]: !prev[day] }));
+  };
+  const handleHoneyCheckbox = () => {
+    setCheckedHoney(prev => ({ ...prev, [day]: !prev[day] }));
+  };
+
+  // get the extra prep items for the extra days
+  useEffect(() => {
+    const fetchExtraPrep = async () => {
+      const { year, week } = selectedYearWeek;
+      const docSnap = await getDoc(doc(db, "prepStatus", `${year}-W${week}`));
+      let loaded = {};
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        loaded = data.extraPrepByDay || {};
+      }
+      setExtraPrepByDay(loaded);
+    };
+    fetchExtraPrep();
+  }, [selectedYearWeek]);
+
+  const saveExtraPrepByDay = async (newObj) => {
+    setExtraPrepByDay(newObj);
+    const { year, week } = selectedYearWeek;
+    await setDoc(
+      doc(db, "prepStatus", `${year}-W${week}`),
+      { extraPrepByDay: newObj },
+      { merge: true }
+    );
+  };
+  const handleAddPrepItem = async (day) => {
+  const text = newPrepItemByDay[day]?.trim();
+  if (text) {
+    const newList = [...(extraPrepByDay[day] || []), { text, done: false }];
+    const newObj = { ...extraPrepByDay, [day]: newList };
+    await saveExtraPrepByDay(newObj);
+    setNewPrepItemByDay(prev => ({ ...prev, [day]: '' }));
+  }
+};
+
+const handleTogglePrepItem = async (day, idx) => {
+  const newList = (extraPrepByDay[day] || []).map((item, i) =>
+    i === idx ? { ...item, done: !item.done } : item
+  );
+  const newObj = { ...extraPrepByDay, [day]: newList };
+  await saveExtraPrepByDay(newObj);
+};
+
+const handleRemovePrepItem = async (day, idx) => {
+  const newList = (extraPrepByDay[day] || []).filter((_, i) => i !== idx);
+  const newObj = { ...extraPrepByDay, [day]: newList };
+  await saveExtraPrepByDay(newObj);
+};
+  
+
 
 
 
@@ -773,7 +843,6 @@ useEffect(() => {
                 <tr>
                   <th
                     className='writeSleevesHeader'
-                    style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', userSelect: 'none' }}
                     onClick={() => setCollapseWriteSleeves(c => !c)}
                   >
                     <input
@@ -864,54 +933,160 @@ useEffect(() => {
             {/* Extra Prep Checklist */}
             </table>
               <ul className='prepTable extraPrepTable'>
-                {extraPrep.map((item, idx) => (
-                  <li key={idx} className='extraPrepList bold' >
-                    <input
+                <li>
+                  <input
                       type="checkbox"
-                      checked={item.done}
-                      onChange={() => handleTogglePrepItem(idx)}
+                      style={{ pointerEvents: 'none' }}
+                      tabIndex={-1}
                     />
-                    <span
-                      style={{
-                        textDecoration: item.done ? 'line-through' : 'none', paddingLeft: 5,
-                      }}
-                    >
-                      {item.text}
-                    </span>
-                    {idx !== 0 && (
-                      <button
-                        onClick={() => handleRemovePrepItem(idx)}
-                        style={{
-                          marginLeft: 8,
-                          background: 'none',
-                          border: 'none',
-                          color: '#c00',
-                          cursor: 'pointer',
-                          fontSize: '1.1em'
-                        }}
-                        title="Remove"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </li>
-                ))}
+                    <span className='writeSleevesTitle bold'>Organise Freezer</span>
+                </li>
+              {(extraPrepByDay[selectedPrepDay] || []).map((item, idx) => (
+                <li key={idx} className='extraPrepList bold'>
+                  <input
+                    type="checkbox"
+                    checked={item.done}
+                    onChange={() => handleTogglePrepItem(selectedPrepDay, idx)}
+                  />
+                  <span
+                    style={{
+                      textDecoration: item.done ? 'line-through' : 'none', paddingLeft: 5,
+                    }}
+                  >
+                    {item.text}
+                  </span>
+                  <button
+                    onClick={() => handleRemovePrepItem(selectedPrepDay, idx)}
+                    style={{
+                      marginLeft: 8,
+                      background: 'none',
+                      border: 'none',
+                      color: '#c00',
+                      cursor: 'pointer',
+                      fontSize: '1.1em'
+                    }}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
               <li className='addPrep'>
                 <input
                   type="text"
-                  value={newPrepItem}
-                  onChange={e => setNewPrepItem(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleAddPrepItem(); }}
+                  value={newPrepItemByDay[selectedPrepDay] || ''}
+                  onChange={e => setNewPrepItemByDay(prev => ({ ...prev, [selectedPrepDay]: e.target.value }))}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddPrepItem(selectedPrepDay); }}
                   placeholder="Add prep item..."
                   style={{ flex: 1, marginRight: 8 }}
                 />
-                <button className='addButton' onClick={handleAddPrepItem}>Add</button>
+                <button className='addButton' onClick={() => handleAddPrepItem(selectedPrepDay)}>Add</button>
               </li>
-              </ul>
-
-
-
+            </ul>
           </div>
+
+          {/* additional prep days */}
+          {sortedWeekBatchDays.map(day => {
+  // Calculate tomato for this day:
+  const date = getRelativeWeekdayDate(mondayDate, prepDays.indexOf(day) + 1);
+  const tomatoPrep = getTomatoPrepForDate(date);
+  const tomatoKg = tomatoPrep ? tomatoPrep.totalKg : 0;
+  const tomatoUnitsNeeded = tomatoPrep ? tomatoPrep.unitsNeeded : 0;
+  const tomatoUnit = tomatoPrep ? tomatoPrep.unit : '';
+
+  // Calculate honey for this day:
+  const pizzasForDay = getPizzasForDate(date);
+  const honeyUsed = pizzasForDay.some(pizza =>
+    (pizza.ingredients || []).includes('Honey')
+  );
+
+  return (
+    <div className='prepBox' key={day}>
+      <div className='toDoHeader'>
+        <h2 className='dayTitles toDo'>To do: </h2>
+        <p className='prepDay'>
+          {day} {getOrdinalDay(date)}
+        </p>
+      </div>
+      <table className='prepTable bold'>
+        <tbody>
+          {tomatoKg > 0 && (
+            <tr>
+              <td>
+                <input
+                  type="checkbox"
+                  id={`tomato-${day}`}
+                  checked={!!checkedTomato[day]}
+                  onChange={() => handleTomatoCheckbox(day)}
+                  style={{ marginRight: 8 }}
+                />
+                <label htmlFor={`tomato-${day}`}>
+                  Tomato x {tomatoUnitsNeeded} {tomatoUnit} ({tomatoKg.toFixed(2)}kg)
+                </label>
+              </td>
+            </tr>
+          )}
+          {honeyUsed && (
+            <tr>
+              <td>
+                <input
+                  type="checkbox"
+                  id={`honey-${day}`}
+                  checked={!!checkedHoney[day]}
+                  onChange={() => handleHoneyCheckbox(day)}
+                  style={{ marginRight: 8 }}
+                />
+                <label htmlFor={`honey-${day}`}>Take honey out</label>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <ul className='prepTable extraPrepTable'>
+        {(extraPrepByDay[day] || []).map((item, idx) => (
+          <li key={idx} className='extraPrepList bold'>
+            <input
+              type="checkbox"
+              checked={item.done}
+              onChange={() => handleTogglePrepItem(day, idx)}
+            />
+            <span style={{
+              textDecoration: item.done ? 'line-through' : 'none', paddingLeft: 5,
+            }}>
+              {item.text}
+            </span>
+            <button
+              onClick={() => handleRemovePrepItem(day, idx)}
+              style={{
+                marginLeft: 8,
+                background: 'none',
+                border: 'none',
+                color: '#c00',
+                cursor: 'pointer',
+                fontSize: '1.1em'
+              }}
+              title="Remove"
+            >
+              ×
+            </button>
+          </li>
+        ))}
+        <li className='addPrep'>
+          <input
+            type="text"
+            value={newPrepItemByDay[day] || ''}
+            onChange={e => setNewPrepItemByDay(prev => ({ ...prev, [day]: e.target.value }))}
+            onKeyDown={e => { if (e.key === 'Enter') handleAddPrepItem(day); }}
+            placeholder="Add prep item..."
+            style={{ flex: 1, marginRight: 8 }}
+          />
+          <button className='addButton' onClick={() => handleAddPrepItem(day)}>Add</button>
+        </li>
+      </ul>
+    </div>
+  );
+})}
+
           <div className='doughBox'>
             <h2 className='dayTitles'>Dough</h2>
             <DoughCalculator selectedYearWeek={selectedYearWeek} getWeekYear={getWeekYear} />

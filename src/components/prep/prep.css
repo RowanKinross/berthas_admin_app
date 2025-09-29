@@ -12,6 +12,7 @@
   }
   .toDoHeader {
     display: flex;
+    padding-top: 5%;
     justify-content: center;
   }
   .prepDay {
@@ -55,7 +56,7 @@
   }
 
   .prepTable {
-    margin: 5% 5% 0 5%;
+    margin: 5%;
     font-size: 14px;
   }
   .extraPrepTable {
@@ -111,6 +112,12 @@
   .addBatchOtherHeader, .writeSleevesHeader {
     display: flex;
     font-weight: 500;
+  }
+  .writeSleevesHeader {
+    margin-top: 15px;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
   }
   .collapsibleArrow {
     margin-left: 5px;
