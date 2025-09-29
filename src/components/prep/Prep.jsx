@@ -769,7 +769,7 @@ const allSleevesChecked =
                                   {new Date(batch.batch_date).toLocaleDateString('en-GB').replace(/\//g, '.')} <br /> {getBestBefore(batch.batch_date).replace(/\//g, '.')}
                                 </div>
                               </div>
-                              <div>
+                              <div className='writeSleevesList'>
                                 {sleevedPizzas.map(pizza => {
                                   const displayCount = Math.max(0, (pizza.quantity || 0) - 20);
                                   return (
@@ -805,7 +805,8 @@ const allSleevesChecked =
               </tbody>
               )}
             {/* Extra Prep Checklist */}
-              <ul style={{ listStyle: 'none', padding: 0 }}>
+            </table>
+              <ul className='prepTable extraPrepTable'>
                 {extraPrep.map((item, idx) => (
                   <li key={idx} className='extraPrepList' >
                     <input
@@ -838,8 +839,7 @@ const allSleevesChecked =
                     )}
                   </li>
                 ))}
-              </ul>
-              <div className='addPrep'>
+              <li className='addPrep'>
                 <input
                   type="text"
                   value={newPrepItem}
@@ -849,8 +849,9 @@ const allSleevesChecked =
                   style={{ flex: 1, marginRight: 8 }}
                 />
                 <button onClick={handleAddPrepItem}>Add</button>
-              </div>
-            </table>
+              </li>
+              </ul>
+
 
 
           </div>
