@@ -61,6 +61,8 @@
   .prepDay {
     text-align: center;
     font-style: italic;
+    width: min-content;
+    align-self: center;
   }
   .strikethrough {
     text-decoration: line-through;
