@@ -410,7 +410,25 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
   const wednesdayTomato = getTomatoPrepForDate(wednesdayDate);
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
 
-  // --- UI ---
+
+  // handle clicking outside of prep info
+  useEffect(() => {
+    if (!openNote) return;
+
+    const handleClick = (e) => {
+      // If the click is inside an info popup, do nothing
+      if (e.target.closest('.prep-note-popup')) return;
+      setOpenNote(null);
+    };
+
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openNote]);
+
+
+
+
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -483,6 +501,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                             )}
                             {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
                               <span
+                                className="prep-note-popup"
                                 style={{
                                   position: 'absolute',
                                   background: '#222',
@@ -574,18 +593,33 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                       <tr>
                         <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
                           {editingBatchCode === ingredient ? (
-                            <input
-                              type="text"
-                              value={editingBatchCodeValue}
-                              autoFocus
-                              onChange={e => setEditingBatchCodeValue(e.target.value)}
-                              onBlur={() => handleBatchCodeSave(ingredient)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') handleBatchCodeSave(ingredient);
-                                if (e.key === 'Escape') setEditingBatchCode(null);
-                              }}
-                              style={{ width: 80 }}
-                            />
+                            <>
+                              <input
+                                type="text"
+                                value={editingBatchCodeValue}
+                                list={`batch-code-suggestions-${ingredient}`}
+                                autoFocus
+                                onChange={e => setEditingBatchCodeValue(e.target.value)}
+                                onBlur={() => handleBatchCodeSave(ingredient)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleBatchCodeSave(ingredient);
+                                  if (e.key === 'Escape') setEditingBatchCode(null);
+                                }}
+                                style={{ width: 80 }}
+                              />
+                              <datalist id={`batch-code-suggestions-${ingredient}`}>
+                                {(batchCodeSuggestions[ingredient] || [])
+                                  .filter(code =>
+                                    editingBatchCodeValue
+                                      ? code.toLowerCase().includes(editingBatchCodeValue.toLowerCase())
+                                      : true
+                                  )
+                                  .slice(0, 3)
+                                  .map(code => (
+                                    <option key={code} value={code} />
+                                  ))}
+                              </datalist>
+                            </>
                           ) : (
                             <span
                               style={{ cursor: 'pointer', color: '#555' }}
