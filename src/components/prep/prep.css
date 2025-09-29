@@ -23,7 +23,7 @@
   .prepBox th {
     word-break: break-word;
     white-space: normal;
-    max-width: 220px; /* or whatever fits your layout */
+    max-width: 100%;
   }
 
   .prepBox .batchCode {
@@ -37,10 +37,19 @@
   .prepTable {
     margin: 5%;
   }
-  .prepTable th {
-  border-top: 1px solid #ccc;
-  padding: 20px 0
-}
+  .prepNotePopup {
+    position: absolute;
+    background: var(--bertha);
+    color: var(--dark);
+    padding: 8px 12px;
+    border-radius: 5px;
+    left: 40px;
+    z-index: 10;
+    min-width: 180px;
+    max-width: 260px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
   .dayTitles {
     margin: 3% 3% 0 3%;
     text-align: center;
@@ -60,6 +69,35 @@
   .sleeveContainer {
     display: flex;
   }
+
+  .otherIngredientsSection {
+    padding-left: 30px;
+  }
+  .addBatchOtherHeader, .writeSleevesTitle {
+    padding-left: 5px;
+  }
+  .addBatchOtherHeader, .writeSleevesHeader {
+    display: flex;
+    font-weight: 400;
+  }
+  .collapsibleArrow {
+    margin-left: 5px;
+  }
+.extraPrepList {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.addPrep {
+  display: flex;
+  margin-top: 15px;
+}
 
 
 
