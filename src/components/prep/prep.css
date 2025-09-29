@@ -74,9 +74,14 @@
     padding-left: 30px;
   }
   .addBatchOtherHeader {
-    display: flex;
     margin-left: 5px;
-    font-weight: lighter;
+  }
+  .addBatchOtherHeader, .writeSleevesHeader {
+    display: flex;
+    font-weight: 400;
+  }
+  .writeSleevesHeader {
+    padding: 5px 0;
   }
   .collapsibleArrow {
     background-color: none !important;

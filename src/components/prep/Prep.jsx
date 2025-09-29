@@ -432,6 +432,25 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
     ing => !!getBatchCodesForIngredient(ing).trim()
   );
 
+// write sleeves checked handler
+const { year: thisYear, week: thisWeek } = selectedYearWeek;
+const weekBatches = batches.filter(batch => {
+  if (!batch.batch_date) return false;
+  const batchDate = new Date(batch.batch_date);
+  const { year, week } = getWeekYear(batchDate);
+  return year === thisYear && week === thisWeek;
+});
+const allSleeveCheckboxIds = weekBatches
+  .flatMap(batch =>
+    (batch.pizzas || [])
+      .filter(pizza => pizza.sleeve && pizza.quantity > 0)
+      .map(pizza => `${batch.id}-${pizza.id}`)
+  );
+const allSleevesChecked =
+  allSleeveCheckboxIds.length > 0 &&
+  allSleeveCheckboxIds.every(id => checkedSleeves[id]);
+
+
 
 
 
@@ -515,7 +534,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                           <td></td>
                         </tr>
                         <tr>
-                          <td colSpan={2} style={{ paddingLeft: 32, paddingBottom: 8 }}>
+                          <td colSpan={2} style={{ paddingLeft: 32}}>
                             {editingBatchCode === ing.name ? (
                               <>
                                 <input
@@ -576,7 +595,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                       tabIndex={-1}
                     />
                     <span className='addBatchOtherHeader'>
-                      <div>Add Batch codes to other ingredients: </div>
+                      <div>Log batch codes for other ingredients: </div>
                       <span className='collapsibleArrow'>
                         <FontAwesomeIcon icon={collapseOtherIngredients ? faCircleChevronRight : faCircleChevronDown} />
                       </span>
@@ -600,7 +619,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                           </td>
                         </tr>
                         <tr>
-                          <td  style={{ paddingLeft: 52, paddingBottom: 8 }}>
+                          <td  style={{ paddingLeft: 50}}>
                             {editingBatchCode === ingredient ? (
                               <>
                                 <input
@@ -660,7 +679,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                           </td>
                         </tr>
                         <tr>
-                          <td colSpan={2} style={{ paddingLeft: 52, paddingBottom: 8 }}>
+                          <td colSpan={2} style={{ paddingLeft: 50}}>
                             {editingBatchCode === ing.name ? (
                               <input
                                 type="text"
@@ -696,7 +715,16 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
               )}
               <thead>
                 <tr>
-                  <th colSpan={2}>Write Sleeves:</th>
+                  <th className='writeSleevesHeader'>
+                    <input
+                      type="checkbox"
+                      checked={allSleevesChecked}
+                      readOnly
+                      style={{ pointerEvents: 'none' }}
+                      tabIndex={-1}
+                    />
+                    <span style={{marginLeft: '5px'}}>Write Sleeves:</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
