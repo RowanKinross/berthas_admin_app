@@ -410,7 +410,25 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
   const wednesdayTomato = getTomatoPrepForDate(wednesdayDate);
   const thursdayTomato = getTomatoPrepForDate(thursdayDate);
 
-  // --- UI ---
+
+  // handle clicking outside of prep info
+  useEffect(() => {
+    if (!openNote) return;
+
+    const handleClick = (e) => {
+      // If the click is inside an info popup, do nothing
+      if (e.target.closest('.prep-note-popup')) return;
+      setOpenNote(null);
+    };
+
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openNote]);
+
+
+
+
+
   return (
     <div className="prep navContent">
       <h2>Prep</h2>
@@ -483,6 +501,7 @@ tuesdayDate.setDate(mondayDate.getDate() + 1);
                             )}
                             {openNote === ing.name && ingredientData && ingredientData.prep_notes && (
                               <span
+                                className="prep-note-popup"
                                 style={{
                                   position: 'absolute',
                                   background: '#222',
