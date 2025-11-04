@@ -119,7 +119,7 @@ const mondayDate = (() => {
 
   // Monday is 2 days after Saturday
   const monday = new Date(saturday);
-  monday.setDate(saturday.getDate() + 2);
+  monday.setDate(saturday.getDate() - 5);
   return monday;
 })();
 const tuesdayDate = new Date(mondayDate);
