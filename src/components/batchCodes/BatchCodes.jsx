@@ -807,6 +807,11 @@ const formatDateDisplay = (dateStr) => {
     formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
   );
   
+  // Add this helper function near the top of your component
+  const isMobileOrTablet = () => {
+    return window.matchMedia('(max-width: 1024px)').matches;
+  };
+
   return (
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
@@ -1099,12 +1104,14 @@ const formatDateDisplay = (dateStr) => {
               onChange={(e) => setEditingValue(e.target.value)}
               onBlur={() => handleInlineSave("batch", null, "notes", editingValue)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+                // Only apply Enter shortcut on desktop (screens wider than 1024px)
+                if (!isMobileOrTablet() && e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleInlineSave("batch", null, "notes", editingValue);
                 }
               }}
               className='fullWidth minHeight'
+              placeholder={isMobileOrTablet() ? "Enter notes... Tap outside to save" : "Enter notes... Shift+Enter for new line, Enter to save"}
             />
           ) : (
             <span 
