@@ -12,21 +12,31 @@ const Customers = ({ accountID }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formValues, setFormValues] = useState({});
+  const [deliveryRegions, setDeliveryRegions] = useState([]);
 
   useEffect(() => {
-    const fetchAccount = async () => {
+    const fetchData = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "customers"));
-        const accountsData = querySnapshot.docs.map(doc => ({
+        // Fetch customers
+        const customersSnapshot = await getDocs(collection(db, "customers"));
+        const accountsData = customersSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
         setAccounts(accountsData);
+
+        // Fetch regions
+        const regionsSnapshot = await getDocs(collection(db, "regions"));
+        const regionsData = regionsSnapshot.docs.map(doc => ({
+          value: doc.id, // Use document ID as value
+          label: doc.data().name || doc.id // Use 'name' field or fallback to ID
+        }));
+        setDeliveryRegions(regionsData);
       } catch (error) {
-        console.error("Error fetching customers:", error);
+        console.error("Error fetching data:", error);
       }
     };
-    fetchAccount();
+    fetchData();
   }, []);
 
   const handleSearchChange = (e) => {
@@ -50,6 +60,10 @@ const Customers = ({ accountID }) => {
   );
 
   const handleEditClick = (account) => {
+    // Find the region ID that matches the stored region name
+    const regionMatch = deliveryRegions.find(region => region.label === account.delivery_region);
+    const regionValue = regionMatch ? regionMatch.value : "";
+
     setEditing(account.id);
     setFormValues({
       account_ID: account.account_ID,
@@ -58,6 +72,7 @@ const Customers = ({ accountID }) => {
       street: account.street,
       city: account.city,
       postcode: account.postcode,
+      delivery_region: regionValue, // Use the region ID for the dropdown
       phone_number: account.phone_number,
       email: account.email,
       default_pizza_view: account.default_pizza_view || "",
@@ -73,6 +88,10 @@ const Customers = ({ accountID }) => {
 
   const handleSaveClick = async (id) => {
     try {
+      // Get the region name instead of the ID before saving
+      const selectedRegion = deliveryRegions.find(region => region.value === formValues.delivery_region);
+      const regionName = selectedRegion ? selectedRegion.label : formValues.delivery_region;
+
       const updatedValues = {
         account_ID: formValues.account_ID || "",
         customer: formValues.customer || "",
@@ -80,6 +99,7 @@ const Customers = ({ accountID }) => {
         street: formValues.street || "",
         city: formValues.city || "",
         postcode: formValues.postcode || "",
+        delivery_region: regionName || "", // Save the region name, not the ID
         phone_number: formValues.phone_number || "",
         email: formValues.email || "",
         default_pizza_view: formValues.default_pizza_view || ""
@@ -224,6 +244,21 @@ const Customers = ({ accountID }) => {
                 />
               </div>
               <div className='entries'>
+                <label>Delivery Region:</label>
+                <select
+                  name="delivery_region"
+                  value={formValues.delivery_region}
+                  onChange={handleChange}
+                >
+                  <option value="">{formValues.delivery_region||'select region'}</option>
+                  {deliveryRegions.map(region => (
+                    <option key={region.value} value={region.value}>
+                      {region.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className='entries'>
                 <label>Phone Number:</label>
                 <input
                   type="text"
@@ -272,6 +307,10 @@ const Customers = ({ accountID }) => {
               <div className='entries'>
                 <label>Postcode:</label> 
                 <p>{selectedCustomer.postcode} </p>
+              </div>
+              <div className='entries'>
+                <label>Delivery Region:</label> 
+                <p>{selectedCustomer.delivery_region || 'No Region Set'}</p>
               </div>
               <div className='entries'>
                 <label>Phone Number:</label> 
