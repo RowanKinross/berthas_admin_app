@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, useNavigate } from 'react-router-dom';
 import { auth } from './components/firebase/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import logo from './bertha_logo.png'
 import './App.css'
 import NavTabs from './components/navTabs/NavTabs'
@@ -16,10 +17,24 @@ import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
 // Protected Route wrapper component
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const navigate = useNavigate();
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       const userRole = localStorage.getItem('userRole');
+      
+      if (!user && userRole) {
+        // User was logged in but Firebase session expired
+        localStorage.removeItem('userRole');
+        setSessionExpired(true);
+        
+        // Show message for 3 seconds then redirect
+        setTimeout(() => {
+          setSessionExpired(false);
+          navigate('/');
+        }, 3000);
+        return;
+      }
       
       if (!user || !userRole) {
         navigate('/');
@@ -34,6 +49,37 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
     return () => unsubscribe();
   }, [navigate, requiredRole]);
+
+  if (sessionExpired) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10000
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          padding: '2rem',
+          borderRadius: '8px',
+          textAlign: 'center',
+          maxWidth: '400px'
+        }}>
+          <h3 style={{ color: '#d32f2f', marginBottom: '1rem' }}>Session Expired</h3>
+          <p>Your session has expired for security reasons. You will be redirected to the login page.</p>
+          <div style={{ marginTop: '1rem', fontSize: '0.9em', color: '#666' }}>
+            Redirecting in 3 seconds...
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return children;
 };

@@ -10,6 +10,18 @@
   width: 100%;
   border: 0;
 }
+.batchText.selected {
+  background-color: var(--MargLight); 
+  color: var(--pale);
+}
+
+.batchText.selected.completed {
+  background-color: var(--MargLight); 
+}
+
+.batchText.selected.draft {
+  background-color: var(--MargLight); 
+}
 .ingredientBatchcodeBox{
   border: 1px solid var(--grey);
   padding-top: 5px;
@@ -32,6 +44,24 @@
 }
 .input {
   width: 100%;
+}
+
+/* Add specific styling for textarea */
+textarea.input {
+  resize: vertical; /* Allow vertical resizing only */
+  font-family: inherit; /* Match the font with other inputs */
+  padding: 8px;
+  border: 1px solid var(--grey);
+}
+
+.paragraph {
+  white-space: pre-wrap; /* Preserves line breaks and spaces */
+  display: block;
+  margin-top: 0.5rem;
+  padding: 8px;
+  background-color: var(--pale);
+  border: 1px solid var(--grey);
+  border-radius: 4px;
 }
 .inputNumber{
   width: 50px;

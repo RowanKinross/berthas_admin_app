@@ -248,6 +248,33 @@ const formatDateDisplay = (dateStr) => {
     };
     fetchPizzas();
   }, []);
+
+  
+    useEffect(() => {
+      const refreshBatchData = async () => {
+        if (!viewingBatch) return;
+        
+        try {
+          const batchRef = doc(db, "batches", viewingBatch.id);
+          const freshSnap = await getDoc(batchRef);
+          if (freshSnap.exists()) {
+            const freshData = { id: freshSnap.id, ...freshSnap.data() };
+            setViewingBatch(freshData);
+          }
+        } catch (error) {
+          console.error("Error refreshing batch data:", error);
+        }
+      };
+
+      const handleWindowFocus = () => {
+        if (viewingBatch) {
+          refreshBatchData();
+        }
+      };
+
+      window.addEventListener('focus', handleWindowFocus);
+      return () => window.removeEventListener('focus', handleWindowFocus);
+    }, [viewingBatch]);
   
   
 
@@ -277,15 +304,19 @@ const formatDateDisplay = (dateStr) => {
 
   // if user clicks the add button
   const handleAddClick = () => {
-    setShowForm(true); // Show the form
-    setBatchDate(""); // Clear batch date
-    setTotalPizzas(0) // Clear pizza total
-    setIngredientsOrdered(false); // Clear ingredients ordered checkbox
-    setSelectedPizzas([]);
-    setPizzas(pizzas.map(pizza => ({ ...pizza, quantity: 0 })));
-    setIngredientBatchCodes({});
-    setNotes("")
-  }; 
+  // Close any open editing fields before opening form
+  setEditingField(null);
+  setEditingValue("");
+  
+  setShowForm(true); // Show the form
+  setBatchDate(""); // Clear batch date
+  setTotalPizzas(0) // Clear pizza total
+  setIngredientsOrdered(false); // Clear ingredients ordered checkbox
+  setSelectedPizzas([]);
+  setPizzas(pizzas.map(pizza => ({ ...pizza, quantity: 0 })));
+  setIngredientBatchCodes({});
+  setNotes("")
+}; 
 
 
   const handleQuantityChange = (e, pizzaId) => {
@@ -383,24 +414,28 @@ const formatDateDisplay = (dateStr) => {
   
 
   const handleBatchClick = (batch) => {
-    setViewingBatch({
-      ...batch,
-      ingredientBatchCodes: batch.pizzas.reduce((acc, pizza) => {
-        pizza.ingredients.forEach(ingredient => {
-          if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
-            acc[ingredient] = pizza.ingredientBatchCodes[ingredient];
-          }
-        });
-        return acc;
-      }, {})
-    });
+  // Close any open editing fields before switching batches
+  setEditingField(null);
+  setEditingValue("");
+  
+  setViewingBatch({
+    ...batch,
+    ingredientBatchCodes: batch.pizzas.reduce((acc, pizza) => {
+      pizza.ingredients.forEach(ingredient => {
+        if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
+          acc[ingredient] = pizza.ingredientBatchCodes[ingredient];
+        }
+      });
+      return acc;
+    }, {})
+  });
 
-    setIngredientsOrdered(batch.ingredients_ordered || false);
+  setIngredientsOrdered(batch.ingredients_ordered || false);
 
-    setTimeout(() => {
-      batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-  };
+  setTimeout(() => {
+    batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 0);
+};
 
   const handleAddFormSubmit = async (e) => {
     e.preventDefault();
@@ -507,6 +542,60 @@ const formatDateDisplay = (dateStr) => {
       const currentSnap = await getDoc(batchRef);
       const currentData = currentSnap.data();
   
+      // Add validation for pizza fields
+      if (type === "pizza") {
+        const existingPizza = currentData.pizzas.find(p => p.id === id);
+        const currentViewingPizza = viewingBatch.pizzas.find(p => p.id === id);
+        
+        // Check if someone else modified this field since we loaded the data
+        if (existingPizza && currentViewingPizza) {
+          const dbValue = existingPizza[field];
+          const ourValue = currentViewingPizza[field];
+          
+          if (dbValue !== ourValue && dbValue != null) {
+            const confirmOverride = window.confirm(
+              `Warning: This field was recently updated to "${dbValue}" by another user. ` +
+              `Do you want to override it with "${value}"?`
+            );
+            if (!confirmOverride) {
+              // Refresh the viewing batch with latest data
+              const freshData = { id: currentSnap.id, ...currentData };
+              setViewingBatch(freshData);
+              return;
+            }
+          }
+        }
+      }
+  
+      // Add similar validation for ingredient batch codes
+      if (type === "ingredient") {
+        const existingCodes = {};
+        currentData.pizzas.forEach(pizza => {
+          Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+            if (code?.trim()) existingCodes[ingredient] = code.trim();
+          });
+        });
+        
+        const ourCodes = {};
+        viewingBatch.pizzas.forEach(pizza => {
+          Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+            if (code?.trim()) ourCodes[ingredient] = code.trim();
+          });
+        });
+        
+        if (existingCodes[id] && existingCodes[id] !== ourCodes[id]) {
+          const confirmOverride = window.confirm(
+            `Warning: This field was recently updated to "${existingCodes[id]}" by another user. ` +
+            `Do you want to override it with "${value}"?`
+          );
+          if (!confirmOverride) {
+            const freshData = { id: currentSnap.id, ...currentData };
+            setViewingBatch(freshData);
+            return;
+          }
+        }
+      }
+  
       if (type === "ingredient") {
         const updatedPizzas = currentData.pizzas.map(pizza => {
           return {
@@ -603,15 +692,18 @@ const formatDateDisplay = (dateStr) => {
         (formRef.current && !formRef.current.contains(e.target)) ||
         (batchDetailsRef.current && !batchDetailsRef.current.contains(e.target))
       ) {
+        // Close editing fields when clicking outside
+        setEditingField(null);
+        setEditingValue("");
         setShowForm(false);
         setViewingBatch(null);
       }
     };
-  
+
     if (showForm || viewingBatch) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-  
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -718,8 +810,8 @@ const formatDateDisplay = (dateStr) => {
   return (
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
-      {/* Only show batch search if not unit and there are batches */}
-      {userRole !== 'unit' && filteredBatches.length > 0 && (
+      {/* Only show batch search if not unit and there are batches in the database */}
+      {userRole !== 'unit' && batches.length > 0 && (
         <div className="alignRight">
           <input
             type="text"
@@ -1136,7 +1228,10 @@ const formatDateDisplay = (dateStr) => {
         .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
         .map(batch => (
           <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-            <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
+            <button 
+              className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''} container`} 
+              onClick={() => handleBatchClick(batch)}
+            >
               <p className='batchTextBoxes'>{formatDateDisplay(batch.batch_date)}</p>
               <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
               {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
@@ -1144,7 +1239,9 @@ const formatDateDisplay = (dateStr) => {
           </div>
         ))
       ) : (
-        <p className='py-3'>Loading batches...</p>
+        <p className='py-3'>
+          {batches.length === 0 ? 'Loading batches...' : 'No batches found matching your search.'}
+        </p>
       )}
       {/* Pagination: hide for unit userRole */}
       {userRole !== 'unit' && (
