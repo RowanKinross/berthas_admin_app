@@ -1111,7 +1111,7 @@ const formatDateDisplay = (dateStr) => {
                 }
               }}
               className='fullWidth minHeight'
-              placeholder={isMobileOrTablet() ? "Enter notes... Tap outside to save" : "Enter notes... Shift+Enter for new line, Enter to save"}
+              placeholder="..."
             />
           ) : (
             <span 
