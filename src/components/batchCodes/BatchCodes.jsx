@@ -1228,7 +1228,10 @@ const formatDateDisplay = (dateStr) => {
         .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
         .map(batch => (
           <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-            <button className={`batchText button ${batch.completed ? 'completed' : 'draft'} container`} onClick={() => handleBatchClick(batch)}>
+            <button 
+              className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''} container`} 
+              onClick={() => handleBatchClick(batch)}
+            >
               <p className='batchTextBoxes'>{formatDateDisplay(batch.batch_date)}</p>
               <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
               {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}

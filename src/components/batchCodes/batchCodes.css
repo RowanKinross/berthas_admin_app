@@ -10,6 +10,18 @@
   width: 100%;
   border: 0;
 }
+.batchText.selected {
+  background-color: var(--MargLight); 
+  color: var(--pale);
+}
+
+.batchText.selected.completed {
+  background-color: var(--MargLight); 
+}
+
+.batchText.selected.draft {
+  background-color: var(--MargLight); 
+}
 .ingredientBatchcodeBox{
   border: 1px solid var(--grey);
   padding-top: 5px;
