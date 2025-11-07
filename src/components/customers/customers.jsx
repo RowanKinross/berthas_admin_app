@@ -29,6 +29,11 @@ const Customers = ({ accountID }) => {
   // Add pizza preference state
   const [pizzaPreference, setPizzaPreference] = useState('');
 
+  // Add new region states
+  const [showAddRegion, setShowAddRegion] = useState(false);
+  const [showAddRegionEdit, setShowAddRegionEdit] = useState(false);
+  const [newRegionName, setNewRegionName] = useState('');
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -215,7 +220,51 @@ const Customers = ({ accountID }) => {
     }
   };
 
-  // Add a helper function to clear the modal form
+  // Add function to handle new region
+  const handleAddNewRegion = async (isEditMode = false) => {
+    try {
+      if (!newRegionName.trim()) {
+        setFormError('Please enter a region name.');
+        return;
+      }
+
+      // Add new region to Firestore
+      const docRef = await addDoc(collection(db, "regions"), {
+        name: newRegionName.trim()
+      });
+
+      // Update local regions state
+      const newRegion = {
+        value: docRef.id,
+        label: newRegionName.trim()
+      };
+      setDeliveryRegions([...deliveryRegions, newRegion]);
+
+      if (isEditMode) {
+        // For edit mode, set the form value to the new region ID
+        setFormValues({
+          ...formValues,
+          delivery_region: docRef.id
+        });
+        setShowAddRegionEdit(false);
+      } else {
+        // For modal, set current region to the new region name
+        setCurrentRegion(newRegionName.trim());
+        setShowAddRegion(false);
+      }
+
+      // Clear form
+      setNewRegionName('');
+      setFormError('');
+
+      console.log("Region added:", newRegionName);
+    } catch (error) {
+      console.error("Error adding region:", error);
+      setFormError("Error adding region. Please try again.");
+    }
+  };
+
+  // Update clearModalForm to include new region states
   const clearModalForm = () => {
     setName('');
     setNameNumber('');
@@ -225,7 +274,9 @@ const Customers = ({ accountID }) => {
     setCurrentRegion('');
     setPhoneNumber('');
     setEmail('');
-    setPizzaPreference(''); // Clear pizza preference
+    setPizzaPreference('');
+    setShowAddRegion(false);
+    setNewRegionName('');
     setFormError('');
   };
 
@@ -381,16 +432,67 @@ const Customers = ({ accountID }) => {
                 <select
                   name="delivery_region"
                   value={formValues.delivery_region}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    if (e.target.value === 'ADD_NEW_REGION') {
+                      setShowAddRegionEdit(true);
+                      return;
+                    }
+                    handleChange(e);
+                  }}
+                  style={{ marginBottom: '10px' }}
                 >
-                  <option value="">{formValues.delivery_region||'select region'}</option>
+                  <option value="">Select Region</option>
                   {deliveryRegions.map(region => (
                     <option key={region.value} value={region.value}>
                       {region.label}
                     </option>
                   ))}
+                  <option value="ADD_NEW_REGION" style={{ color: '#007bff', fontWeight: 'bold' }}>
+                    + Add New Region
+                  </option>
                 </select>
+                
+                {/* Add New Region Section for Edit Mode */}
+                {showAddRegionEdit && (
+                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                    <input
+                      type="text"
+                      placeholder="Enter new region name"
+                      value={newRegionName}
+                      onChange={(e) => setNewRegionName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddNewRegion(true);
+                        }
+                        if (e.key === 'Escape') {
+                          setShowAddRegionEdit(false);
+                          setNewRegionName('');
+                        }
+                      }}
+                      style={{ flex: 1, padding: '5px' }}
+                      autoFocus
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => handleAddNewRegion(true)}
+                      style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '3px' }}
+                    >
+                      Add
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setShowAddRegionEdit(false);
+                        setNewRegionName('');
+                      }}
+                      style={{ padding: '5px 10px', backgroundColor: '#ccc', border: 'none', borderRadius: '3px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
+              
               <div className='entries'>
                 <label>Phone Number:</label>
                 <input
@@ -527,7 +629,14 @@ const Customers = ({ accountID }) => {
               <label><h6>Delivery Region:</h6></label>
               <select
                 value={currentRegion}
-                onChange={(e) => setCurrentRegion(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value === 'ADD_NEW_REGION') {
+                    setShowAddRegion(true);
+                    return;
+                  }
+                  setCurrentRegion(e.target.value);
+                }}
+                style={{ marginBottom: '10px' }}
               >
                 <option value="">Select Region</option>
                 {deliveryRegions.map((region) => (
@@ -535,7 +644,50 @@ const Customers = ({ accountID }) => {
                     {region.label}
                   </option>
                 ))}
+                <option value="ADD_NEW_REGION" style={{ color: '#007bff', fontWeight: 'bold' }}>
+                  + Add New Region
+                </option>
               </select>
+              
+              {/* Add New Region Section for Modal */}
+              {showAddRegion && (
+                <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter new region name"
+                    value={newRegionName}
+                    onChange={(e) => setNewRegionName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddNewRegion(false);
+                      }
+                      if (e.key === 'Escape') {
+                        setShowAddRegion(false);
+                        setNewRegionName('');
+                      }
+                    }}
+                    style={{ flex: 1, padding: '5px' }}
+                    autoFocus
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => handleAddNewRegion(false)}
+                    style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '3px' }}
+                  >
+                    Add
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setShowAddRegion(false);
+                      setNewRegionName('');
+                    }}
+                    style={{ padding: '5px 10px', backgroundColor: '#ccc', border: 'none', borderRadius: '3px' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
 
             <label><h6>Phone Number:</h6></label>
@@ -574,6 +726,7 @@ const Customers = ({ accountID }) => {
             <button 
               type="submit" 
               className='button' 
+              disabled={!name}
               onClick={() => {
                 if (!name || !postcode) {
                   setFormError('Please fill in both Name and Postcode.');
@@ -582,6 +735,10 @@ const Customers = ({ accountID }) => {
                   setAddCustomer(false);
                   handleAddNewCustomer();
                 }
+              }}
+              style={{
+                opacity: !name ? 0.5 : 1,
+                cursor: !name ? 'not-allowed' : 'pointer'
               }}
             >Submit</button>
           </div>
