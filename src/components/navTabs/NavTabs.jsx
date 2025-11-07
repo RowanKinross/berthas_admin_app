@@ -229,13 +229,17 @@ const generateAccountID = ({ name, postcode }) => {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">NEW ORDER</h3>
           </NavLink>
-          <NavLink to="/inventory" className={({ isActive }) =>
+          <NavLink to="/customers" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h3 className="navTab">INVENTORY</h3>
+            <h3 className="navTab">CUSTOMERS</h3>
           </NavLink>
           <NavLink to="/summary" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">DEMAND SUMMARY</h3>
+          </NavLink>
+          <NavLink to="/inventory" className={({ isActive }) =>
+            isActive ? 'nav-link active' : 'nav-link'}>
+            <h3 className="navTab">INVENTORY</h3>
           </NavLink>
           <NavLink to="/archive" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
@@ -262,7 +266,7 @@ const generateAccountID = ({ name, postcode }) => {
           </NavLink> */}
           <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h3 className="navTab">BATCH CODES</h3>
+            <h3 className="navTab">BATCHES</h3>
           </NavLink>
         </>
       );

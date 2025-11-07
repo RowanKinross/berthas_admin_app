@@ -7,6 +7,7 @@ import Home from './components/home/Home'
 import NewOrder from './components/newOrder/NewOrder'
 import OrderHistory from './components/orderHistory/OrderHistory'
 import Account from './components/account/account'
+import Customers from './components/customers/customers'
 import Orders from './components/orders/Orders'
 import Inventory from './components/inventory/Inventory'
 import Archive from './components/archive/Archive'
@@ -39,6 +40,7 @@ return (
             <Route path="newOrder" element={<NewOrder customerName={customerName} accountID={accountID}/>} />
             <Route path="orderHistory" element={<OrderHistory customerName={customerName} accountID={accountID}/>} />
             <Route path="account" element={<Account customerName={customerName} accountID={accountID}/>} />
+            <Route path="customers" element={<Customers customerName={customerName} accountID={accountID}/>} />
             <Route path="orders" element={<Orders />} />
             <Route path="newOrderAdmin" element={<NewOrderAdmin/>} />
             <Route path="inventory" element={<Inventory />} />
