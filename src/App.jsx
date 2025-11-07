@@ -5,17 +5,12 @@ import logo from './bertha_logo.png'
 import './App.css'
 import NavTabs from './components/navTabs/NavTabs'
 import Home from './components/home/Home'
-import NewOrder from './components/newOrder/NewOrder'
-import OrderHistory from './components/orderHistory/OrderHistory'
-import Account from './components/account/account'
 import Customers from './components/customers/customers'
 import Orders from './components/orders/Orders'
 import Inventory from './components/inventory/Inventory'
 import Archive from './components/archive/Archive'
 import Summary from './components/summary/Summary'
 import BatchCodes from './components/batchCodes/BatchCodes'
-import Prep from './components/prep/Prep'
-import Auth from './components/auth/Auth';
 import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
 
 // Protected Route wrapper component
@@ -44,8 +39,6 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 };
 
 function App() {
-  const [customerName, setCustomerName] = useState(null);
-  const [accountID, setAccountID] = useState(null);
 
   return (
     <>
@@ -54,34 +47,17 @@ function App() {
       <Router>
         <header className='header'>
           <img src={logo} className="logo berthasLogo" alt="Bertha's Logo" />
-          <NavTabs customerName={customerName} setCustomerName={setCustomerName} accountID={accountID} setAccountID={setAccountID}/>
+          <NavTabs/>
         </header>
         <div className='body'>
           <div>
             <Routes>
               <Route path="/" element={<Home />} />
               
-              {/* Customer routes - require any login */}
-              <Route path="newOrder" element={
-                <ProtectedRoute>
-                  <NewOrder customerName={customerName} accountID={accountID}/>
-                </ProtectedRoute>
-              } />
-              <Route path="orderHistory" element={
-                <ProtectedRoute>
-                  <OrderHistory customerName={customerName} accountID={accountID}/>
-                </ProtectedRoute>
-              } />
-              <Route path="account" element={
-                <ProtectedRoute>
-                  <Account customerName={customerName} accountID={accountID}/>
-                </ProtectedRoute>
-              } />
-              
               {/* Admin-only routes */}
               <Route path="customers" element={
                 <ProtectedRoute requiredRole="admin">
-                  <Customers customerName={customerName} accountID={accountID}/>
+                  <Customers/>
                 </ProtectedRoute>
               } />
               <Route path="orders" element={
@@ -114,11 +90,6 @@ function App() {
               <Route path="batchCodes" element={
                 <ProtectedRoute>
                   <BatchCodes/>
-                </ProtectedRoute>
-              } />
-              <Route path="prep" element={
-                <ProtectedRoute>
-                  <Prep/>
                 </ProtectedRoute>
               } />
             </Routes>
