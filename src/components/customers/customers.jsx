@@ -283,7 +283,7 @@ const Customers = ({ accountID }) => {
   const selectedCustomer = accounts.find(account => account.id === selectedCustomerId);
 
   return (
-    <div className='account navContent'>
+    <div className='customers navContent'>
       <h2>CUSTOMERS</h2>
       
       {/* Customer Selection with Search */}
