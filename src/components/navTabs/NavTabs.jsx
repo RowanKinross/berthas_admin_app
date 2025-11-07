@@ -245,7 +245,8 @@ const generateAccountID = ({ name, postcode }) => {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCHES</h3>
           </NavLink>
-          {/* <NavLink to="/prep" className={({ isActive }) =>
+          {/* discontinued tab 
+          <NavLink to="/prep" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">PREP</h3>
           </NavLink> */}
@@ -254,7 +255,8 @@ const generateAccountID = ({ name, postcode }) => {
     } else if (userRole === "unit") {
       return (
         <>
-          {/* <NavLink to="/prep" className={({ isActive }) =>
+          {/* discontinued tab 
+          <NavLink to="/prep" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">PREP</h3>
           </NavLink> */}
