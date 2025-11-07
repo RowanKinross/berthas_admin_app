@@ -718,8 +718,8 @@ const formatDateDisplay = (dateStr) => {
   return (
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
-      {/* Only show batch search if not unit and there are batches */}
-      {userRole !== 'unit' && filteredBatches.length > 0 && (
+      {/* Only show batch search if not unit and there are batches in the database */}
+      {userRole !== 'unit' && batches.length > 0 && (
         <div className="alignRight">
           <input
             type="text"
@@ -1144,7 +1144,9 @@ const formatDateDisplay = (dateStr) => {
           </div>
         ))
       ) : (
-        <p className='py-3'>Loading batches...</p>
+        <p className='py-3'>
+          {batches.length === 0 ? 'Loading batches...' : 'No batches found matching your search.'}
+        </p>
       )}
       {/* Pagination: hide for unit userRole */}
       {userRole !== 'unit' && (
