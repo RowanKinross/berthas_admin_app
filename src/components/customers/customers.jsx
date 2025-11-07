@@ -95,7 +95,7 @@ const Customers = ({ accountID }) => {
         <select 
           value={selectedCustomerId} 
           onChange={handleCustomerSelect}
-          className="customer-select"
+          className="customerSelect"
         >
           <option value="">-- Select a Customer --</option>
           {accounts.map(account => (

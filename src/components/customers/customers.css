@@ -44,3 +44,7 @@
 .icon:hover {
   color: var(--berthas);
 }
+
+.customerSelect {
+  text-align: center;
+}
