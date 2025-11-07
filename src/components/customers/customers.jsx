@@ -7,6 +7,7 @@ import { faEdit } from '@fortawesome/free-solid-svg-icons';
 
 const Customers = ({ accountID }) => {
   const [accounts, setAccounts] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [editing, setEditing] = useState(null);
   const [formValues, setFormValues] = useState({});
 
@@ -19,12 +20,22 @@ const Customers = ({ accountID }) => {
           ...doc.data()
         }));
         setAccounts(accountsData);
+        
+        // Auto-select first customer if available
+        if (accountsData.length > 0 && !selectedCustomerId) {
+          setSelectedCustomerId(accountsData[0].id);
+        }
       } catch (error) {
         console.error("Error fetching customers:", error);
       }
     };
     fetchAccount();
-  }, []);
+  }, [selectedCustomerId]);
+
+  const handleCustomerSelect = (e) => {
+    setSelectedCustomerId(e.target.value);
+    setEditing(null); // Exit edit mode when switching customers
+  };
 
   const handleEditClick = (account) => {
     setEditing(account.id);
@@ -35,7 +46,7 @@ const Customers = ({ accountID }) => {
       street: account.street,
       city: account.city,
       postcode: account.postcode,
-      phoneNumber: account.phoneNumber,
+      phone_number: account.phone_number,
       email: account.email,
       default_pizza_view: account.default_pizza_view || "",
     });
@@ -57,7 +68,7 @@ const Customers = ({ accountID }) => {
         street: formValues.street || "",
         city: formValues.city || "",
         postcode: formValues.postcode || "",
-        phoneNumber: formValues.phoneNumber || "",
+        phone_number: formValues.phone_number || "",
         email: formValues.email || "",
         default_pizza_view: formValues.default_pizza_view || ""
       };
@@ -72,130 +83,149 @@ const Customers = ({ accountID }) => {
   }
   };
 
+  const selectedCustomer = accounts.find(account => account.id === selectedCustomerId);
+
   return (
-<div className='account navContent'>
+    <div className='account navContent'>
       <h2>CUSTOMERS</h2>
-      {accounts
-        .filter(account => account.account_ID === accountID)
-        .map(account => (
-          <div key={account.id}>
-            {editing === account.id ? (
-              <div>
-                <div className='entries'>
-                  <label>Account ID:</label> {account.account_ID}
-                </div>
-                <div className='entries'>
-                  <label>Name:</label>
-                  <input
-                    type="text"
-                    name="customer"
-                    value={formValues.customer}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className='entries'>
-                  <label>Address:</label>
-                  <input
-                    type="text"
-                    name="name_number"
-                    value={formValues.name_number}
-                    onChange={handleChange}
-                  />
-                  <input
-                    type="text"
-                    name="street"
-                    value={formValues.street}
-                    onChange={handleChange}
-                  />
-                  <input
-                    type="text"
-                    name="city"
-                    value={formValues.city}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className='entries'>
-                  <label>Postcode:</label>
-                  <input
-                    type="text"
-                    name="postcode"
-                    value={formValues.postcode}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className='entries'>
-                  <label>Phone Number:</label>
-                  <input
-                    type="text"
-                    name="phoneNumber"
-                    value={formValues.phoneNumber}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className='entries'>
-                  <label>Email:</label>
-                  <input
-                    type="text"
-                    name="email"
-                    value={formValues.email}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className='entries'>
-                  <label>Pizza Type:</label>
-                  <select
-                    name="default_pizza_view"
-                    value={formValues.default_pizza_view}
-                    onChange={handleChange}
-                  >
-                    <option value="withSleeve">With Sleeves</option>
-                    <option value="withoutSleeve">Without Sleeves</option>
-                    <option value="all">All Pizzas</option>
-                  </select>
-                </div>
-                <button className='saveButton button' onClick={() => handleSaveClick(account.id)}>Save</button>
+      
+      {/* Customer Selection Dropdown */}
+      <div className='entries'>
+        <label>Customer:</label>
+        <select 
+          value={selectedCustomerId} 
+          onChange={handleCustomerSelect}
+          className="customer-select"
+        >
+          <option value="">-- Select a Customer --</option>
+          {accounts.map(account => (
+            <option key={account.id} value={account.id}>
+              {account.customer}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Display selected customer details */}
+      {selectedCustomer && (
+        <div key={selectedCustomer.id}>
+          {editing === selectedCustomer.id ? (
+            <div>
+              <div className='entries'>
+                <label>Account ID:</label> {selectedCustomer.account_ID}
               </div>
-            ) : (
-              <div>
-                <div className='entries'>
-                  <label>Account ID:</label>
-                  <p> {account.account_ID} </p>
-                </div>
-                <div className='entries'>
-                  <label>Name:</label>
-                  <p> {account.customer} </p>
-                </div>
-                <div className='entries'>
-                  <label>Address:</label> 
-                  <p>{account.name_number}, {account.street} <br/>{account.city}</p>
-                </div>
-                <div className='entries'>
-                  <label>Postcode:</label> 
-                  <p>{account.postcode} </p>
-                </div>
-                <div className='entries'>
-                  <label>Phone Number:</label> 
-                  <p>{account.phone_number}</p>
-                </div>
-                <div className='entries'>
-                  <label>Email:</label> 
-                  <p>{account.email} </p>
-                </div>
-                <div className='entries'>
-                  <label>Pizza Type:</label>
-                  <p>  {
-                    {
-                      withSleeve: 'With Sleeves',
-                      withoutSleeve: 'Without Sleeves',
-                      all: 'All Pizzas',
-                    }[account.default_pizza_view] || 'No Preference'
-                  }</p>
-                </div>
-                <button className='editButton' onClick={() => handleEditClick(account)}><FontAwesomeIcon icon={faEdit} className='icon' /></button>
+              <div className='entries'>
+                <label>Name:</label>
+                <input
+                  type="text"
+                  name="customer"
+                  value={formValues.customer}
+                  onChange={handleChange}
+                />
               </div>
-            )}
-          </div>
-        ))}
+              <div className='entries'>
+                <label>Address:</label>
+                <input
+                  type="text"
+                  name="name_number"
+                  value={formValues.name_number}
+                  onChange={handleChange}
+                />
+                <input
+                  type="text"
+                  name="street"
+                  value={formValues.street}
+                  onChange={handleChange}
+                />
+                <input
+                  type="text"
+                  name="city"
+                  value={formValues.city}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className='entries'>
+                <label>Postcode:</label>
+                <input
+                  type="text"
+                  name="postcode"
+                  value={formValues.postcode}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className='entries'>
+                <label>Phone Number:</label>
+                <input
+                  type="text"
+                  name="phone_number"
+                  value={formValues.phone_number}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className='entries'>
+                <label>Email:</label>
+                <input
+                  type="text"
+                  name="email"
+                  value={formValues.email}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className='entries'>
+                <label>Pizza Type:</label>
+                <select
+                  name="default_pizza_view"
+                  value={formValues.default_pizza_view}
+                  onChange={handleChange}
+                >
+                  <option value="withSleeve">With Sleeves</option>
+                  <option value="withoutSleeve">Without Sleeves</option>
+                  <option value="all">All Pizzas</option>
+                </select>
+              </div>
+              <button className='saveButton button' onClick={() => handleSaveClick(selectedCustomer.id)}>Save</button>
+            </div>
+          ) : (
+            <div>
+              <div className='entries'>
+                <label>Account ID:</label>
+                <p> {selectedCustomer.account_ID} </p>
+              </div>
+              <div className='entries'>
+                <label>Name:</label>
+                <p> {selectedCustomer.customer} </p>
+              </div>
+              <div className='entries'>
+                <label>Address:</label> 
+                <p>{selectedCustomer.name_number}, {selectedCustomer.street} <br/>{selectedCustomer.city}</p>
+              </div>
+              <div className='entries'>
+                <label>Postcode:</label> 
+                <p>{selectedCustomer.postcode} </p>
+              </div>
+              <div className='entries'>
+                <label>Phone Number:</label> 
+                <p>{selectedCustomer.phone_number}</p>
+              </div>
+              <div className='entries'>
+                <label>Email:</label> 
+                <p>{selectedCustomer.email} </p>
+              </div>
+              <div className='entries'>
+                <label>Pizza Type:</label>
+                <p>  {
+                  {
+                    withSleeve: 'With Sleeves',
+                    withoutSleeve: 'Without Sleeves',
+                    all: 'All Pizzas',
+                  }[selectedCustomer.default_pizza_view] || 'No Preference'
+                }</p>
+              </div>
+              <button className='editButton' onClick={() => handleEditClick(selectedCustomer)}><FontAwesomeIcon icon={faEdit} className='icon' /></button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
