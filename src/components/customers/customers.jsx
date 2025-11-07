@@ -26,6 +26,8 @@ const Customers = ({ accountID }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [formError, setFormError] = useState('');
+  // Add pizza preference state
+  const [pizzaPreference, setPizzaPreference] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -180,7 +182,7 @@ const Customers = ({ accountID }) => {
         email: email,
         phone_number: phoneNumber,
         delivery_region: currentRegion,
-        default_pizza_view: "", // Default value
+        default_pizza_view: pizzaPreference, // Add pizza preference
         created_at: new Date().toISOString()
       };
 
@@ -223,6 +225,7 @@ const Customers = ({ accountID }) => {
     setCurrentRegion('');
     setPhoneNumber('');
     setEmail('');
+    setPizzaPreference(''); // Clear pizza preference
     setFormError('');
   };
 
@@ -552,6 +555,19 @@ const Customers = ({ accountID }) => {
               value={email}
               onChange={handleModalChange}
             />
+
+            <div>
+              <label><h6>Pizza Preference:</h6></label>
+              <select
+                value={pizzaPreference}
+                onChange={(e) => setPizzaPreference(e.target.value)}
+              >
+                <option value="">Select Pizza Preference</option>
+                <option value="withSleeve">With Sleeves</option>
+                <option value="withoutSleeve">Without Sleeves</option>
+                <option value="all">All Pizzas</option>
+              </select>
+            </div>
             
             {formError && <p style={{ color: 'red', fontSize: '0.9em' }}>{formError}</p>}
             
