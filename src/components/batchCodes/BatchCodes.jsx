@@ -248,6 +248,33 @@ const formatDateDisplay = (dateStr) => {
     };
     fetchPizzas();
   }, []);
+
+  
+    useEffect(() => {
+      const refreshBatchData = async () => {
+        if (!viewingBatch) return;
+        
+        try {
+          const batchRef = doc(db, "batches", viewingBatch.id);
+          const freshSnap = await getDoc(batchRef);
+          if (freshSnap.exists()) {
+            const freshData = { id: freshSnap.id, ...freshSnap.data() };
+            setViewingBatch(freshData);
+          }
+        } catch (error) {
+          console.error("Error refreshing batch data:", error);
+        }
+      };
+
+      const handleWindowFocus = () => {
+        if (viewingBatch) {
+          refreshBatchData();
+        }
+      };
+
+      window.addEventListener('focus', handleWindowFocus);
+      return () => window.removeEventListener('focus', handleWindowFocus);
+    }, [viewingBatch]);
   
   
 
@@ -506,6 +533,60 @@ const formatDateDisplay = (dateStr) => {
       const batchRef = doc(db, "batches", viewingBatch.id);
       const currentSnap = await getDoc(batchRef);
       const currentData = currentSnap.data();
+  
+      // Add validation for pizza fields
+      if (type === "pizza") {
+        const existingPizza = currentData.pizzas.find(p => p.id === id);
+        const currentViewingPizza = viewingBatch.pizzas.find(p => p.id === id);
+        
+        // Check if someone else modified this field since we loaded the data
+        if (existingPizza && currentViewingPizza) {
+          const dbValue = existingPizza[field];
+          const ourValue = currentViewingPizza[field];
+          
+          if (dbValue !== ourValue && dbValue != null) {
+            const confirmOverride = window.confirm(
+              `Warning: This field was recently updated to "${dbValue}" by another user. ` +
+              `Do you want to override it with "${value}"?`
+            );
+            if (!confirmOverride) {
+              // Refresh the viewing batch with latest data
+              const freshData = { id: currentSnap.id, ...currentData };
+              setViewingBatch(freshData);
+              return;
+            }
+          }
+        }
+      }
+  
+      // Add similar validation for ingredient batch codes
+      if (type === "ingredient") {
+        const existingCodes = {};
+        currentData.pizzas.forEach(pizza => {
+          Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+            if (code?.trim()) existingCodes[ingredient] = code.trim();
+          });
+        });
+        
+        const ourCodes = {};
+        viewingBatch.pizzas.forEach(pizza => {
+          Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+            if (code?.trim()) ourCodes[ingredient] = code.trim();
+          });
+        });
+        
+        if (existingCodes[id] && existingCodes[id] !== ourCodes[id]) {
+          const confirmOverride = window.confirm(
+            `Warning: This field was recently updated to "${existingCodes[id]}" by another user. ` +
+            `Do you want to override it with "${value}"?`
+          );
+          if (!confirmOverride) {
+            const freshData = { id: currentSnap.id, ...currentData };
+            setViewingBatch(freshData);
+            return;
+          }
+        }
+      }
   
       if (type === "ingredient") {
         const updatedPizzas = currentData.pizzas.map(pizza => {
