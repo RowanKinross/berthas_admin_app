@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, useNavigate} from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './navtabs.css';
 import { app, db, auth, signInWithEmailAndPassword } from '../firebase/firebase';
 import { signOut } from 'firebase/auth'; 
@@ -9,8 +9,9 @@ import { nanoid } from 'nanoid';
 
 
 function NavTabs() {
-  // Add the navigate hook
+  // Add the navigate and location hooks
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [userRole, setUserRole] = useState(null); // Initially set to null (no user)
   const [dropdownOpen, setDropdownOpen] = useState(false); // dropdown menu visibility (admin or unit?)
@@ -112,11 +113,24 @@ function NavTabs() {
   };
 
 
-// Load user info from localStorage
+// Auto-navigate unit users to batchCodes
+useEffect(() => {
+  if (userRole === 'unit' && location.pathname === '/') {
+    navigate('/batchCodes');
+  }
+}, [userRole, location.pathname, navigate]);
+
+// Load user info from localStorage and auto-navigate if unit
 useEffect(() => {
   const storedUserRole = localStorage.getItem('userRole');
-  if (storedUserRole) setUserRole(storedUserRole);
-}, []);
+  if (storedUserRole) {
+    setUserRole(storedUserRole);
+    // Auto-navigate unit users on page load/refresh
+    if (storedUserRole === 'unit' && location.pathname === '/') {
+      navigate('/batchCodes');
+    }
+  }
+}, [location.pathname, navigate]);
 
 // Update localStorage when userRole or customerName changes
 useEffect(() => {
