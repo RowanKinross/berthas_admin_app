@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './navtabs.css';
 import { app, db, auth, signInWithEmailAndPassword } from '../firebase/firebase';
-import { signOut } from 'firebase/auth'; 
+import { signOut, onAuthStateChanged } from 'firebase/auth'; 
 import { collection, query, where, getDocs, addDoc } from '@firebase/firestore';
 import { Dropdown, Button, Form } from 'react-bootstrap';
 import { nanoid } from 'nanoid';
@@ -13,12 +13,13 @@ function NavTabs() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [userRole, setUserRole] = useState(null); // Initially set to null (no user)
-  const [dropdownOpen, setDropdownOpen] = useState(false); // dropdown menu visibility (admin or unit?)
-  // login and password states
+  const [userRole, setUserRole] = useState(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [activeDropdown, setActiveDropdown] = useState(null); // 'admin' | 'unit' | null
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [deliveryRegions, setDeliveryRegions] = useState([]);
+  const [isTestLogout, setIsTestLogout] = useState(false); // Add this flag
 
   const ROLE_EMAILS = {
     admin: 'admin@berthasapp.com',
@@ -38,19 +39,37 @@ function NavTabs() {
     }
   };
 
-
-  
   const handleLogOut = async () => {
     try {
       await signOut(auth);
-      setUserRole(null); // Clear user role state
-      localStorage.removeItem('userRole'); // Clear from localStorage
-      navigate("/"); // Navigate to home
+      setUserRole(null);
+      localStorage.removeItem('userRole');
+      navigate("/");
     } catch (error) {
       console.error("Error signing out:", error);
     }
   }
-  
+
+  // Add auth state listener that ignores test logouts
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user && !isTestLogout) {
+        // Only update UI if it's NOT a test logout
+        setUserRole(null);
+        localStorage.removeItem('userRole');
+      }
+      
+      // Reset the test flag after a delay (let App.jsx handle the modal)
+      if (isTestLogout) {
+        setTimeout(() => {
+          setIsTestLogout(false);
+        }, 4000); // Reset after modal should be done
+      }
+    });
+
+    return () => unsubscribe();
+  }, [isTestLogout]);
+
   // Render navigation tabs based on user role
   const renderNavTabs = () => {
     if (!userRole) return null;
@@ -132,7 +151,7 @@ useEffect(() => {
   }
 }, [location.pathname, navigate]);
 
-// Update localStorage when userRole or customerName changes
+// Update localStorage when userRole changes
 useEffect(() => {
   if (userRole) {
     localStorage.setItem('userRole', userRole);
@@ -153,16 +172,15 @@ useEffect(() => {
       const regions = regionData.map(region => region.name)
       setDeliveryRegions(regions)
     } catch (error) {
-      console.error("Error fetching customers:", error);
+      console.error("Error fetching regions:", error); // Fixed error message
     }
   };
   fetchRegions();
 }, []);
 
-
-
   return (
     <div className="navBarContainer">
+
       {/* Render navigation tabs based on user role */}
       {renderNavTabs()}
       {/* Render dropdown */}
