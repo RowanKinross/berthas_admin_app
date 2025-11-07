@@ -1,7 +1,7 @@
 import './customers.css';
 import { useState, useEffect } from 'react';
 import { app, db } from '../firebase/firebase';
-import { getDocs, collection, doc, updateDoc } from 'firebase/firestore'; 
+import { getDocs, collection, doc, updateDoc, addDoc } from 'firebase/firestore'; 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit } from '@fortawesome/free-solid-svg-icons';
 
@@ -13,6 +13,19 @@ const Customers = ({ accountID }) => {
   const [editing, setEditing] = useState(null);
   const [formValues, setFormValues] = useState({});
   const [deliveryRegions, setDeliveryRegions] = useState([]);
+  const [addCustomer, setAddCustomer] = useState(false);
+  const [customerAddedMsg, setCustomerAddedMsg] = useState(false);
+  
+  // Add customer modal form states
+  const [name, setName] = useState('');
+  const [nameNumber, setNameNumber] = useState('');
+  const [street, setStreet] = useState('');
+  const [city, setCity] = useState('');
+  const [postcode, setPostcode] = useState('');
+  const [currentRegion, setCurrentRegion] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,6 +61,13 @@ const Customers = ({ accountID }) => {
   };
 
   const handleCustomerSelect = (customer) => {
+    if (customer === 'ADD_NEW') {
+      setAddCustomer(true);
+      setShowDropdown(false);
+      setSearchTerm('');
+      return;
+    }
+    
     setSelectedCustomerId(customer.id);
     setSearchTerm(customer.customer);
     setShowDropdown(false);
@@ -114,6 +134,98 @@ const Customers = ({ accountID }) => {
     }
   };
 
+  // Add the modal form change handler
+  const handleModalChange = (e) => {
+    const { name, value } = e.target;
+    switch(name) {
+      case 'name': setName(value); break;
+      case 'nameNumber': setNameNumber(value); break;
+      case 'street': setStreet(value); break;
+      case 'city': setCity(value); break;
+      case 'postcode': setPostcode(value); break;
+      case 'phoneNumber': setPhoneNumber(value); break;
+      case 'email': setEmail(value); break;
+      default: break;
+    }
+  };
+
+  // Add the generateAccountID function
+  const generateAccountID = ({ name, postcode }) => {
+    const cleanedTitle = (name || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+
+    const cleanedPostcode = (postcode || '')
+      .replace(/\s+/g, '')
+      .slice(-4)
+      .toUpperCase();
+
+    const shortId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Short 4-char ID
+
+    return `${cleanedTitle}${cleanedPostcode}${shortId}`;
+  };
+
+  // Replace your existing handleAddNewCustomer function with this:
+  const handleAddNewCustomer = async () => {
+    try {
+      const newAccountID = generateAccountID({ name, postcode });
+
+      const newCustomerData = {
+        account_ID: newAccountID,
+        customer: name,
+        name_number: nameNumber,
+        street: street,
+        city: city,
+        postcode: postcode,
+        email: email,
+        phone_number: phoneNumber,
+        delivery_region: currentRegion,
+        default_pizza_view: "", // Default value
+        created_at: new Date().toISOString()
+      };
+
+      // Add the new customer to Firestore
+      const docRef = await addDoc(collection(db, "customers"), newCustomerData);
+      
+      // Update local state to include the new customer
+      const newCustomer = {
+        id: docRef.id,
+        ...newCustomerData
+      };
+      setAccounts([...accounts, newCustomer]);
+
+      // Auto-select the new customer
+      setSelectedCustomerId(docRef.id);
+      setSearchTerm(name);
+
+      // Show success message
+      setCustomerAddedMsg(true);
+      setTimeout(() => setCustomerAddedMsg(false), 3000);
+
+      // Clear form
+      clearModalForm();
+
+      console.log("Customer added with ID: ", newAccountID);
+      
+    } catch (error) {
+      console.error("Error adding customer: ", error);
+      setFormError("Error adding customer. Please try again.");
+    }
+  };
+
+  // Add a helper function to clear the modal form
+  const clearModalForm = () => {
+    setName('');
+    setNameNumber('');
+    setStreet('');
+    setCity('');
+    setPostcode('');
+    setCurrentRegion('');
+    setPhoneNumber('');
+    setEmail('');
+    setFormError('');
+  };
+
   const selectedCustomer = accounts.find(account => account.id === selectedCustomerId);
 
   return (
@@ -148,7 +260,7 @@ const Customers = ({ accountID }) => {
           >
             ▼
           </button>
-          {showDropdown && filteredCustomers.length > 0 && (
+          {showDropdown && (
             <div className="customer-dropdown" style={{
               position: 'absolute',
               top: '100%',
@@ -161,6 +273,24 @@ const Customers = ({ accountID }) => {
               overflowY: 'auto',
               zIndex: 1000
             }}>
+              {/* Add New Customer option */}
+              <div
+                onClick={() => handleCustomerSelect('ADD_NEW')}
+                style={{
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid #eee',
+                  backgroundColor: '#f0f8ff',
+                  fontWeight: 'bold',
+                  color: '#007bff'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#e6f3ff'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#f0f8ff'}
+              >
+                + Add New Customer
+              </div>
+              
+              {/* Existing customers */}
               {filteredCustomers.map(account => (
                 <div
                   key={account.id}
@@ -333,6 +463,112 @@ const Customers = ({ accountID }) => {
               <button className='editButton' onClick={() => handleEditClick(selectedCustomer)}><FontAwesomeIcon icon={faEdit} className='icon' /></button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Add Customer Modal */}
+      {addCustomer && (
+        <div className='modal'>
+          <div className='modalContent addCustomerModal'>
+            <button className='closeButton' onClick={() => {
+              setAddCustomer(false);
+              clearModalForm();
+            }}>×</button>
+            {customerAddedMsg && (
+              <div className='customerAdded'>
+                ✅ Customer added!
+              </div>
+            )}
+            <div>
+              <label><h6>Name:</h6></label>
+              <input
+                type="text"
+                placeholder=""
+                name="name"
+                value={name}
+                onChange={handleModalChange}
+              />
+
+              <label><h6>Address:</h6></label>
+              <input
+                type="text"
+                placeholder="First Line of Address"
+                name="nameNumber"
+                value={nameNumber}
+                onChange={handleModalChange}
+              />
+              <input
+                type="text"
+                placeholder="Second Line of Address (optional)"
+                name="street"
+                value={street}
+                onChange={handleModalChange}
+              />
+              <input
+                type="text"
+                placeholder="Town/City"
+                name="city"
+                value={city}
+                onChange={handleModalChange}
+              />
+              <input
+                type="text"
+                placeholder="postcode"
+                name="postcode"
+                value={postcode}
+                onChange={handleModalChange}
+              />
+            </div>
+            
+            <div>
+              <label><h6>Delivery Region:</h6></label>
+              <select
+                value={currentRegion}
+                onChange={(e) => setCurrentRegion(e.target.value)}
+              >
+                <option value="">Select Region</option>
+                {deliveryRegions.map((region) => (
+                  <option key={region.value} value={region.label}>
+                    {region.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <label><h6>Phone Number:</h6></label>
+            <input
+              type="text"
+              placeholder=""
+              name="phoneNumber"
+              value={phoneNumber}
+              onChange={handleModalChange}
+            />
+            
+            <label><h6>Email:</h6></label>
+            <input
+              type="text"
+              placeholder=""
+              name="email"
+              value={email}
+              onChange={handleModalChange}
+            />
+            
+            {formError && <p style={{ color: 'red', fontSize: '0.9em' }}>{formError}</p>}
+            
+            <button 
+              type="submit" 
+              className='button' 
+              onClick={() => {
+                if (!name || !postcode) {
+                  setFormError('Please fill in both Name and Postcode.');
+                } else {
+                  setFormError('');
+                  setAddCustomer(false);
+                  handleAddNewCustomer();
+                }
+              }}
+            >Submit</button>
+          </div>
         </div>
       )}
     </div>
