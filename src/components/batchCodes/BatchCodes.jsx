@@ -304,15 +304,19 @@ const formatDateDisplay = (dateStr) => {
 
   // if user clicks the add button
   const handleAddClick = () => {
-    setShowForm(true); // Show the form
-    setBatchDate(""); // Clear batch date
-    setTotalPizzas(0) // Clear pizza total
-    setIngredientsOrdered(false); // Clear ingredients ordered checkbox
-    setSelectedPizzas([]);
-    setPizzas(pizzas.map(pizza => ({ ...pizza, quantity: 0 })));
-    setIngredientBatchCodes({});
-    setNotes("")
-  }; 
+  // Close any open editing fields before opening form
+  setEditingField(null);
+  setEditingValue("");
+  
+  setShowForm(true); // Show the form
+  setBatchDate(""); // Clear batch date
+  setTotalPizzas(0) // Clear pizza total
+  setIngredientsOrdered(false); // Clear ingredients ordered checkbox
+  setSelectedPizzas([]);
+  setPizzas(pizzas.map(pizza => ({ ...pizza, quantity: 0 })));
+  setIngredientBatchCodes({});
+  setNotes("")
+}; 
 
 
   const handleQuantityChange = (e, pizzaId) => {
@@ -410,24 +414,28 @@ const formatDateDisplay = (dateStr) => {
   
 
   const handleBatchClick = (batch) => {
-    setViewingBatch({
-      ...batch,
-      ingredientBatchCodes: batch.pizzas.reduce((acc, pizza) => {
-        pizza.ingredients.forEach(ingredient => {
-          if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
-            acc[ingredient] = pizza.ingredientBatchCodes[ingredient];
-          }
-        });
-        return acc;
-      }, {})
-    });
+  // Close any open editing fields before switching batches
+  setEditingField(null);
+  setEditingValue("");
+  
+  setViewingBatch({
+    ...batch,
+    ingredientBatchCodes: batch.pizzas.reduce((acc, pizza) => {
+      pizza.ingredients.forEach(ingredient => {
+        if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
+          acc[ingredient] = pizza.ingredientBatchCodes[ingredient];
+        }
+      });
+      return acc;
+    }, {})
+  });
 
-    setIngredientsOrdered(batch.ingredients_ordered || false);
+  setIngredientsOrdered(batch.ingredients_ordered || false);
 
-    setTimeout(() => {
-      batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-  };
+  setTimeout(() => {
+    batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 0);
+};
 
   const handleAddFormSubmit = async (e) => {
     e.preventDefault();
@@ -684,15 +692,18 @@ const formatDateDisplay = (dateStr) => {
         (formRef.current && !formRef.current.contains(e.target)) ||
         (batchDetailsRef.current && !batchDetailsRef.current.contains(e.target))
       ) {
+        // Close editing fields when clicking outside
+        setEditingField(null);
+        setEditingValue("");
         setShowForm(false);
         setViewingBatch(null);
       }
     };
-  
+
     if (showForm || viewingBatch) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-  
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
