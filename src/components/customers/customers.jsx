@@ -8,6 +8,8 @@ import { faEdit } from '@fortawesome/free-solid-svg-icons';
 const Customers = ({ accountID }) => {
   const [accounts, setAccounts] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formValues, setFormValues] = useState({});
 
@@ -20,22 +22,32 @@ const Customers = ({ accountID }) => {
           ...doc.data()
         }));
         setAccounts(accountsData);
-        
-        // Auto-select first customer if available
-        if (accountsData.length > 0 && !selectedCustomerId) {
-          setSelectedCustomerId(accountsData[0].id);
-        }
       } catch (error) {
         console.error("Error fetching customers:", error);
       }
     };
     fetchAccount();
-  }, [selectedCustomerId]);
+  }, []);
 
-  const handleCustomerSelect = (e) => {
-    setSelectedCustomerId(e.target.value);
-    setEditing(null); // Exit edit mode when switching customers
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setShowDropdown(true);
+    if (e.target.value === '') {
+      setSelectedCustomerId('');
+    }
   };
+
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomerId(customer.id);
+    setSearchTerm(customer.customer);
+    setShowDropdown(false);
+    setEditing(null);
+  };
+
+  const filteredCustomers = accounts.filter(account =>
+    account.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    account.account_ID.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleEditClick = (account) => {
     setEditing(account.id);
@@ -73,14 +85,13 @@ const Customers = ({ accountID }) => {
         default_pizza_view: formValues.default_pizza_view || ""
       };
 
-
       const accountRef = doc(db, "customers", id);
       await updateDoc(accountRef, updatedValues);
       setEditing(null);
       setAccounts(accounts.map(account => account.id === id ? { ...account, ...updatedValues } : account));
-  } catch (error) {
-    console.error("Error updating document: ", error);
-  }
+    } catch (error) {
+      console.error("Error updating document: ", error);
+    }
   };
 
   const selectedCustomer = accounts.find(account => account.id === selectedCustomerId);
@@ -89,22 +100,81 @@ const Customers = ({ accountID }) => {
     <div className='account navContent'>
       <h2>CUSTOMERS</h2>
       
-      {/* Customer Selection Dropdown */}
+      {/* Customer Selection with Search */}
       <div className='entries'>
         <label>Customer:</label>
-        <select 
-          value={selectedCustomerId} 
-          onChange={handleCustomerSelect}
-          className="customerSelect"
-        >
-          <option value="">-- Select a Customer --</option>
-          {accounts.map(account => (
-            <option key={account.id} value={account.id}>
-              {account.customer}
-            </option>
-          ))}
-        </select>
+        <div className="customerSearchContainer" style={{ position: 'relative' }}>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearchChange}
+            onFocus={() => setShowDropdown(true)}
+            placeholder="Search customers"
+            className="customerSelect"
+          />
+          <button 
+            type="button"
+            onClick={() => setShowDropdown(!showDropdown)}
+            style={{
+              position: 'absolute',
+              right: '5px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            ▼
+          </button>
+          {showDropdown && filteredCustomers.length > 0 && (
+            <div className="customer-dropdown" style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              backgroundColor: 'white',
+              border: '1px solid #ccc',
+              borderTop: 'none',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              zIndex: 1000
+            }}>
+              {filteredCustomers.map(account => (
+                <div
+                  key={account.id}
+                  onClick={() => handleCustomerSelect(account)}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #eee'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                >
+                  {account.customer}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Close dropdown when clicking outside */}
+      {showDropdown && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 999
+          }}
+          onClick={() => setShowDropdown(false)}
+        />
+      )}
 
       {/* Display selected customer details */}
       {selectedCustomer && (
