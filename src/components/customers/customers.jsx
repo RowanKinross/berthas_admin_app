@@ -276,22 +276,6 @@ const Customers = ({ accountID }) => {
               overflowY: 'auto',
               zIndex: 1000
             }}>
-              {/* Add New Customer option */}
-              <div
-                onClick={() => handleCustomerSelect('ADD_NEW')}
-                style={{
-                  padding: '8px 12px',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid #eee',
-                  backgroundColor: '#f0f8ff',
-                  fontWeight: 'bold',
-                  color: '#007bff'
-                }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#e6f3ff'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#f0f8ff'}
-              >
-                + Add New Customer
-              </div>
               
               {/* Existing customers */}
               {filteredCustomers.map(account => (
@@ -309,6 +293,22 @@ const Customers = ({ accountID }) => {
                   {account.customer}
                 </div>
               ))}
+              {/* Add New Customer option */}
+              <div
+                onClick={() => handleCustomerSelect('ADD_NEW')}
+                style={{
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  borderBottom: '1px solid #eee',
+                  backgroundColor: '#f0f8ff',
+                  fontWeight: 'bold',
+                  color: '#007bff'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#e6f3ff'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#f0f8ff'}
+              >
+                + Add New Customer
+              </div>
             </div>
           )}
         </div>
@@ -557,12 +557,12 @@ const Customers = ({ accountID }) => {
             />
 
             <div>
-              <label><h6>Pizza Preference:</h6></label>
+              <label><h6>Pizza Type:</h6></label>
               <select
                 value={pizzaPreference}
                 onChange={(e) => setPizzaPreference(e.target.value)}
               >
-                <option value="">Select Pizza Preference</option>
+                <option value="">Select Type</option>
                 <option value="withSleeve">With Sleeves</option>
                 <option value="withoutSleeve">Without Sleeves</option>
                 <option value="all">All Pizzas</option>
