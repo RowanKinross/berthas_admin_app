@@ -1008,6 +1008,99 @@ const handleBulkPrintPackingSlips = () => {
   printWindow.close();
 };
 
+
+
+
+
+  // Download raw order data function for use in excel/google sheets
+  const downloadRawOrdersCSV = () => {
+    // Filter orders to only include selected ones
+    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id));
+    
+    // Prepare raw order data based on your Firestore structure
+    const rawData = selectedOrdersData.map(order => {
+      const customerName = order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name;
+      const deliveryDate = order.delivery_day || '-';
+      const accountId = order.account_ID || '-';
+      const email = order.customer_email || '-';
+      const orderTimestamp = order.order_placed_timestamp || '-';
+      const purchaseOrder = order.purchase_order || '-';
+      const additionalNotes = order.additional_notes || '-';
+      const complete = order.complete ? 'Yes' : 'No';
+      const pizzaTotal = order.pizzaTotal || 0;
+      
+      // pizza type breakdown & quantity
+      const pizzaDetails = Object.entries(order.pizzas || {})
+        .filter(([pizzaType, pizza]) => pizza.quantity > 0)
+        .map(([pizzaType, pizza]) => {
+          const pizzaName = pizzaTitles[pizzaType] || pizzaType;
+            return `${pizzaName}: ${pizza.quantity}`;
+        })
+        .join('; ');
+
+      return {
+        'Customer Name': customerName,
+        'Account ID': accountId,
+        'Customer Email': email,
+        'Delivery Date': deliveryDate,
+        'Complete': complete,
+        'Pizza Total': pizzaTotal,
+        'Pizza Breakdown': pizzaDetails,
+        'Order Timestamp': orderTimestamp,
+        'Purchase Order': purchaseOrder,
+        'Additional Notes': additionalNotes
+      };
+    });
+
+    if (rawData.length === 0) {
+      alert('No orders selected for download.');
+      return;
+    }
+
+    // Create CSV headers 
+    const headers = [
+      'Customer Name', 'Account ID', 'Customer Email', 'Delivery Date', 
+      'Complete', 'Pizza Total', 'Pizza Breakdown', 'Order Timestamp', 
+      'Purchase Order', 'Additional Notes'
+    ];
+
+    // Create CSV rows 
+    const csvRows = [
+      headers.join(','), // Header row
+      ...rawData.map(row => [
+        `"${row['Customer Name']}"`,
+        `"${row['Account ID']}"`,
+        `"${row['Customer Email']}"`,
+        `"${row['Delivery Date']}"`,
+        `"${row['Complete']}"`,
+        row['Pizza Total'],
+        `"${row['Pizza Breakdown']}"`,
+        `"${row['Order Timestamp']}"`,
+        `"${row['Purchase Order']}"`,
+        `"${row['Additional Notes']}"`
+      ].join(','))
+    ];
+
+    // Create and download the file
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `selected-orders-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+
+
+
+
 useEffect(() => {
 if (!selectedOrder) return;
   const hasSplit = Object.values(selectedOrder.pizzas || {}).some(pizza => {
@@ -1108,6 +1201,9 @@ function getPizzaAllocatedTally(pizzaData) {
           {/* mark as complete */}
           <button className="button" onClick={() => markSelectedAsComplete()}>
             Mark as complete
+          </button>
+          <button className="button" onClick={() => downloadRawOrdersCSV()}>
+            Download Selected as CSV file
           </button>
         </div>
       )}

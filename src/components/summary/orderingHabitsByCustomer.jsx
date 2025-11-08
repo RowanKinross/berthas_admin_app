@@ -172,6 +172,8 @@ function OrderingHabitsByCustomer({ orders = [] }) {
     return filtered;
   }, [customers, sortField, sortDirection, searchTerm]);
 
+
+
   return (
     <div>
       <div className="searchCustomer">
