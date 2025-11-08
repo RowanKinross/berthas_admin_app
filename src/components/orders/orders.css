@@ -371,7 +371,7 @@ input:checked + .slider:before {
   content: attr(data-count) " selected";
   font-size: 12px !;
   color: #666;
-  margin-right: 8px;
+  padding-left: 8px;
 }
 
 .tooltip-wrapper {
@@ -420,11 +420,11 @@ input:checked + .slider:before {
   .selectCancel {
     font-size: 12px;
   }
-}
-@media (max-width: 768px) {
   .mobile-label {
     display: inline;
   }
+}
+@media (max-width: 768px) {
   
   .button-icon {
     padding: 0.5rem;

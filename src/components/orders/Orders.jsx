@@ -1038,7 +1038,6 @@ const handleBulkPrintPackingSlips = () => {
       const customerName = order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name;
       const deliveryDate = order.delivery_day || '-';
       const accountId = order.account_ID || '-';
-      const email = order.customer_email || '-';
       const orderTimestamp = order.order_placed_timestamp || '-';
       const purchaseOrder = order.purchase_order || '-';
       const additionalNotes = order.additional_notes || '-';
@@ -1049,15 +1048,13 @@ const handleBulkPrintPackingSlips = () => {
       const pizzaDetails = Object.entries(order.pizzas || {})
         .filter(([pizzaType, pizza]) => pizza.quantity > 0)
         .map(([pizzaType, pizza]) => {
-          const pizzaName = pizzaTitles[pizzaType] || pizzaType;
-            return `${pizzaName}: ${pizza.quantity}`;
+            return `${pizzaType}: ${pizza.quantity}`;
         })
         .join('; ');
 
       return {
         'Customer Name': customerName,
         'Account ID': accountId,
-        'Customer Email': email,
         'Delivery Date': deliveryDate,
         'Complete': complete,
         'Pizza Total': pizzaTotal,
@@ -1075,7 +1072,7 @@ const handleBulkPrintPackingSlips = () => {
 
     // Create CSV headers 
     const headers = [
-      'Customer Name', 'Account ID', 'Customer Email', 'Delivery Date', 
+      'Customer Name', 'Account ID', 'Delivery Date', 
       'Complete', 'Pizza Total', 'Pizza Breakdown', 'Order Timestamp', 
       'Purchase Order', 'Additional Notes'
     ];
@@ -1086,7 +1083,6 @@ const handleBulkPrintPackingSlips = () => {
       ...rawData.map(row => [
         `"${row['Customer Name']}"`,
         `"${row['Account ID']}"`,
-        `"${row['Customer Email']}"`,
         `"${row['Delivery Date']}"`,
         `"${row['Complete']}"`,
         row['Pizza Total'],
