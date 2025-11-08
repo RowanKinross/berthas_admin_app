@@ -369,7 +369,7 @@ input:checked + .slider:before {
 /* Optional: Show count badge */
 .selectCancel[data-count]:not([data-count="0"])::after {
   content: attr(data-count) " selected";
-  font-size: 12px;
+  font-size: 12px !;
   color: #666;
   margin-right: 8px;
 }
@@ -417,6 +417,9 @@ input:checked + .slider:before {
     align-items: center;
     gap: 10px;
   }
+  .selectCancel {
+    font-size: 12px;
+  }
 }
 @media (max-width: 768px) {
   .mobile-label {
@@ -431,6 +434,7 @@ input:checked + .slider:before {
   
   .bulk-actions {
     flex-wrap: wrap;
+    justify-content: center;
   }
 }
 

@@ -1194,6 +1194,35 @@ function getPizzaAllocatedTally(pizzaData) {
           >
           {selectMode ? "Cancel Selection" : "Select Orders"}
         </button>
+        {selectMode && (
+          <button
+            className='button button-secondary'
+            onClick={() => {
+              const allVisibleOrderIds = sortedOrders.map(order => order.id);
+              const allSelected = allVisibleOrderIds.every(id => selectedOrders.includes(id));
+              
+              if (allSelected) {
+                // Deselect all visible orders
+                setSelectedOrders(prev => prev.filter(id => !allVisibleOrderIds.includes(id)));
+              } else {
+                // Select all visible orders (merge with existing selection)
+                setSelectedOrders(prev => {
+                  const newSelection = [...prev];
+                  allVisibleOrderIds.forEach(id => {
+                    if (!newSelection.includes(id)) {
+                      newSelection.push(id);
+                    }
+                  });
+                  return newSelection;
+                });
+              }
+            }}
+            style={{ marginLeft: '8px' }}
+          >
+            {sortedOrders.every(order => selectedOrders.includes(order.id)) ? "Deselect All" : "Select All"}
+            {searchTerm && ` (${sortedOrders.length} filtered)`}
+          </button>
+        )}
       </div>
       {selectedOrders.length > 0 && (
         <div className="bulk-actions" >
