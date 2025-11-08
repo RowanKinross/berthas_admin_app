@@ -189,7 +189,7 @@ function OrderingHabitsByCustomer({ orders = [] }) {
         <table className="stockTable customerTableFixed">
           <thead>
             <tr>
-              <th>
+              <th className="customerName">
                 Customer Name
                 <span
                   className="filter"

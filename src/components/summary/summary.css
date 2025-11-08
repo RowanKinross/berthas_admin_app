@@ -1,15 +1,16 @@
 .summaryContainer {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     width: 100%;
-    max-width: 520px;
-    margin: 1%;
+    max-width: 500px;
     background-size: cover;
     background-repeat: no-repeat;
     box-sizing: border-box;
     position: relative;
     box-shadow: 0 2px 4px var(--boxShadow);
     padding-top: 30px;
+    overflow-x: scroll;
 }
 .customerSummaryContainer {
   max-width: 98%;
@@ -23,6 +24,8 @@
   align-self: center;
   border-collapse: collapse;
   margin: 1rem;
+  
+    overflow: scroll;
 }
 .stockTable th,
 .stockTable td {
@@ -59,6 +62,7 @@
 .demandSummaryFlex {
   padding-top: 50px;
   display: flex;
+  justify-content: space-evenly;
   flex-wrap: wrap;
 }
 .th-full { display: none; }
@@ -96,18 +100,25 @@
 .customerTableScrollContainer {
   position: relative;
   max-width: 75%;
+  width: 100%;
+  overflow: hidden;
 }
 /* Actual scrollable table */
 .customerTableScrollable {
   overflow-x: scroll;
   max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 /* Wide table for columns */
 .customerTableWide {
   min-width: 1000px;
   table-layout: fixed;
 }
-.stockTable tbody tr:nth-child(odd) {
+.customerTableFixed tbody tr:nth-child(odd) {
+  background-color: var(--paleGrey);
+} 
+.customerTableScrollable tbody tr:nth-child(odd) {
   background-color: var(--paleGrey);
 }
 
@@ -116,16 +127,18 @@
   text-align: right;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 670px) {
   .statusFull { display: none; }
+
   .statusShort { display: inline; }
-}
-@media (max-width: 1160px) {
-  /* tablet size */
-  .demandSummaryFlex {
-    flex-direction: column;
+
+  .stockTable {
+    overflow: hidden;
   }
-  .summaryContainer {
-    max-width: 100%;
+}
+@media (max-width: 1180px) {
+  /* tablet size */
+  .customerName {
+    padding: 12px 0px !important;
   }
 }
