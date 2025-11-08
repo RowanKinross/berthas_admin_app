@@ -366,6 +366,11 @@ input:checked + .slider:before {
   transform: translateY(-1px);
 }
 
+.checkGreen {
+  color: var(--MargLight);
+}
+
+
 /* Optional: Show count badge */
 .selectCancel[data-count]:not([data-count="0"])::after {
   content: attr(data-count) " selected";

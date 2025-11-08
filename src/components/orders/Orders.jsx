@@ -1300,7 +1300,7 @@ function getPizzaAllocatedTally(pizzaData) {
             <span className="mobile-label">Mark Packed</span>
           </button>
           <button className="button button-icon" onClick={() => markSelectedAsComplete()} title="Mark as Complete">
-            <FontAwesomeIcon icon={faCheckSquare} />
+            <FontAwesomeIcon icon={faCheckSquare} className='checkGreen' />
             <span className="mobile-label">Complete</span>
           </button>
           <button className="button button-icon" onClick={() => downloadRawOrdersCSV()} title="Download CSV">
@@ -1419,7 +1419,7 @@ function getPizzaAllocatedTally(pizzaData) {
               {order.order_status === 'order placed' && ''}
               {order.order_status === 'ready to pack' && <FontAwesomeIcon icon={faBoxOpen} />}
               {order.order_status === 'packed' && <FontAwesomeIcon icon={faBox} />}
-              {order.order_status === 'complete' && <FontAwesomeIcon icon={faCheckSquare} />}
+              {order.order_status === 'complete' && <FontAwesomeIcon icon={faCheckSquare} className='checkGreen' />}
             </div>
             <div
               className={`
