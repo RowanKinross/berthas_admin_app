@@ -107,7 +107,10 @@
   min-width: 1000px;
   table-layout: fixed;
 }
-.stockTable tbody tr:nth-child(odd) {
+.customerTableFixed tbody tr:nth-child(odd) {
+  background-color: var(--paleGrey);
+} 
+.customerTableScrollable tbody tr:nth-child(odd) {
   background-color: var(--paleGrey);
 }
 
@@ -120,8 +123,11 @@
   .statusFull { display: none; }
   .statusShort { display: inline; }
 }
-@media (max-width: 1024px) {
+@media (max-width: 1180px) {
   /* tablet size */
+  .customerName {
+    padding: 12px 0px !important;
+  }
   .demandSummaryFlex {
     flex-direction: column;
   }
