@@ -75,8 +75,8 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
     );
 
   return (
-    <div>
-      <table className="stockTable">
+    <table className="stockTable">
+      
         <thead>
           <tr>
             <th></th>
@@ -146,8 +146,8 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
             );
           })}
         </tbody>
-      </table>
-    </div>
+      
+    </table>
   );
 }
 

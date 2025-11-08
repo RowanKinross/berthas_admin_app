@@ -1,6 +1,7 @@
 .summaryContainer {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     width: 100%;
     max-width: 500px;
     background-size: cover;
@@ -9,6 +10,7 @@
     position: relative;
     box-shadow: 0 2px 4px var(--boxShadow);
     padding-top: 30px;
+    overflow-x: scroll;
 }
 .customerSummaryContainer {
   max-width: 98%;
@@ -22,6 +24,8 @@
   align-self: center;
   border-collapse: collapse;
   margin: 1rem;
+  
+    overflow: scroll;
 }
 .stockTable th,
 .stockTable td {
@@ -96,11 +100,15 @@
 .customerTableScrollContainer {
   position: relative;
   max-width: 75%;
+  width: 100%;
+  overflow: hidden;
 }
 /* Actual scrollable table */
 .customerTableScrollable {
   overflow-x: scroll;
   max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 /* Wide table for columns */
 .customerTableWide {
@@ -119,19 +127,18 @@
   text-align: right;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 670px) {
   .statusFull { display: none; }
+
   .statusShort { display: inline; }
+
+  .stockTable {
+    overflow: hidden;
+  }
 }
 @media (max-width: 1180px) {
   /* tablet size */
   .customerName {
     padding: 12px 0px !important;
-  }
-  .demandSummaryFlex {
-    flex-direction: column;
-  }
-  .summaryContainer {
-    max-width: 100%;
   }
 }
