@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faReceipt,  faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft, faList, faFileExport, faCheck, faCheckSquare, faBox, faBoxOpen, faDownload} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faReceipt, faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft, faList, faFileExport, faCheck, faCheckSquare, faBox, faBoxOpen, faDownload, faTimes} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot, deleteField } from 'firebase/firestore';
@@ -59,6 +59,9 @@ function Orders() {
   
   // tool tip on mobile for explaining the buttons
   const [activeTooltip, setActiveTooltip] = useState(null);
+
+  // Sleeve Filter:
+  const [sleeveFilter, setSleeveFilter] = useState("all");
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -718,12 +721,13 @@ const orderHasBatchErrors = (order) => {
   const customer = allCustomers[order.account_ID] || {};
   const search = searchTerm.toLowerCase();
 
-    // Format delivery day for searching
+  // Format delivery day for searching
   let formattedDeliveryDay = "";
   if (order.delivery_day && order.delivery_day !== "tbc") {
     formattedDeliveryDay = dayjs(order.delivery_day).format("DD/MM/YYYY");
   }
-    // Normalize for flexible search
+  
+  // Normalize for flexible search
   const normalize = str => str.replace(/[\s\-\/\.]/g, '').toLowerCase();
 
   const deliveryDayVariants = [
@@ -739,15 +743,42 @@ const orderHasBatchErrors = (order) => {
   const matchesDeliveryDay = deliveryDayVariants.some(variant =>
     normalize(variant).includes(normalize(search))
   );
-    return (
-      order.customer_name?.toLowerCase().includes(search) ||
-      order.sample_customer_name?.toLowerCase().includes(search) ||
-      order.order_status?.toLowerCase().includes(search) ||
-      matchesDeliveryDay ||
-      customer.delivery_region?.toLowerCase().includes(search) ||
-      order.account_ID?.toLowerCase().includes(search)
-    );
+
+  const matchesSearch = (
+    order.customer_name?.toLowerCase().includes(search) ||
+    order.sample_customer_name?.toLowerCase().includes(search) ||
+    order.order_status?.toLowerCase().includes(search) ||
+    matchesDeliveryDay ||
+    customer.delivery_region?.toLowerCase().includes(search) ||
+    order.account_ID?.toLowerCase().includes(search)
+  );
+
+  // Apply sleeve filter
+  if (sleeveFilter === "all") {
+    return matchesSearch;
+  }
+
+  // Check if order contains sleeved or non-sleeved pizzas
+  const hasSleevedPizzas = Object.keys(order.pizzas || {}).some(pizzaId => {
+    const pizza = pizzaCatalog.find(p => p.id === pizzaId);
+    return pizza && pizza.sleeve === true;
   });
+
+  const hasNonSleevedPizzas = Object.keys(order.pizzas || {}).some(pizzaId => {
+    const pizza = pizzaCatalog.find(p => p.id === pizzaId);
+    return pizza && pizza.sleeve === false;
+  });
+
+  if (sleeveFilter === "sleeve") {
+    return matchesSearch && hasSleevedPizzas;
+  }
+
+  if (sleeveFilter === "noSleeve") {
+    return matchesSearch && hasNonSleevedPizzas;
+  }
+
+  return matchesSearch;
+});
   const sortedOrders = sortOrders(filteredOrders);
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
@@ -1176,6 +1207,40 @@ function getPizzaAllocatedTally(pizzaData) {
   return (
   <div className='orders navContent'>
     <h2>ORDERS</h2>
+
+    <div className="sleeveFilter" style={{ marginBottom: 16 }}>
+          <label>
+            <input
+              type="radio"
+              value="all"
+              className='sleeveRadio'
+              checked={sleeveFilter === 'all'}
+              onChange={() => setSleeveFilter('all')}
+            />
+            All
+          </label>
+          <label style={{ marginLeft: 12 }}>
+            <input
+              type="radio"
+              value="sleeve"
+              className='sleeveRadio'
+              checked={sleeveFilter === 'sleeve'}
+              onChange={() => setSleeveFilter('sleeve')}
+            />
+            Sleeve
+          </label>
+          <label style={{ marginLeft: 12 }}>
+            <input
+              type="radio"
+              value="noSleeve"
+              className='sleeveRadio'
+              checked={sleeveFilter === 'noSleeve'}
+              onChange={() => setSleeveFilter('noSleeve')}
+            />
+            No Sleeve
+          </label>
+        </div>
+
     <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
       <div className='selectCancel' {...(selectedOrders.length > 0 && { 'data-count': selectedOrders.length })}>
