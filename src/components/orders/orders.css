@@ -347,12 +347,101 @@ input:checked + .slider:before {
 }
 
 
+.bulk-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
+.button-icon {
+  padding: 8px 12px;
+  min-width: 40px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
+.button-icon:hover {
+  transform: translateY(-1px);
+}
+
+/* Optional: Show count badge */
+.selectCancel[data-count]:not([data-count="0"])::after {
+  content: attr(data-count) " selected";
+  font-size: 12px !;
+  color: #666;
+  margin-right: 8px;
+}
+
+.tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.mobile-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 5px;
+}
+
+.mobile-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.9);
+}
+
+.mobile-label {
+  display: none;
+  font-size: 0.75rem;
+  margin-left: 0.4rem;
+  font-weight: normal;
+}
+@media (max-width: 1024px) {
+  .selectOrdersAndSearchOrders {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+  .selectCancel {
+    font-size: 12px;
+  }
+}
+@media (max-width: 768px) {
+  .mobile-label {
+    display: inline;
+  }
+  
+  .button-icon {
+    padding: 0.5rem;
+    margin: 0;
+    white-space: nowrap;
+  }
+  
+  .bulk-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
 
 @media (max-width: 530px) {
   .orderButton {
     gap: 5px;
+    font-size: 12px;
   }
 
   .orderModal {

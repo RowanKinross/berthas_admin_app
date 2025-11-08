@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faReceipt,  faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft, faList, faFileExport, faCheck, faCheckSquare, faBox, faBoxOpen, faDownload} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot, deleteField } from 'firebase/firestore';
@@ -56,6 +56,9 @@ function Orders() {
   
   // edit qty hint
   const [showEditQtyHint, setShowEditQtyHint] = useState(true);
+  
+  // tool tip on mobile for explaining the buttons
+  const [activeTooltip, setActiveTooltip] = useState(null);
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -69,6 +72,19 @@ function calculatePizzaTotal(pizzas) {
   return Object.values(pizzas).reduce((sum, p) => sum + (parseInt(p.quantity, 10) || 0), 0);
 }
 
+
+const MobileTooltip = ({ children, text, id }) => (
+  <div 
+    className="tooltip-wrapper"
+    onTouchStart={() => setActiveTooltip(id)}
+    onTouchEnd={() => setTimeout(() => setActiveTooltip(null), 2000)}
+  >
+    {children}
+    {activeTooltip === id && (
+      <div className="mobile-tooltip">{text}</div>
+    )}
+  </div>
+);
 
 
 
@@ -1008,6 +1024,99 @@ const handleBulkPrintPackingSlips = () => {
   printWindow.close();
 };
 
+
+
+
+
+  // Download raw order data function for use in excel/google sheets
+  const downloadRawOrdersCSV = () => {
+    // Filter orders to only include selected ones
+    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id));
+    
+    // Prepare raw order data based on your Firestore structure
+    const rawData = selectedOrdersData.map(order => {
+      const customerName = order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name;
+      const deliveryDate = order.delivery_day || '-';
+      const accountId = order.account_ID || '-';
+      const email = order.customer_email || '-';
+      const orderTimestamp = order.order_placed_timestamp || '-';
+      const purchaseOrder = order.purchase_order || '-';
+      const additionalNotes = order.additional_notes || '-';
+      const complete = order.complete ? 'Yes' : 'No';
+      const pizzaTotal = order.pizzaTotal || 0;
+      
+      // pizza type breakdown & quantity
+      const pizzaDetails = Object.entries(order.pizzas || {})
+        .filter(([pizzaType, pizza]) => pizza.quantity > 0)
+        .map(([pizzaType, pizza]) => {
+          const pizzaName = pizzaTitles[pizzaType] || pizzaType;
+            return `${pizzaName}: ${pizza.quantity}`;
+        })
+        .join('; ');
+
+      return {
+        'Customer Name': customerName,
+        'Account ID': accountId,
+        'Customer Email': email,
+        'Delivery Date': deliveryDate,
+        'Complete': complete,
+        'Pizza Total': pizzaTotal,
+        'Pizza Breakdown': pizzaDetails,
+        'Order Timestamp': orderTimestamp,
+        'Purchase Order': purchaseOrder,
+        'Additional Notes': additionalNotes
+      };
+    });
+
+    if (rawData.length === 0) {
+      alert('No orders selected for download.');
+      return;
+    }
+
+    // Create CSV headers 
+    const headers = [
+      'Customer Name', 'Account ID', 'Customer Email', 'Delivery Date', 
+      'Complete', 'Pizza Total', 'Pizza Breakdown', 'Order Timestamp', 
+      'Purchase Order', 'Additional Notes'
+    ];
+
+    // Create CSV rows 
+    const csvRows = [
+      headers.join(','), // Header row
+      ...rawData.map(row => [
+        `"${row['Customer Name']}"`,
+        `"${row['Account ID']}"`,
+        `"${row['Customer Email']}"`,
+        `"${row['Delivery Date']}"`,
+        `"${row['Complete']}"`,
+        row['Pizza Total'],
+        `"${row['Pizza Breakdown']}"`,
+        `"${row['Order Timestamp']}"`,
+        `"${row['Purchase Order']}"`,
+        `"${row['Additional Notes']}"`
+      ].join(','))
+    ];
+
+    // Create and download the file
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `selected-orders-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+
+
+
+
 useEffect(() => {
 if (!selectedOrder) return;
   const hasSplit = Object.values(selectedOrder.pizzas || {}).some(pizza => {
@@ -1073,17 +1182,73 @@ function getPizzaAllocatedTally(pizzaData) {
     <h2>ORDERS</h2>
     <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
-      <button
-        className='button'
-        onClick={() => {
-          if (selectMode) {
-            setSelectedOrders([]); // clear selected orders when exiting selection mode
-          }
-          setSelectMode(!selectMode);
-        }}
-      >
-        {selectMode ? "Cancel Selection" : "Select Orders"}
-      </button>
+      <div className='selectCancel' {...(selectedOrders.length > 0 && { 'data-count': selectedOrders.length })}>
+        <button
+          className='button'
+          onClick={() => {
+            if (selectMode) {
+              setSelectedOrders([]); // clear selected orders when exiting selection mode
+            }
+            setSelectMode(!selectMode);
+          }}
+          >
+          {selectMode ? "Cancel Selection" : "Select Orders"}
+        </button>
+        {selectMode && (
+          <button
+            className='button button-secondary'
+            onClick={() => {
+              const allVisibleOrderIds = sortedOrders.map(order => order.id);
+              const allSelected = allVisibleOrderIds.every(id => selectedOrders.includes(id));
+              
+              if (allSelected) {
+                // Deselect all visible orders
+                setSelectedOrders(prev => prev.filter(id => !allVisibleOrderIds.includes(id)));
+              } else {
+                // Select all visible orders (merge with existing selection)
+                setSelectedOrders(prev => {
+                  const newSelection = [...prev];
+                  allVisibleOrderIds.forEach(id => {
+                    if (!newSelection.includes(id)) {
+                      newSelection.push(id);
+                    }
+                  });
+                  return newSelection;
+                });
+              }
+            }}
+            style={{ marginLeft: '8px' }}
+          >
+            {sortedOrders.every(order => selectedOrders.includes(order.id)) ? "Deselect All" : "Select All"}
+            {searchTerm && ` (${sortedOrders.length} filtered)`}
+          </button>
+        )}
+      </div>
+      {selectedOrders.length > 0 && (
+        <div className="bulk-actions" >
+          <button className="button button-icon" onClick={generatePDF} title="Generate Packing List">
+            <FontAwesomeIcon icon={faList} />
+            <span className="mobile-label">Packing List</span>
+          </button>
+          <button className="button button-icon" onClick={handleBulkPrintPackingSlips} title="Generate Packing Slips">
+            <FontAwesomeIcon icon={faReceipt} />
+            <span className="mobile-label">Packing Slips</span>
+          </button>
+          <button className="button button-icon" onClick={() => markSelectedAsPacked()} title="Mark as Packed">
+            <FontAwesomeIcon icon={faBox} />
+            <span className="mobile-label">Mark Packed</span>
+          </button>
+          <button className="button button-icon" onClick={() => markSelectedAsComplete()} title="Mark as Complete">
+            <FontAwesomeIcon icon={faCheckSquare} />
+            <span className="mobile-label">Complete</span>
+          </button>
+          <button className="button button-icon" onClick={() => downloadRawOrdersCSV()} title="Download CSV">
+            <FontAwesomeIcon icon={faDownload} />
+            <span className="mobile-label">CSV</span>
+          </button>
+        </div>
+      )}
+
       <input
         type="text"
         placeholder="Search orders..."
@@ -1091,27 +1256,6 @@ function getPizzaAllocatedTally(pizzaData) {
         onChange={e => setSearchTerm(e.target.value)}
         style={{ marginRight: 8 }}
       />
-      {selectedOrders.length > 0 && (
-        <div className="bulk-actions">
-          {/* generate Packing list button */}
-          <button className="button" onClick={generatePDF}>
-            Generate Packing List
-          </button>
-          {/* generate Packing Packing Slips */}
-          <button className="button" onClick={handleBulkPrintPackingSlips}>
-            Generate Packing Slips
-          </button>
-          {/* mark as packed */}
-          <button className="button" onClick={() => markSelectedAsPacked()}>
-            Mark as Packed
-          </button>
-          {/* mark as complete */}
-          <button className="button" onClick={() => markSelectedAsComplete()}>
-            Mark as complete
-          </button>
-        </div>
-      )}
-
     </div>
 
     <div className='ordersList'>
@@ -1207,11 +1351,15 @@ function getPizzaAllocatedTally(pizzaData) {
               ${order.order_status === 'packed' ? 'packed' : ''}
               `}
               onClick={() => handleOrderClick(order)}
-              
               >
             <div>{order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
-            <div className='orderStatus'>{order.order_status}</div>
+            <div className='orderStatus'>
+              {order.order_status === 'order placed' && ''}
+              {order.order_status === 'ready to pack' && <FontAwesomeIcon icon={faBoxOpen} />}
+              {order.order_status === 'packed' && <FontAwesomeIcon icon={faBox} />}
+              {order.order_status === 'complete' && <FontAwesomeIcon icon={faCheckSquare} />}
+            </div>
             <div
               className={`
                 ${order.delivery_day === 'tbc' ? 'tbc' : ''}
@@ -1219,7 +1367,6 @@ function getPizzaAllocatedTally(pizzaData) {
               }
             >
               <span className={isToday ? 'deliveryToday' : ''}>
-
               {order.delivery_day === 'tbc'
                 ? 'tbc'
                 : formatDeliveryDay(order.delivery_day)}
@@ -1250,7 +1397,7 @@ function getPizzaAllocatedTally(pizzaData) {
           <div className='orderDetailsAndSlip'>
             <div>- Order Details -</div>
             <button className='button packButton' onClick={handlePrintClick}>
-              <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
+              <FontAwesomeIcon icon={faReceipt} className='icon' /> Packing Slip
             </button>
           </div>
           <div className='orderContent'>
