@@ -4,7 +4,7 @@ import { app, db } from '../firebase/firebase';
 import { collection, getDocs, getDoc, doc, updateDoc, writeBatch, deleteDoc } from '@firebase/firestore';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {faPrint, faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft} from '@fortawesome/free-solid-svg-icons';
+import {faPrint, faReceipt,  faPencilAlt, faTrash, faSort, faArrowTurnUp, faArrowLeft, faList, faFileExport, faCheck, faCheckSquare, faBox, faBoxOpen, faDownload} from '@fortawesome/free-solid-svg-icons';
 import { formatDate, formatDeliveryDay } from '../../utils/formatDate';
 import { fetchCustomerByAccountID } from '../../utils/firestoreUtils';
 import { onSnapshot, deleteField } from 'firebase/firestore';
@@ -56,6 +56,9 @@ function Orders() {
   
   // edit qty hint
   const [showEditQtyHint, setShowEditQtyHint] = useState(true);
+  
+  // tool tip on mobile for explaining the buttons
+  const [activeTooltip, setActiveTooltip] = useState(null);
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -69,6 +72,19 @@ function calculatePizzaTotal(pizzas) {
   return Object.values(pizzas).reduce((sum, p) => sum + (parseInt(p.quantity, 10) || 0), 0);
 }
 
+
+const MobileTooltip = ({ children, text, id }) => (
+  <div 
+    className="tooltip-wrapper"
+    onTouchStart={() => setActiveTooltip(id)}
+    onTouchEnd={() => setTimeout(() => setActiveTooltip(null), 2000)}
+  >
+    {children}
+    {activeTooltip === id && (
+      <div className="mobile-tooltip">{text}</div>
+    )}
+  </div>
+);
 
 
 
@@ -1166,17 +1182,44 @@ function getPizzaAllocatedTally(pizzaData) {
     <h2>ORDERS</h2>
     <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
-      <button
-        className='button'
-        onClick={() => {
-          if (selectMode) {
-            setSelectedOrders([]); // clear selected orders when exiting selection mode
-          }
-          setSelectMode(!selectMode);
-        }}
-      >
-        {selectMode ? "Cancel Selection" : "Select Orders"}
-      </button>
+      <div className='selectCancel' {...(selectedOrders.length > 0 && { 'data-count': selectedOrders.length })}>
+        <button
+          className='button'
+          onClick={() => {
+            if (selectMode) {
+              setSelectedOrders([]); // clear selected orders when exiting selection mode
+            }
+            setSelectMode(!selectMode);
+          }}
+          >
+          {selectMode ? "Cancel Selection" : "Select Orders"}
+        </button>
+      </div>
+      {selectedOrders.length > 0 && (
+        <div className="bulk-actions" >
+          <button className="button button-icon" onClick={generatePDF} title="Generate Packing List">
+            <FontAwesomeIcon icon={faList} />
+            <span className="mobile-label">Packing List</span>
+          </button>
+          <button className="button button-icon" onClick={handleBulkPrintPackingSlips} title="Generate Packing Slips">
+            <FontAwesomeIcon icon={faReceipt} />
+            <span className="mobile-label">Packing Slips</span>
+          </button>
+          <button className="button button-icon" onClick={() => markSelectedAsPacked()} title="Mark as Packed">
+            <FontAwesomeIcon icon={faBox} />
+            <span className="mobile-label">Mark Packed</span>
+          </button>
+          <button className="button button-icon" onClick={() => markSelectedAsComplete()} title="Mark as Complete">
+            <FontAwesomeIcon icon={faCheckSquare} />
+            <span className="mobile-label">Complete</span>
+          </button>
+          <button className="button button-icon" onClick={() => downloadRawOrdersCSV()} title="Download CSV">
+            <FontAwesomeIcon icon={faDownload} />
+            <span className="mobile-label">CSV</span>
+          </button>
+        </div>
+      )}
+
       <input
         type="text"
         placeholder="Search orders..."
@@ -1184,30 +1227,6 @@ function getPizzaAllocatedTally(pizzaData) {
         onChange={e => setSearchTerm(e.target.value)}
         style={{ marginRight: 8 }}
       />
-      {selectedOrders.length > 0 && (
-        <div className="bulk-actions">
-          {/* generate Packing list button */}
-          <button className="button" onClick={generatePDF}>
-            Generate Packing List
-          </button>
-          {/* generate Packing Packing Slips */}
-          <button className="button" onClick={handleBulkPrintPackingSlips}>
-            Generate Packing Slips
-          </button>
-          {/* mark as packed */}
-          <button className="button" onClick={() => markSelectedAsPacked()}>
-            Mark as Packed
-          </button>
-          {/* mark as complete */}
-          <button className="button" onClick={() => markSelectedAsComplete()}>
-            Mark as complete
-          </button>
-          <button className="button" onClick={() => downloadRawOrdersCSV()}>
-            Download Selected as CSV file
-          </button>
-        </div>
-      )}
-
     </div>
 
     <div className='ordersList'>
@@ -1303,11 +1322,15 @@ function getPizzaAllocatedTally(pizzaData) {
               ${order.order_status === 'packed' ? 'packed' : ''}
               `}
               onClick={() => handleOrderClick(order)}
-              
               >
             <div>{order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
-            <div className='orderStatus'>{order.order_status}</div>
+            <div className='orderStatus'>
+              {order.order_status === 'order placed' && ''}
+              {order.order_status === 'ready to pack' && <FontAwesomeIcon icon={faBoxOpen} />}
+              {order.order_status === 'packed' && <FontAwesomeIcon icon={faBox} />}
+              {order.order_status === 'complete' && <FontAwesomeIcon icon={faCheckSquare} />}
+            </div>
             <div
               className={`
                 ${order.delivery_day === 'tbc' ? 'tbc' : ''}
@@ -1315,7 +1338,6 @@ function getPizzaAllocatedTally(pizzaData) {
               }
             >
               <span className={isToday ? 'deliveryToday' : ''}>
-
               {order.delivery_day === 'tbc'
                 ? 'tbc'
                 : formatDeliveryDay(order.delivery_day)}
@@ -1346,7 +1368,7 @@ function getPizzaAllocatedTally(pizzaData) {
           <div className='orderDetailsAndSlip'>
             <div>- Order Details -</div>
             <button className='button packButton' onClick={handlePrintClick}>
-              <FontAwesomeIcon icon={faPrint} className='icon' /> Packing Slip
+              <FontAwesomeIcon icon={faReceipt} className='icon' /> Packing Slip
             </button>
           </div>
           <div className='orderContent'>
