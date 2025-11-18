@@ -1061,87 +1061,118 @@ const handleBulkPrintPackingSlips = () => {
 
   // Download raw order data function for use in excel/google sheets
   const downloadRawOrdersCSV = () => {
-    // Filter orders to only include selected ones
-    const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id));
-    
-    // Prepare raw order data based on your Firestore structure
-    const rawData = selectedOrdersData.map(order => {
-      const customerName = order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name;
-      const deliveryDate = order.delivery_day || '-';
-      const accountId = order.account_ID || '-';
-      const orderTimestamp = order.order_placed_timestamp || '-';
-      const purchaseOrder = order.purchase_order || '-';
-      const additionalNotes = order.additional_notes || '-';
-      const complete = order.complete ? 'Yes' : 'No';
-      const pizzaTotal = order.pizzaTotal || 0;
-      
-      // pizza type breakdown & quantity
-      const pizzaDetails = Object.entries(order.pizzas || {})
-        .filter(([pizzaType, pizza]) => pizza.quantity > 0)
-        .map(([pizzaType, pizza]) => {
-            return `${pizzaType}: ${pizza.quantity}`;
-        })
-        .join('; ');
+  // Filter orders to only include selected ones
+  const selectedOrdersData = orders.filter(order => selectedOrders.includes(order.id));
+  
+  // Get all pizza types from the pizzas collection and sort them
+  const allPizzaTypes = pizzaCatalog.map(pizza => pizza.id);
 
-      return {
-        'Customer Name': customerName,
-        'Account ID': accountId,
-        'Delivery Date': deliveryDate,
-        'Complete': complete,
-        'Pizza Total': pizzaTotal,
-        'Pizza Breakdown': pizzaDetails,
-        'Order Timestamp': orderTimestamp,
-        'Purchase Order': purchaseOrder,
-        'Additional Notes': additionalNotes
-      };
+  // Sort pizza types: all _1s first (alphabetical), then all _0s (alphabetical), then TOM_A0, DOU_A1, DOU_A0 at the end
+  const sortedPizzaTypes = allPizzaTypes.sort((a, b) => {
+    const getCategory = (id) => {
+      if (id === 'TOM_A0') return 4;
+      if (id === 'DOU_A1') return 5;
+      if (id === 'DOU_A0') return 6;
+      if (id.includes('_A1')) return 1;
+      if (id.includes('_B1')) return 1;
+      if (id.includes('_A0')) return 2; 
+      if (id.includes('_B0')) return 2;
+      return 3; // Everything else third
+    };
+
+    const categoryA = getCategory(a);
+    const categoryB = getCategory(b);
+    
+    if (categoryA !== categoryB) {
+      return categoryA - categoryB;
+    }
+    
+    // Within same category, sort alphabetically
+    return a.localeCompare(b);
+  });
+  
+  // Prepare raw order data
+  const rawData = selectedOrdersData.map((order) => {
+    const customerName = order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name;
+    
+    // Format delivery date as DD/MM/YYYY
+    const deliveryDate = order.delivery_day === 'tbc' || !order.delivery_day 
+      ? 'tbc' 
+      : dayjs(order.delivery_day).format('DD/MM/YYYY');
+    const accountId = order.account_ID || '-';
+    const orderTimestamp = order.order_placed_timestamp || '-';
+    const purchaseOrder = order.purchase_order || '-';
+    const additionalNotes = order.additional_notes || '-';
+    
+    // Create pizza quantity object - include ALL pizza types, even if not ordered
+    const pizzaQuantities = {};
+    sortedPizzaTypes.forEach((pizzaType) => {
+      pizzaQuantities[pizzaType] = order.pizzas?.[pizzaType]?.quantity || '';
     });
 
-    if (rawData.length === 0) {
-      alert('No orders selected for download.');
-      return;
-    }
+    return {
+      'Customer Name': customerName,
+      'Account ID': accountId,
+      'Delivery Date': deliveryDate,
+      'Pizza Total': '', // Leave blank instead of using order.pizzaTotal
+      ...pizzaQuantities,
+      'Order Timestamp': orderTimestamp,
+      'Purchase Order': purchaseOrder,
+      'Additional Notes': additionalNotes
+    };
+  });
 
-    // Create CSV headers 
-    const headers = [
-      'Customer Name', 'Account ID', 'Delivery Date', 
-      'Complete', 'Pizza Total', 'Pizza Breakdown', 'Order Timestamp', 
-      'Purchase Order', 'Additional Notes'
-    ];
+  if (rawData.length === 0) {
+    alert('No orders selected for download.');
+    return;
+  }
 
-    // Create CSV rows 
-    const csvRows = [
-      headers.join(','), // Header row
-      ...rawData.map(row => [
+  // Create CSV headers 
+  const headers = [
+    'Customer Name', 'Account ID', 'Delivery Date', 
+    'Pizza Total', 
+    ...sortedPizzaTypes,
+    'Order Timestamp', 'Purchase Order', 'Additional Notes'
+  ];
+
+  // Create CSV rows 
+  const csvRows = [
+    headers.join(','), // Header row
+    ...rawData.map(row => {
+      const baseFields = [
         `"${row['Customer Name']}"`,
         `"${row['Account ID']}"`,
         `"${row['Delivery Date']}"`,
-        `"${row['Complete']}"`,
-        row['Pizza Total'],
-        `"${row['Pizza Breakdown']}"`,
+        '' // Empty string for Pizza Total
+      ];
+      
+      const pizzaFields = sortedPizzaTypes.map(pizzaType => row[pizzaType] || '');
+      
+      const endFields = [
         `"${row['Order Timestamp']}"`,
         `"${row['Purchase Order']}"`,
         `"${row['Additional Notes']}"`
-      ].join(','))
-    ];
+      ];
+      
+      return [...baseFields, ...pizzaFields, ...endFields].join(',');
+    })
+  ];
 
-    // Create and download the file
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `selected-orders-${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-
-
+  // Create and download the file
+  const csvContent = csvRows.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `selected-orders-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
 
 useEffect(() => {
@@ -1990,7 +2021,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 // Remove allocation status for this order in all batches
                 const batchesSnapshot = await getDocs(collection(db, "batches"));
                 const batchDocs = batchesSnapshot.docs;
-                const allocationUpdates = batchDocs.map(async (docSnap) => {
+                               const allocationUpdates = batchDocs.map(async (docSnap) => {
                   const batchData = docSnap.data();
                   let updated = false;
                   const updatedAllocations = (batchData.pizza_allocations || []).map(allocation => {

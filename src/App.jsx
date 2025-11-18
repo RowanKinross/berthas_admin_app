@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import logo from './bertha_logo.png'
 import './App.css'
 import NavTabs from './components/navTabs/NavTabs'
+// import Prep from './components/prep/Prep'
 import Home from './components/home/Home'
 import Customers from './components/customers/customers'
 import Orders from './components/orders/Orders'
@@ -131,6 +132,11 @@ function App() {
                   <Summary/>
                 </ProtectedRoute>
               } />
+              {/* <Route path="prep" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Prep/>
+                </ProtectedRoute>
+              } /> */}
               
               {/* Routes accessible by both roles */}
               <Route path="batchCodes" element={
