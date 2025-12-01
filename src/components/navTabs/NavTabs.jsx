@@ -109,10 +109,12 @@ function NavTabs() {
           {/* discontinued tab  */}
           {/* <NavLink to="/prep" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
-            <h3 className="navTab">PREP<
+            <h3 className="navTab">PREP< */}
         </>
       );
-    } else if (userRole === "unit") {
+    } 
+      
+    if (userRole === "unit") {
       return (
         <>
           {/* discontinued tab 
