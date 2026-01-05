@@ -35,6 +35,10 @@ const [dropdownOpen, setDropdownOpen] = useState(false);
 const [deliveryDay, setDeliveryDay] = useState("");
 const [wastageReason, setWastageReason] = useState("");
 
+// Batch-related states for wastage
+const [availableBatches, setAvailableBatches] = useState([]);
+const [selectedBatches, setSelectedBatches] = useState({}); // {pizzaId: {batchCode: quantity}}
+
 const [sampleCustomerName, setSampleCustomerName] = useState("");
 const [confirmChecked, setConfirmChecked] = useState(false);
 
@@ -47,6 +51,27 @@ const handleFilterChange = (event) => {
   setFilterCriteria(event.target.value);
 };
 
+// Batch formatting functions (from orders component)
+const formatBatchCode = (code) => {
+  if (!code || code.length !== 8) return code;
+  const day = code.slice(6, 8);
+  const month = code.slice(4, 6);
+  const year = code.slice(2, 4);
+  return `${day}.${month}.${year}`;
+};
+
+// Get available quantity for a pizza in a batch
+const getAvailableQuantity = (batch, pizzaId) => {
+  const pizza = batch.pizzas?.find(p => p.id === pizzaId);
+  if (!pizza) return 0;
+
+  const allocated = (batch.pizza_allocations || [])
+    .filter(a => a.pizzaId === pizzaId)
+    .reduce((sum, a) => sum + a.quantity, 0);
+
+  return pizza.quantity - allocated;
+};
+
 
 
 
@@ -55,24 +80,15 @@ const handleFilterChange = (event) => {
 const fetchStock = async () => {
   try {
     const querySnapshot = await getDocs(collection(db, 'batches'));
-    const data = querySnapshot.docs.map(doc => {
-      const batchData = doc.data();
-      const pizzasInBatch = batchData.pizzas.map((pizza) => ({
-        batch_id: doc.id,
-        batch_number: batchData.batch_code,
-        pizza_id: pizza.id,
-        quantity_available: pizza.quantity_available,
-      }));
-      return pizzasInBatch;
-    });
+    const batchData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
-    // Flatten the array of arrays (each batch's pizzas) into a single array
-    const flattenedStock = data.flat();
+    // Sort by batch_code
+    batchData.sort((a, b) => a.batch_code.localeCompare(b.batch_code));
 
-    // Sort by batch_number
-    flattenedStock.sort((a, b) => a.batch_number - b.batch_number);
-
-    setStock(flattenedStock);
+    setStock(batchData);
   } catch (error) {
     console.error("Error fetching stock data:", error);
   }
@@ -192,11 +208,81 @@ const handleChange = (event) => {
     setCustomDeliveryWeek('');
     setDeliveryDay('');
     setWastageReason('');
+    setSelectedBatches({}); // Reset batch selections
     setDeliveryOption("asap");
     // Reset editable email to the selected customer's email
     setEditableEmail(customerData.find(c => c.account_ID === selectedCustomerId)?.email || "");
      setConfirmChecked(false);
 }, [selectedCustomerId, pizzaData]);
+
+  // Fetch batches when customer is WASTAGE
+  useEffect(() => {
+    const fetchBatches = async () => {
+      if (selectedCustomerId === "WASTAGE") {
+        try {
+          const batchesSnapshot = await getDocs(collection(db, "batches"));
+          const batchesData = batchesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          // Filter for completed batches with available stock
+          const availableBatchesData = batchesData.filter(batch => 
+            batch.completed && 
+            batch.pizzas?.some(pizza => getAvailableQuantity(batch, pizza.id) > 0)
+          );
+          
+          setAvailableBatches(availableBatchesData);
+        } catch (error) {
+          console.error("Error fetching batches:", error);
+        }
+      } else {
+        setAvailableBatches([]);
+      }
+    };
+
+    fetchBatches();
+  }, [selectedCustomerId]);
+
+  // Batch handling functions for WASTAGE
+  const handleBatchClick = (pizzaId, batchCode) => {
+    if (selectedCustomerId !== "WASTAGE") return;
+    
+    setSelectedBatches(prev => {
+      const pizzaBatches = prev[pizzaId] || {};
+      const isAlreadySelected = pizzaBatches[batchCode];
+      
+      if (isAlreadySelected) {
+        // Remove batch selection
+        const updated = { ...pizzaBatches };
+        delete updated[batchCode];
+        return { ...prev, [pizzaId]: updated };
+      } else {
+        // Add batch selection with the pizza quantity
+        const quantity = pizzaQuantities[pizzaId] || 0;
+        if (quantity > 0) {
+          return {
+            ...prev,
+            [pizzaId]: {
+              ...pizzaBatches,
+              [batchCode]: quantity
+            }
+          };
+        }
+      }
+      return prev;
+    });
+  };
+
+  const handleBatchQuantityChange = (pizzaId, batchCode, newQuantity) => {
+    setSelectedBatches(prev => ({
+      ...prev,
+      [pizzaId]: {
+        ...prev[pizzaId],
+        [batchCode]: parseInt(newQuantity) || 0
+      }
+    }));
+  };
 
 
 
@@ -293,9 +379,22 @@ const handleSubmit = async (event) => {
   const pizzas = filteredPizzaData.reduce((acc, pizza) => {
     const quantityRequired = pizzaQuantities[pizza.id] >= 0 ? pizzaQuantities[pizza.id] : 0;
     if (quantityRequired > 0) {
+      // Convert selectedBatches to batchesUsed format
+      const batchesUsed = [];
+      if (selectedCustomerId === "WASTAGE" && selectedBatches[pizza.id]) {
+        Object.entries(selectedBatches[pizza.id]).forEach(([batchCode, quantity]) => {
+          if (quantity > 0) {
+            batchesUsed.push({
+              batch_number: batchCode,
+              quantity: quantity
+            });
+          }
+        });
+      }
+      
       acc[pizza.id] = {
         quantity: quantityRequired,
-        batchesUsed: [],
+        batchesUsed: batchesUsed,
       };
     }
     return acc;
@@ -318,8 +417,8 @@ const handleSubmit = async (event) => {
       pizzas: pizzas,
       pizzaTotal: totalPizzas,
       additional_notes: document.getElementById('additonalNotes').value,
-      order_status: "order placed",
-      complete: false,
+      order_status: selectedCustomerId === "WASTAGE" ? "complete" : "order placed",
+      complete: selectedCustomerId === "WASTAGE" ? true : false,
       ...((selectedCustomerId === "SAMPLES/6UGM" || selectedCustomerId === "WEDDINGSPRIVATEEVENTS") && { sample_customer_name: sampleCustomerName }),
       ...(selectedCustomerId === "WASTAGE" && { wastage_reason: wastageReason }),
     });
@@ -586,6 +685,53 @@ return (
         </Form.Group>
       ))}
       </fieldset>
+
+      {selectedCustomerId === "WASTAGE" && stock && Object.values(pizzaQuantities).some(qty => qty > 0) && (
+        <div>
+          <h5>Select Batches:</h5>
+          {filteredPizzaData.map(pizza => {
+            const quantity = pizzaQuantities[pizza.id];
+            if (!quantity || quantity <= 0) return null;
+
+            return (
+              <div key={pizza.id} style={{marginBottom: '20px'}}>
+                <h6>{capitalizeWords(pizza.pizza_title)}: {quantity}</h6>
+                <div className="batchButtonContainer">
+                  {stock
+                    .filter(batch => {
+                      const pizzaInBatch = batch.pizzas?.find(p => p.id === pizza.id);
+                      return (
+                        pizzaInBatch &&
+                        getAvailableQuantity(batch, pizza.id) > 0 &&
+                        batch.pizza_numbers_complete === true
+                      );
+                    })
+                    .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
+                    .map(batch => {
+                    const availableQty = getAvailableQuantity(batch, pizza.id);
+                    if (availableQty <= 0) return null;
+
+                    const isSelected = selectedBatches[pizza.id]?.[batch.batch_code];
+                    const selectedQty = isSelected ? selectedBatches[pizza.id][batch.batch_code] : 0;
+
+                    return (
+                      <div
+                        key={batch.batch_code}
+                        className={`batchButton ${isSelected ? 'selected' : ''}`}
+                        onClick={() => handleBatchClick(pizza.id, batch.batch_code, availableQty)}
+                      >
+                        <div>{formatBatchCode(batch.batch_code)}</div>
+                        <div>({availableQty} available)</div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {selectedCustomerId === "WASTAGE" && (
       <Form.Group as={Row} className="mb-3" controlId="wastageReason">
