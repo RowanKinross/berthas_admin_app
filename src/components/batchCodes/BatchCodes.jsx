@@ -31,7 +31,7 @@ function BatchCodes() {
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const batchesPerPage = 10;
+  const batchesPerPage = 20;
   function getPagination(currentPage, totalPages) {
   const pages = [];
   if (totalPages <= 7) {
@@ -131,6 +131,28 @@ const formatDateDisplay = (dateStr) => {
       month: "short",
       year: "numeric"
     });
+  };
+
+  // format batch date for batch list with day of week and conditional batch code
+  const formatBatchListDate = (dateStr, batchCode, userRole, isSearching) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const formattedDate = date.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "2-digit", 
+      month: "short",
+      year: "numeric"
+    });
+    
+    if (userRole === 'admin' && batchCode && isSearching) {
+      return (
+        <span>
+          {formattedDate} <span style={{ color: '#888' }}>#{batchCode}</span>
+        </span>
+      );
+    }
+    
+    return formattedDate;
   };
 
 
@@ -765,6 +787,49 @@ const formatDateDisplay = (dateStr) => {
     return text.toLowerCase().replace(/[\s\W]/g, ""); // Remove spaces, punctuation, and convert to lowercase
   };
 
+  // Helper function to find matching ingredient batch code for search display
+  const getMatchingIngredientCodes = (batch, searchTerm) => {
+    if (!searchTerm || !batch.pizzas) return [];
+    
+    const normalizedSearchTerm = normalizeForSearch(searchTerm);
+    
+    // First check if batch code or date matches (not ingredient codes)
+    const batchMatches = 
+      normalizeForSearch(batch.batch_code).includes(normalizedSearchTerm) ||
+      normalizeForSearch(formatDateDisplay(batch.batch_date)).includes(normalizedSearchTerm);
+    
+    if (batchMatches) return []; // Don't show ingredient match if batch info matched
+    
+    // Find all matching ingredient batch codes
+    const matches = [];
+    const seenCombos = new Set(); // Prevent duplicates
+    
+    for (const pizza of batch.pizzas) {
+      if (pizza.ingredientBatchCodes && pizza.quantity > 0) { // Only pizzas actually made
+        for (const [ingredient, code] of Object.entries(pizza.ingredientBatchCodes)) {
+          if (code && normalizeForSearch(code).includes(normalizedSearchTerm)) {
+            const combo = `${ingredient}:${code}`;
+            if (!seenCombos.has(combo)) {
+              // Find all pizzas in this batch that use this ingredient
+              const pizzasWithIngredient = batch.pizzas
+                .filter(p => p.quantity > 0 && p.ingredients.includes(ingredient))
+                .map(p => p.pizza_title);
+              
+              matches.push({ 
+                ingredient, 
+                code, 
+                pizzas: pizzasWithIngredient 
+              });
+              seenCombos.add(combo);
+            }
+          }
+        }
+      }
+    }
+    
+    return matches;
+  };
+
   // Helper to get week number and year (Saturday to Friday)
   function getWeekYear(date) {
     const d = new Date(date);
@@ -839,7 +904,7 @@ const formatDateDisplay = (dateStr) => {
         <div className="alignRight">
           <input
             type="text"
-            placeholder="Search batches, dates, or ingredient codes..."
+            placeholder="Search batches or ingredient codes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -1252,18 +1317,49 @@ const formatDateDisplay = (dateStr) => {
         filteredBatches
         .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
         .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
-        .map(batch => (
-          <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-            <button 
-              className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''} container`} 
-              onClick={() => handleBatchClick(batch)}
-            >
-              <p className='batchTextBoxes'>{formatDateDisplay(batch.batch_date)}</p>
-              <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
-              {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
-            </button>
-          </div>
-        ))
+        .map(batch => {
+          const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
+          
+          return (
+            <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
+              <button 
+                className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
+                onClick={() => handleBatchClick(batch)}
+                style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
+              >
+                <div className="container" style={{ width: '100%' }}>
+                  <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
+                  <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
+                  {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
+                </div>
+                {matchingIngredients.length > 0 && (
+                  <div style={{ 
+                    width: '100%', 
+                    fontSize: '0.8em', 
+                    opacity: 0.8, 
+                    marginTop: '0.25rem',
+                    textAlign: 'left',
+                    paddingLeft: '0.5rem'
+                  }}>
+                    {matchingIngredients.length === 1 ? (
+                      <div>
+                        {matchingIngredients[0].ingredient}: {matchingIngredients[0].code} → {matchingIngredients[0].pizzas.join(', ')}
+                      </div>
+                    ) : (
+                      <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                        {matchingIngredients.map((match, index) => (
+                          <li key={index}>
+                            {match.ingredient}: {match.code} → {match.pizzas.join(', ')}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </button>
+            </div>
+          );
+        })
       ) : (
         <p className='py-3'>
           {batches.length === 0 ? 'Loading batches...' : 'No batches found matching your search.'}
