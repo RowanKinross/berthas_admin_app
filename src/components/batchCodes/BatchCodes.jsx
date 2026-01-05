@@ -766,8 +766,8 @@ const formatDateDisplay = (dateStr) => {
   };
 
   // Helper function to find matching ingredient batch code for search display
-  const getMatchingIngredientCode = (batch, searchTerm) => {
-    if (!searchTerm || !batch.pizzas) return null;
+  const getMatchingIngredientCodes = (batch, searchTerm) => {
+    if (!searchTerm || !batch.pizzas) return [];
     
     const normalizedSearchTerm = normalizeForSearch(searchTerm);
     
@@ -776,20 +776,27 @@ const formatDateDisplay = (dateStr) => {
       normalizeForSearch(batch.batch_code).includes(normalizedSearchTerm) ||
       normalizeForSearch(formatDateDisplay(batch.batch_date)).includes(normalizedSearchTerm);
     
-    if (batchMatches) return null; // Don't show ingredient match if batch info matched
+    if (batchMatches) return []; // Don't show ingredient match if batch info matched
     
-    // Find matching ingredient batch code
+    // Find all matching ingredient batch codes
+    const matches = [];
+    const seenCombos = new Set(); // Prevent duplicates
+    
     for (const pizza of batch.pizzas) {
       if (pizza.ingredientBatchCodes) {
         for (const [ingredient, code] of Object.entries(pizza.ingredientBatchCodes)) {
           if (code && normalizeForSearch(code).includes(normalizedSearchTerm)) {
-            return { ingredient, code };
+            const combo = `${ingredient}:${code}`;
+            if (!seenCombos.has(combo)) {
+              matches.push({ ingredient, code });
+              seenCombos.add(combo);
+            }
           }
         }
       }
     }
     
-    return null;
+    return matches;
   };
 
   // Helper to get week number and year (Saturday to Friday)
@@ -1280,7 +1287,7 @@ const formatDateDisplay = (dateStr) => {
         .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
         .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
         .map(batch => {
-          const matchingIngredient = getMatchingIngredientCode(batch, searchTerm);
+          const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
           
           return (
             <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
@@ -1294,15 +1301,24 @@ const formatDateDisplay = (dateStr) => {
                   <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
                   {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
                 </div>
-                {matchingIngredient && (
+                {matchingIngredients.length > 0 && (
                   <div style={{ 
                     width: '100%', 
                     fontSize: '0.8em', 
                     opacity: 0.8, 
+                    marginTop: '0.25rem',
                     textAlign: 'left',
                     paddingLeft: '0.5rem'
                   }}>
-                    {matchingIngredient.ingredient}: {matchingIngredient.code}
+                    {matchingIngredients.length === 1 ? (
+                      <div>{matchingIngredients[0].ingredient}: {matchingIngredients[0].code}</div>
+                    ) : (
+                      <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                        {matchingIngredients.map((match, index) => (
+                          <li key={index}>{match.ingredient}: {match.code}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
               </button>
