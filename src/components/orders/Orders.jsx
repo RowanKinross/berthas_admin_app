@@ -779,10 +779,27 @@ const orderHasBatchErrors = (order) => {
 
   return matchesSearch;
 });
-  const sortedOrders = sortOrders(filteredOrders);
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  // Sort by delivery date - invalid dates at top, then valid dates newest first
+  const sortedByDeliveryDate = [...filteredOrders].sort((a, b) => {
+    // Check if delivery_day is a valid YYYY-MM-DD format
+    const isValidDate = (dateStr) => {
+      return dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(new Date(dateStr));
+    };
+    
+    const aValid = isValidDate(a.delivery_day);
+    const bValid = isValidDate(b.delivery_day);
+    
+    // Both invalid - maintain order
+    if (!aValid && !bValid) return 0;
+    // A invalid, B valid - A goes first (top)
+    if (!aValid && bValid) return -1;
+    // A valid, B invalid - B goes first (top)
+    if (aValid && !bValid) return 1;
+    
+    // Both valid - sort by date newest first
+    return b.delivery_day.localeCompare(a.delivery_day);
+  });
+  const currentOrders = sortedByDeliveryDate;
   
 
 
@@ -1472,17 +1489,7 @@ function getPizzaAllocatedTally(pizzaData) {
         <p className='py-3'>Loading orders...</p>
       )}
     </div>
-    <div className="pagination">
-      {Array.from({ length: Math.ceil(orders.length / ordersPerPage) }, (_, index) => (
-        <button
-          key={index + 1}
-          className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
-          onClick={() => setCurrentPage(index + 1)}
-        >
-          {index + 1}
-        </button>
-      ))}
-    </div>
+    {/* Pagination removed for debugging */}
     {selectedOrder && (
         <div className='modal'>
           <div className='modalContent orderModal' ref={modalRef}>
