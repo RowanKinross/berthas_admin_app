@@ -1178,6 +1178,55 @@ const formatDateDisplay = (dateStr) => {
                 </div>
               );
             })}
+            
+            {/* Vacuum Bags - always shown for every batch */}
+            {(() => {
+              const vacuumBagsBatchCode = viewingBatch.pizzas
+                .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
+                .find(code => code) || '';
+              
+              return (
+                <div key="vacuum-bags" className='ingredient container' style={{ color: vacuumBagsBatchCode ? 'inherit' : 'red' }}>
+                  <p>
+                    <strong>Vacuum Bags:</strong>
+                  </p>
+                  {editingField === `ingredient-Vacuum Bags` ? (
+                    <div>
+                    <input
+                      type="text"
+                      list={`batch-code-suggestions-Vacuum Bags`}
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("ingredient", "Vacuum Bags", null, editingValue)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleInlineSave("ingredient", "Vacuum Bags", null, editingValue);
+                      }}
+                      />
+                  <datalist id={`batch-code-suggestions-Vacuum Bags`}>
+                    {(batchCodeSuggestions['Vacuum Bags'] || [])
+                      .filter(code =>
+                        editingValue
+                          ? code.toLowerCase().includes(editingValue.toLowerCase())
+                          : true
+                      )
+                      .slice(0, 3)
+                      .map(code => (
+                        <option key={code} value={code} />
+                      ))}
+                  </datalist>
+                  </div>
+                  ) : (
+                    <p onClick={() => {
+                      setEditingField(`ingredient-Vacuum Bags`);
+                      setEditingValue(vacuumBagsBatchCode || "");
+                    }}>
+                      {vacuumBagsBatchCode ? `# ${vacuumBagsBatchCode}` : <span style={{ color: 'red' }}>-</span>}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             </div>
           <p className='fullWidth'>
           <strong>Notes:</strong>{" "}
