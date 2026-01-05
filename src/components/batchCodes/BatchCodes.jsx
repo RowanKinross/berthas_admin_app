@@ -759,6 +759,12 @@ const formatDateDisplay = (dateStr) => {
   // Get userRole from localStorage
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
 
+  // Helper function to normalize text for search
+  const normalizeForSearch = (text) => {
+    if (!text) return "";
+    return text.toLowerCase().replace(/[\s\W]/g, ""); // Remove spaces, punctuation, and convert to lowercase
+  };
+
   // Helper to get week number and year (Saturday to Friday)
   function getWeekYear(date) {
     const d = new Date(date);
@@ -802,10 +808,23 @@ const formatDateDisplay = (dateStr) => {
     }
     return true;
   })
-  .filter(batch =>
-    batch.batch_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    formatDateDisplay(batch.batch_date).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  .filter(batch => {
+    const normalizedSearchTerm = normalizeForSearch(searchTerm);
+    
+    // Search in batch code and date
+    const matchesBatchInfo = 
+      normalizeForSearch(batch.batch_code).includes(normalizedSearchTerm) ||
+      normalizeForSearch(formatDateDisplay(batch.batch_date)).includes(normalizedSearchTerm);
+    
+    // Search in ingredient batch codes
+    const matchesIngredientCodes = batch.pizzas?.some(pizza => 
+      Object.values(pizza.ingredientBatchCodes || {}).some(code => 
+        normalizeForSearch(code).includes(normalizedSearchTerm)
+      )
+    );
+    
+    return matchesBatchInfo || matchesIngredientCodes;
+  });
   
   // Add this helper function near the top of your component
   const isMobileOrTablet = () => {
@@ -820,7 +839,7 @@ const formatDateDisplay = (dateStr) => {
         <div className="alignRight">
           <input
             type="text"
-            placeholder="Search batch dates..."
+            placeholder="Search batches, dates, or ingredient codes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
