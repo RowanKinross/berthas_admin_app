@@ -17,6 +17,12 @@ function BatchCodes() {
   const [ingredientsOrdered, setIngredientsOrdered] = useState(false);
   const [pizzaNumbersComplete, setPizzaNumbersComplete] = useState(false);
   const [notes, setNotes] = useState("");
+  
+  // Wastage tracking fields
+  const [doughBallWastage, setDoughBallWastage] = useState(0);
+  const [tomatoBaseWastageOven, setTomatoBaseWastageOven] = useState(0);
+  const [tomatoBaseWastageTopping, setTomatoBaseWastageTopping] = useState(0);
+  const [toppedPizzaWastage, setToppedPizzaWastage] = useState(0);
   const formRef = useRef(null)
   const [totalPizzas, setTotalPizzas] = useState(0);
   const [selectedPizzas, setSelectedPizzas] = useState([]);
@@ -482,6 +488,10 @@ const formatDateDisplay = (dateStr) => {
         completed: completed,
         ingredients_ordered: ingredientsOrdered,
         pizza_numbers_complete: pizzaNumbersComplete,
+        dough_ball_wastage: doughBallWastage,
+        tomato_base_wastage_oven: tomatoBaseWastageOven,
+        tomato_base_wastage_topping: tomatoBaseWastageTopping,
+        topped_pizza_wastage: toppedPizzaWastage,
         pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
@@ -505,6 +515,10 @@ const formatDateDisplay = (dateStr) => {
       setCompleted(false);
       setIngredientsOrdered(false);
       setNotes("")
+      setDoughBallWastage(0);
+      setTomatoBaseWastageOven(0);
+      setTomatoBaseWastageTopping(0);
+      setToppedPizzaWastage(0);
       const querySnapshot = await getDocs(collection(db, "batches"));
       const batchesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -1118,6 +1132,70 @@ const formatDateDisplay = (dateStr) => {
 
         );
       })()}
+          
+          <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
+          <br></br>
+          {/* Wastage tracking fields */}
+          <div style={{ display: 'flex',flexDirection: 'column', marginBottom: '15px', alignItems: 'end'}}>
+            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
+              <label style={{ display: 'block', fontSize: '12px' }}>
+                <strong>Dough Ball Wastage:</strong>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={doughBallWastage}
+                onChange={(e) => setDoughBallWastage(parseInt(e.target.value) || 0)}
+                style={{ width: '40px' }}
+              />
+            </div>
+            
+            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
+              <label style={{ display: 'block', fontSize: '12px', }}>
+                <strong>Tomato Base Wastage - Oven Side:</strong>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={tomatoBaseWastageOven}
+                onChange={(e) => setTomatoBaseWastageOven(parseInt(e.target.value) || 0)}
+                style={{ width: '40px' }}
+              />
+            </div>
+            
+            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center'  }}>
+              <label style={{ display: 'block', fontSize: '12px', }}>
+                <strong>Tomato Base Wastage - Topping Side:</strong>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={tomatoBaseWastageTopping}
+                onChange={(e) => setTomatoBaseWastageTopping(parseInt(e.target.value) || 0)}
+                style={{ width: '40px' }}
+              />
+            </div>
+            
+            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
+              <label style={{ display: 'block', fontSize: '12px', }}>
+                <strong>Topped Pizza Wastage: </strong>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={toppedPizzaWastage}
+                onChange={(e) => setToppedPizzaWastage(parseInt(e.target.value) || 0)}
+                style={{ width: '40px' }}
+              />
+            </div>
+          <p className="alignRight"><strong>Total Wastage:</strong> {
+            (viewingBatch.dough_ball_wastage || 0) + 
+            (viewingBatch.tomato_base_wastage_oven || 0) + 
+            (viewingBatch.tomato_base_wastage_topping || 0) + 
+            (viewingBatch.topped_pizza_wastage || 0)
+          }</p>
+          </div>
+
           <p className='pizzaNumbers'>
             <strong>Pizza numbers complete:</strong>{" "}
             <input
@@ -1133,7 +1211,23 @@ const formatDateDisplay = (dateStr) => {
               }}
             />
           </p>
-          <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
+          
+          {/* Display wastage information */}
+          {(viewingBatch.dough_ball_wastage || viewingBatch.tomato_base_wastage_oven || 
+            viewingBatch.tomato_base_wastage_topping || viewingBatch.topped_pizza_wastage) && (
+            <div style={{ fontSize: '14px', marginBottom: '10px' }}>
+              <strong>Wastage:</strong>
+              {viewingBatch.dough_ball_wastage > 0 && 
+                <span> Dough Ball: {viewingBatch.dough_ball_wastage}</span>}
+              {viewingBatch.tomato_base_wastage_oven > 0 && 
+                <span> | Tomato Base (Oven): {viewingBatch.tomato_base_wastage_oven}</span>}
+              {viewingBatch.tomato_base_wastage_topping > 0 && 
+                <span> | Tomato Base (Topping): {viewingBatch.tomato_base_wastage_topping}</span>}
+              {viewingBatch.topped_pizza_wastage > 0 && 
+                <span> | Topped Pizza: {viewingBatch.topped_pizza_wastage}</span>}
+            </div>
+          )}
+          
           <h4>Batch Codes:</h4>
           <div className='ingredientBatchcodeBox'>
           {sortIngredients(
