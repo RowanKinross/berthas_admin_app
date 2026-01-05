@@ -399,10 +399,18 @@ return (
                   if (accountName === 'SAMPLES' && linkedOrder?.sample_customer_name) {
                     accountName = `SAMPLES: ${linkedOrder.sample_customer_name}`;
                   }
+                  
+                  // Format delivery date from yyyy-mm-dd to dd-mm-yyyy
+                  let deliveryDay = linkedOrder?.delivery_day || (a.orderId === 'archived' ? 'archived' : 'unknown');
+                  if (deliveryDay !== 'archived' && deliveryDay !== 'unknown' && deliveryDay !== 'tbc' && deliveryDay && /^\d{4}-\d{2}-\d{2}$/.test(deliveryDay)) {
+                    const [year, month, day] = deliveryDay.split('-');
+                    deliveryDay = `${day}-${month}-${year}`;
+                  }
+                  
                   return {
                     ...a,
                     accountName,
-                    deliveryDay: linkedOrder?.delivery_day || (a.orderId === 'archived' ? 'archived' : 'unknown')
+                    deliveryDay
                   };
                 })
                 .sort((a, b) => a.accountName.localeCompare(b.accountName))
