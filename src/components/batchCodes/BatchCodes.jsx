@@ -31,7 +31,7 @@ function BatchCodes() {
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const batchesPerPage = 10;
+  const batchesPerPage = 20;
   function getPagination(currentPage, totalPages) {
   const pages = [];
   if (totalPages <= 7) {
@@ -904,7 +904,7 @@ const formatDateDisplay = (dateStr) => {
         <div className="alignRight">
           <input
             type="text"
-            placeholder="Search batches, dates, or ingredient codes..."
+            placeholder="Search batches or ingredient codes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
