@@ -783,12 +783,21 @@ const formatDateDisplay = (dateStr) => {
     const seenCombos = new Set(); // Prevent duplicates
     
     for (const pizza of batch.pizzas) {
-      if (pizza.ingredientBatchCodes) {
+      if (pizza.ingredientBatchCodes && pizza.quantity > 0) { // Only pizzas actually made
         for (const [ingredient, code] of Object.entries(pizza.ingredientBatchCodes)) {
           if (code && normalizeForSearch(code).includes(normalizedSearchTerm)) {
             const combo = `${ingredient}:${code}`;
             if (!seenCombos.has(combo)) {
-              matches.push({ ingredient, code });
+              // Find all pizzas in this batch that use this ingredient
+              const pizzasWithIngredient = batch.pizzas
+                .filter(p => p.quantity > 0 && p.ingredients.includes(ingredient))
+                .map(p => p.pizza_title);
+              
+              matches.push({ 
+                ingredient, 
+                code, 
+                pizzas: pizzasWithIngredient 
+              });
               seenCombos.add(combo);
             }
           }
@@ -1311,11 +1320,15 @@ const formatDateDisplay = (dateStr) => {
                     paddingLeft: '0.5rem'
                   }}>
                     {matchingIngredients.length === 1 ? (
-                      <div>{matchingIngredients[0].ingredient}: {matchingIngredients[0].code}</div>
+                      <div>
+                        {matchingIngredients[0].ingredient}: {matchingIngredients[0].code} → {matchingIngredients[0].pizzas.join(', ')}
+                      </div>
                     ) : (
                       <ul style={{ margin: 0, paddingLeft: '1rem' }}>
                         {matchingIngredients.map((match, index) => (
-                          <li key={index}>{match.ingredient}: {match.code}</li>
+                          <li key={index}>
+                            {match.ingredient}: {match.code} → {match.pizzas.join(', ')}
+                          </li>
                         ))}
                       </ul>
                     )}
