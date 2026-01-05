@@ -351,7 +351,7 @@ return (
             {customerData.find(c => c.account_ID === selectedCustomerId)?.customer || "Select Customer"}
           </Dropdown.Toggle>
 
-          <Dropdown.Menu style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          <Dropdown.Menu style={{ maxHeight: '250px' }}>
             <Form.Control
               type="text"
               placeholder="Search Customers"
