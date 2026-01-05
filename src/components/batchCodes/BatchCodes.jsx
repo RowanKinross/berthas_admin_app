@@ -133,6 +133,28 @@ const formatDateDisplay = (dateStr) => {
     });
   };
 
+  // format batch date for batch list with day of week and conditional batch code
+  const formatBatchListDate = (dateStr, batchCode, userRole, isSearching) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const formattedDate = date.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "2-digit", 
+      month: "short",
+      year: "numeric"
+    });
+    
+    if (userRole === 'admin' && batchCode && isSearching) {
+      return (
+        <span>
+          {formattedDate} <span style={{ color: '#888' }}>#{batchCode}</span>
+        </span>
+      );
+    }
+    
+    return formattedDate;
+  };
+
 
   // format batchDate for labelling 
   const getBatchDate = (batchDateStr) => {
@@ -1306,7 +1328,7 @@ const formatDateDisplay = (dateStr) => {
                 style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
               >
                 <div className="container" style={{ width: '100%' }}>
-                  <p className='batchTextBoxes'>{formatDateDisplay(batch.batch_date)}</p>
+                  <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
                   <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
                   {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
                 </div>
