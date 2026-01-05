@@ -1509,15 +1509,21 @@ function getPizzaAllocatedTally(pizzaData) {
           <div className='modalContent orderModal' ref={modalRef}>
           <div className='orderDetailsAndSlip'>
             <div>- Order Details -</div>
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <button className='button packButton' onClick={handlePrintClick}>
               <FontAwesomeIcon icon={faReceipt} className='icon' /> Packing Slip
             </button>
+            )}
           </div>
           <div className='orderContent'>
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <p><strong>Account ID:</strong> {selectedOrder.account_ID}</p>
+            )}
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <p><strong>Customer:  </strong> {selectedOrder.customer_name === 'SAMPLES' ? `SAMPLE: ${selectedOrder. sample_customer_name}` :  selectedOrder.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${selectedOrder.sample_customer_name}`: selectedOrder.customer_name}</p>
+            )}
 
-            {selectedOrder.account_ID !== "SAMPLES/6UGM" && selectedOrder.account_ID !== "WEDDINGSPRIVATEEVENTS" &&
+            {selectedOrder.account_ID !== "SAMPLES/6UGM" && selectedOrder.account_ID !== "WEDDINGSPRIVATEEVENTS" && selectedOrder.account_ID !== "WASTAGE" &&
               <div><p><strong>Address:</strong></p><br />
                     <div className='displayAddress'>
                       {customerInfo?.customer || 'N/A'} <br/>
@@ -1538,6 +1544,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 <p><strong>PO:</strong> {selectedOrder.purchase_order|| 'N/A'}</p>
               </div>
             }
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <p><strong>Email: </strong>
               {editingEmail ? (
                 <input
@@ -1581,10 +1588,13 @@ function getPizzaAllocatedTally(pizzaData) {
                 </span>
               )}
             </p>
+            )}
 
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <p><strong>Order Placed: </strong> {formatDate(selectedOrder.timestamp)}</p>
+            )}
 
-            <p><strong>Delivery Notes: </strong>
+            <p><strong>{selectedOrder.account_ID === "WASTAGE" ? "Additional Notes:" : "Delivery Notes:"} </strong>
               {editingNotes ? (
                 <input
                   type="text"
@@ -1628,9 +1638,15 @@ function getPizzaAllocatedTally(pizzaData) {
               )}
             </p>
 
+            {selectedOrder.account_ID === "WASTAGE" && selectedOrder.wastage_reason && (
+            <p><strong>Wastage Reason:</strong> {selectedOrder.wastage_reason}</p>
+            )}
+
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <p><strong>Delivery Week:</strong> {selectedOrder.delivery_week}</p>
+            )}
             <div className='flexRow'>
-            <strong className='space'>Delivery Day:</strong>{" "}
+            <strong className='space'>{selectedOrder.account_ID === "WASTAGE" ? "Day of Wastage:" : "Delivery Day:"}</strong>{" "}
             {editingDeliveryDate ? (
               <>
                 <input
@@ -1664,7 +1680,8 @@ function getPizzaAllocatedTally(pizzaData) {
             )}
           </div>
             <div className='split'>
-            <strong>Pizzas Ordered:</strong>
+            <strong>{selectedOrder.account_ID === "WASTAGE" ? "Pizzas Wasted:" : "Pizzas Ordered:"}</strong>
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <div 
               className='button pencil clickable'
               title="edit order quantities"
@@ -1677,7 +1694,8 @@ function getPizzaAllocatedTally(pizzaData) {
                 className="icon"
               />
             </div>
-            {showEditQtyHint && (
+            )}
+            {selectedOrder.account_ID !== "WASTAGE" && showEditQtyHint && (
               <div className='editOrderQtyContainer'>
                 <FontAwesomeIcon
                     icon={faArrowLeft}
@@ -1686,6 +1704,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 <p className='orderQtyHint'>edit ordered quantities</p>
               </div>
             )}
+              {selectedOrder.account_ID !== "WASTAGE" && (
               <div
                 style={{ display: "inline-block" }}
                 onClick={e => {
@@ -1713,6 +1732,7 @@ function getPizzaAllocatedTally(pizzaData) {
                   <span className="slider round"></span>
                 </label>
               </div>
+              )}
             </div>
               {splitToggleError && (
                 <div className="tbc toggleError">
@@ -1720,7 +1740,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 </div>
               )}
 
-              {showSplitHint && (
+              {selectedOrder.account_ID !== "WASTAGE" && showSplitHint && (
                 <div className="split-hint-container">
                   <div className="split-hint-tooltip">
                     Toggle to fulfill with multiple batch codes
@@ -1987,7 +2007,9 @@ function getPizzaAllocatedTally(pizzaData) {
               })
           )}
             <p><strong>Total Pizzas:</strong> {selectedOrder.pizzaTotal}</p>
+            {selectedOrder.account_ID !== "WASTAGE" && (
             <p><strong>Order Status: </strong> {selectedOrder.order_status}</p>
+            )}
           </div>
           <div className='modalFooter'>
             <div>
