@@ -39,7 +39,7 @@ function Orders() {
   const [editQuantities, setEditQuantities] = useState(false);
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const ordersPerPage = 20;
+  const ordersPerPage = 25;
   // sort filter
   const [sortField, setSortField] = useState("order_status");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -799,7 +799,11 @@ const orderHasBatchErrors = (order) => {
     // Both valid - sort by date newest first
     return b.delivery_day.localeCompare(a.delivery_day);
   });
-  const currentOrders = sortedByDeliveryDate;
+  
+  // Add pagination
+  const indexOfLastOrder = currentPage * ordersPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+  const currentOrders = sortedByDeliveryDate.slice(indexOfFirstOrder, indexOfLastOrder);
   
 
 
@@ -1489,7 +1493,17 @@ function getPizzaAllocatedTally(pizzaData) {
         <p className='py-3'>Loading orders...</p>
       )}
     </div>
-    {/* Pagination removed for debugging */}
+    <div className="pagination">
+      {Array.from({ length: Math.ceil(filteredOrders.length / ordersPerPage) }, (_, index) => (
+        <button
+          key={index + 1}
+          className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
+          onClick={() => setCurrentPage(index + 1)}
+        >
+          {index + 1}
+        </button>
+      ))}
+    </div>
     {selectedOrder && (
         <div className='modal'>
           <div className='modalContent orderModal' ref={modalRef}>
