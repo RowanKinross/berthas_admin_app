@@ -62,9 +62,9 @@ function BatchCodes() {
     "Mozzarella"
   ];
   const sortIngredients = (ingredients) => {
-    // Ingredients to always put at the end (except Flour, Salt, which are at the start)
+    // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
     const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella"]);
-    const startSet = new Set(["Flour (Caputo Red)", "Salt"]);
+    const startSet = new Set(["Flour (Caputo Red)", "Salt", "Rye Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
     const end = [];
