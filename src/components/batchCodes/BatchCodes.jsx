@@ -1139,7 +1139,10 @@ const formatDateDisplay = (dateStr) => {
               return (
                 <div key={ingredient.id} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
                   <p>
-                    <strong>{ingredient.name}:</strong>  {formatQuantity(numberOfUnits)} {ingredientQuantity.unit} 
+                    <strong>{ingredient.name}:</strong>
+                    {ingredient.name !== "Flour (Caputo Red)" && ingredient.name !== "Salt" && 
+                      ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
+                    }
                   </p>
                   {editingField === `ingredient-${ingredient.name}` ? (
                     <div>
