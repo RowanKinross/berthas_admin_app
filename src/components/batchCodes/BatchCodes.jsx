@@ -362,8 +362,11 @@ const formatDateDisplay = (dateStr) => {
 
     consolidateIngredients(newSelectedPizzas); // Consolidate ingredients
   
-    // Update the total pizzas count
-    const newTotal = updatedPizzas.reduce((sum, pizza) => sum + (pizza.quantity || 0), 0);
+    // Update the total pizzas count (excluding dough balls)
+    const newTotal = updatedPizzas.reduce((sum, pizza) => {
+      if (pizza.id === "DOU_A1" || pizza.id === "DOU_A0") return sum;
+      return sum + (pizza.quantity || 0);
+    }, 0);
     setTotalPizzas(newTotal);
   };
 
@@ -466,10 +469,15 @@ const formatDateDisplay = (dateStr) => {
       return;
     }
     try {
+      // Calculate total pizzas excluding dough balls
+      const totalPizzasExcludingDough = pizzas
+        .filter(pizza => pizza.quantity > 0 && pizza.id !== "DOU_A1" && pizza.id !== "DOU_A0")
+        .reduce((sum, pizza) => sum + pizza.quantity, 0);
+
       // Add new batch
       await addDoc(collection(db, "batches"), {
         batch_date: batchDate,
-        num_pizzas: totalPizzas,
+        num_pizzas: totalPizzasExcludingDough,
         batch_code: batchCode,
         completed: completed,
         ingredients_ordered: ingredientsOrdered,
@@ -687,7 +695,10 @@ const formatDateDisplay = (dateStr) => {
         }
 
         const totalPizzas = updatedPizzas.reduce(
-          (sum, pizza) => sum + (parseInt(pizza.quantity) || 0),
+          (sum, pizza) => {
+            if (pizza.id === "DOU_A1" || pizza.id === "DOU_A0") return sum;
+            return sum + (parseInt(pizza.quantity) || 0);
+          },
           0
         );
         await updateDoc(batchRef, { 
