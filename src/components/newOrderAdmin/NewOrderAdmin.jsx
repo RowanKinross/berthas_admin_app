@@ -33,6 +33,7 @@ const [selectedCustomerId, setSelectedCustomerId] = useState(accountID || "");
 const [customerSearch, setCustomerSearch] = useState("");
 const [dropdownOpen, setDropdownOpen] = useState(false);
 const [deliveryDay, setDeliveryDay] = useState("");
+const [wastageReason, setWastageReason] = useState("");
 
 const [sampleCustomerName, setSampleCustomerName] = useState("");
 const [confirmChecked, setConfirmChecked] = useState(false);
@@ -190,6 +191,7 @@ const handleChange = (event) => {
     setCustomDeliveryDate('');
     setCustomDeliveryWeek('');
     setDeliveryDay('');
+    setWastageReason('');
     setDeliveryOption("asap");
     // Reset editable email to the selected customer's email
     setEditableEmail(customerData.find(c => c.account_ID === selectedCustomerId)?.email || "");
@@ -269,6 +271,7 @@ const handleSubmit = async (event) => {
   if (
     selectedCustomerId !== "SAMPLES/6UGM" &&
     selectedCustomerId !== "WEDDINGSPRIVATEEVENTS" &&
+    selectedCustomerId !== "WASTAGE" &&
     (!editableEmail || !editableEmail.includes('@'))
   ) {
     alert("Please enter a valid email address.");
@@ -318,6 +321,7 @@ const handleSubmit = async (event) => {
       order_status: "order placed",
       complete: false,
       ...((selectedCustomerId === "SAMPLES/6UGM" || selectedCustomerId === "WEDDINGSPRIVATEEVENTS") && { sample_customer_name: sampleCustomerName }),
+      ...(selectedCustomerId === "WASTAGE" && { wastage_reason: wastageReason }),
     });
 
     console.log("Document written with ID: ", docRef.id);
@@ -379,7 +383,7 @@ return (
         </Dropdown>
       </Col>
     </Form.Group>
-      {(selectedCustomerId !== "SAMPLES/6UGM" || selectedCustomerId !== "WEDDINGSPRIVATEEVENTS") && (
+      {(selectedCustomerId !== "SAMPLES/6UGM" && selectedCustomerId !== "WEDDINGSPRIVATEEVENTS" && selectedCustomerId !== "WASTAGE") && (
       <>
         <p className='today'>{today}</p>
         <p>Account ID: {selectedCustomerId || "—"}</p>
@@ -402,10 +406,11 @@ return (
         </Form.Group>
       )}
       <Form.Group className='customerDetails'>
-        {(selectedCustomerId !== "SAMPLES/6UGM" && selectedCustomerId !== "WEDDINGSPRIVATEEVENTS") && (
+        {(selectedCustomerId !== "SAMPLES/6UGM" && selectedCustomerId !== "WEDDINGSPRIVATEEVENTS" && selectedCustomerId !== "WASTAGE") && (
         <p>Address: {customerAddress} </p>
         )}
 
+        {selectedCustomerId !== "WASTAGE" && (
         <div className='email'>
           {editingEmail ? (
             <>
@@ -429,9 +434,10 @@ return (
           </>
         )}
         </div>
+        )}
       </Form.Group>
       
-
+      {selectedCustomerId !== "WASTAGE" && (
       <fieldset>
       <Form.Group as={Row} className="mb-3">
         <Form.Label>
@@ -500,6 +506,23 @@ return (
         </Col>
       </Form.Group>
     </fieldset>
+    )}
+    
+    {selectedCustomerId === "WASTAGE" && (
+      <Form.Group as={Row} className="mb-3" controlId="wastageDay">
+        <Form.Label column sm={3}>
+          <h5>Day of Wastage:</h5>
+        </Form.Label>
+        <Col sm={9}>
+          <Form.Control
+            type="date"
+            value={deliveryDay}
+            onChange={e => setDeliveryDay(e.target.value)}
+          />
+        </Col>
+      </Form.Group>
+    )}
+    {selectedCustomerId !== "WASTAGE" && (
     <Form.Group as={Row} className="mb-3" controlId="purchaseOrder">
       <Form.Label column sm={3}>
         <h5>Purchase Order:</h5>
@@ -513,6 +536,7 @@ return (
         />
       </Col>
     </Form.Group>
+    )}
       <Form.Label><h5> Pizzas: </h5></Form.Label>
     <fieldset>
     <Form.Group as={Row} className="mb-3">
@@ -563,6 +587,25 @@ return (
       ))}
       </fieldset>
 
+      {selectedCustomerId === "WASTAGE" && (
+      <Form.Group as={Row} className="mb-3" controlId="wastageReason">
+        <Form.Label column sm={3}>
+          <h5>Reason for Wastage:</h5>
+        </Form.Label>
+        <Col sm={9}>
+          <Form.Select
+            value={wastageReason}
+            onChange={(e) => setWastageReason(e.target.value)}
+          >
+            <option value="">Select reason...</option>
+            <option value="sample">Sample</option>
+            <option value="out of date">Out of Date</option>
+            <option value="staff">Staff</option>
+            <option value="other">Other</option>
+          </Form.Select>
+        </Col>
+      </Form.Group>
+      )}
 
       <fieldset>
       <Form.Group as={Row} className="mb-3" controlId="additonalNotes">
