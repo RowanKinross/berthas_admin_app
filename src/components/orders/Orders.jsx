@@ -779,6 +779,10 @@ const orderHasBatchErrors = (order) => {
 
   return matchesSearch;
 });
+
+  // Apply sort function to filtered orders
+  const sortedOrders = sortOrders(filteredOrders);
+
   // Sort by delivery date - invalid dates at top, then valid dates newest first
   const sortedByDeliveryDate = [...filteredOrders].sort((a, b) => {
     // Check if delivery_day is a valid YYYY-MM-DD format
