@@ -1,7 +1,7 @@
 .batchDiv {
   background-color: var(--bertha);
   display: flex;
-  justify-content: space-between;
+  justify-content: space-between !important;
   margin: 2px;
 }
 .batchText {
