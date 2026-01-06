@@ -34,6 +34,7 @@ function BatchCodes() {
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [wastageExpanded, setWastageExpanded] = useState(false);
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -448,6 +449,7 @@ const formatDateDisplay = (dateStr) => {
   // Close any open editing fields before switching batches
   setEditingField(null);
   setEditingValue("");
+  setWastageExpanded(false);
   
   setViewingBatch({
     ...batch,
@@ -1134,66 +1136,145 @@ const formatDateDisplay = (dateStr) => {
       })()}
           
           <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
-          <br></br>
-          {/* Wastage tracking fields */}
-          <div style={{ display: 'flex',flexDirection: 'column', marginBottom: '15px', alignItems: 'end'}}>
-            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
-              <label style={{ display: 'block', fontSize: '12px' }}>
-                <strong>Dough Ball Wastage:</strong>
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={doughBallWastage}
-                onChange={(e) => setDoughBallWastage(parseInt(e.target.value) || 0)}
-                style={{ width: '40px' }}
-              />
-            </div>
+          
+          {/* Wastage tracking - collapsible */}
+          <div style={{ marginBottom: '15px', alignItems: 'end' }}>
+            <p 
+              className="alignRight" 
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              onClick={() => setWastageExpanded(!wastageExpanded)}
+            >
+              <strong>Total Wastage:</strong> {
+                (viewingBatch.dough_ball_wastage || 0) + 
+                (viewingBatch.tomato_base_wastage_oven || 0) + 
+                (viewingBatch.tomato_base_wastage_topping || 0) + 
+                (viewingBatch.topped_pizza_wastage || 0)
+              }{" "}{wastageExpanded ? '⌄' : '>'}
+            </p>
             
-            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
-              <label style={{ display: 'block', fontSize: '12px', }}>
-                <strong>Tomato Base Wastage - Oven Side:</strong>
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={tomatoBaseWastageOven}
-                onChange={(e) => setTomatoBaseWastageOven(parseInt(e.target.value) || 0)}
-                style={{ width: '40px' }}
-              />
-            </div>
-            
-            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center'  }}>
-              <label style={{ display: 'block', fontSize: '12px', }}>
-                <strong>Tomato Base Wastage - Topping Side:</strong>
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={tomatoBaseWastageTopping}
-                onChange={(e) => setTomatoBaseWastageTopping(parseInt(e.target.value) || 0)}
-                style={{ width: '40px' }}
-              />
-            </div>
-            
-            <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
-              <label style={{ display: 'block', fontSize: '12px', }}>
-                <strong>Topped Pizza Wastage: </strong>
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={toppedPizzaWastage}
-                onChange={(e) => setToppedPizzaWastage(parseInt(e.target.value) || 0)}
-                style={{ width: '40px' }}
-              />
-            </div>
-          <p className="alignRight"><strong>Total Wastage:</strong> {
-            (viewingBatch.dough_ball_wastage || 0) + 
-            (viewingBatch.tomato_base_wastage_oven || 0) + 
-            (viewingBatch.tomato_base_wastage_topping || 0) + 
-            (viewingBatch.topped_pizza_wastage || 0)
-          }</p>
+            {wastageExpanded && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'end', marginTop: '10px' }}>
+                <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
+                  <label style={{ display: 'block', fontSize: '12px' }}>
+                    <strong>Dough Ball Wastage:</strong>
+                  </label>
+                  {editingField === 'wastage-dough-ball' ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("batch", null, "dough_ball_wastage", parseInt(editingValue) || 0)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleInlineSave("batch", null, "dough_ball_wastage", parseInt(editingValue) || 0);
+                      }}
+                      style={{ width: '40px' }}
+                    />
+                  ) : (
+                    <span
+                      onClick={() => {
+                        setEditingField('wastage-dough-ball');
+                        setEditingValue(viewingBatch.dough_ball_wastage || "");
+                      }}
+                      style={{ cursor: 'pointer', minWidth: '40px', textAlign: 'center', border: '1px solid transparent', padding: '2px' }}
+                    >
+                      {viewingBatch.dough_ball_wastage || "-"}
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
+                  <label style={{ display: 'block', fontSize: '12px', }}>
+                    <strong>Tomato Base Wastage - Oven Side:</strong>
+                  </label>
+                  {editingField === 'wastage-tomato-oven' ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("batch", null, "tomato_base_wastage_oven", parseInt(editingValue) || 0)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleInlineSave("batch", null, "tomato_base_wastage_oven", parseInt(editingValue) || 0);
+                      }}
+                      style={{ width: '40px' }}
+                    />
+                  ) : (
+                    <span
+                      onClick={() => {
+                        setEditingField('wastage-tomato-oven');
+                        setEditingValue(viewingBatch.tomato_base_wastage_oven || "");
+                      }}
+                      style={{ cursor: 'pointer', minWidth: '40px', textAlign: 'center', border: '1px solid transparent', padding: '2px' }}
+                    >
+                      {viewingBatch.tomato_base_wastage_oven || "-"}
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center'  }}>
+                  <label style={{ display: 'block', fontSize: '12px', }}>
+                    <strong>Tomato Base Wastage - Topping Side:</strong>
+                  </label>
+                  {editingField === 'wastage-tomato-topping' ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("batch", null, "tomato_base_wastage_topping", parseInt(editingValue) || 0)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleInlineSave("batch", null, "tomato_base_wastage_topping", parseInt(editingValue) || 0);
+                      }}
+                      style={{ width: '40px' }}
+                    />
+                  ) : (
+                    <span
+                      onClick={() => {
+                        setEditingField('wastage-tomato-topping');
+                        setEditingValue(viewingBatch.tomato_base_wastage_topping || "");
+                      }}
+                      style={{ cursor: 'pointer', minWidth: '40px', textAlign: 'center', border: '1px solid transparent', padding: '2px' }}
+                    >
+                      {viewingBatch.tomato_base_wastage_topping || "-"}
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{ maxWidth: '400px', display: 'flex', paddingBottom: '5px', alignItems: 'center' }}>
+                  <label style={{ display: 'block', fontSize: '12px', }}>
+                    <strong>Topped Pizza Wastage: </strong>
+                  </label>
+                  {editingField === 'wastage-topped-pizza' ? (
+                    <input
+                      type="number"
+                      min="0"
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("batch", null, "topped_pizza_wastage", parseInt(editingValue) || 0)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleInlineSave("batch", null, "topped_pizza_wastage", parseInt(editingValue) || 0);
+                      }}
+                      style={{ width: '40px' }}
+                    />
+                  ) : (
+                    <span
+                      onClick={() => {
+                        setEditingField('wastage-topped-pizza');
+                        setEditingValue(viewingBatch.topped_pizza_wastage || "");
+                      }}
+                      style={{ cursor: 'pointer', minWidth: '40px', textAlign: 'center', border: '1px solid transparent', padding: '2px' }}
+                    >
+                      {viewingBatch.topped_pizza_wastage || "-"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <p className='pizzaNumbers'>
@@ -1211,22 +1292,6 @@ const formatDateDisplay = (dateStr) => {
               }}
             />
           </p>
-          
-          {/* Display wastage information */}
-          {(viewingBatch.dough_ball_wastage || viewingBatch.tomato_base_wastage_oven || 
-            viewingBatch.tomato_base_wastage_topping || viewingBatch.topped_pizza_wastage) && (
-            <div style={{ fontSize: '14px', marginBottom: '10px' }}>
-              <strong>Wastage:</strong>
-              {viewingBatch.dough_ball_wastage > 0 && 
-                <span> Dough Ball: {viewingBatch.dough_ball_wastage}</span>}
-              {viewingBatch.tomato_base_wastage_oven > 0 && 
-                <span> | Tomato Base (Oven): {viewingBatch.tomato_base_wastage_oven}</span>}
-              {viewingBatch.tomato_base_wastage_topping > 0 && 
-                <span> | Tomato Base (Topping): {viewingBatch.tomato_base_wastage_topping}</span>}
-              {viewingBatch.topped_pizza_wastage > 0 && 
-                <span> | Topped Pizza: {viewingBatch.topped_pizza_wastage}</span>}
-            </div>
-          )}
           
           <h4>Batch Codes:</h4>
           <div className='ingredientBatchcodeBox'>
