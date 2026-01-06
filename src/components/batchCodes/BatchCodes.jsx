@@ -1273,6 +1273,46 @@ const formatDateDisplay = (dateStr) => {
                     </span>
                   )}
                 </div>
+                
+                <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', paddingBottom: '5px', paddingTop: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>
+                    <strong>Wastage Notes:</strong>
+                  </label>
+                  {editingField === 'wastage-notes' ? (
+                    <textarea
+                      value={editingValue}
+                      autoFocus
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      onBlur={() => handleInlineSave("batch", null, "wastage_notes", editingValue)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleInlineSave("batch", null, "wastage_notes", editingValue);
+                        }
+                      }}
+                      style={{ width: '100%', minHeight: '60px', padding: '5px', fontSize: '12px' }}
+                      placeholder="Add notes about wastage..."
+                    />
+                  ) : (
+                    <span
+                      onClick={() => {
+                        setEditingField('wastage-notes');
+                        setEditingValue(viewingBatch.wastage_notes || "");
+                      }}
+                      style={{ 
+                        cursor: 'pointer', 
+                        minHeight: '20px', 
+                        padding: '5px', 
+                        border: '1px solid transparent', 
+                        fontSize: '12px',
+                        fontStyle: viewingBatch.wastage_notes ? 'normal' : 'italic',
+                        color: viewingBatch.wastage_notes ? 'inherit' : '#888'
+                      }}
+                    >
+                      {viewingBatch.wastage_notes || "Add notes about wastage..."}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
