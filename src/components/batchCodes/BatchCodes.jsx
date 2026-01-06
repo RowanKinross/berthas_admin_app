@@ -264,13 +264,34 @@ function BatchCodes() {
       return sum + (pizza.quantity || 0);
     }, 0);
     
+    // Calculate totals by pizza type
+    const pizzaTotals = {};
+    allPizzas.forEach(pizza => {
+      if (pizza.id === "DOU_A1" || pizza.id === "DOU_A0") return;
+      const title = pizza.pizza_title;
+      pizzaTotals[title] = (pizzaTotals[title] || 0) + pizza.quantity;
+    });
+    
+    // Sort pizza totals by the same order as batches
+    const sortedPizzaTotals = Object.entries(pizzaTotals)
+      .sort(([titleA], [titleB]) => {
+        const pizzaA = pizzas.find(p => p.pizza_title === titleA);
+        const pizzaB = pizzas.find(p => p.pizza_title === titleB);
+        if (!pizzaA || !pizzaB) return titleA.localeCompare(titleB);
+        
+        const sortedPizzas = sortPizzas(pizzas);
+        const indexA = sortedPizzas.findIndex(p => p.id === pizzaA.id);
+        const indexB = sortedPizzas.findIndex(p => p.id === pizzaB.id);
+        return indexA - indexB;
+      });
+    
     // Create HTML content for PDF
     const selectedBatchCodes = selectedBatchData.map(batch => batch.batch_code).join(', ');
     
     const htmlContent = `
       <html>
         <head>
-          <title>Ingredient Requirements</title>
+          <title>Ingredients / Bertha's at Home Admin App</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             h1 { color: #333; margin-bottom: 20px; }
@@ -285,10 +306,11 @@ function BatchCodes() {
           </style>
         </head>
         <body>
-          <h1>Ingredient Requirements</h1>
+          <h1>Ingredients</h1>
           <div class="batch-codes">
             <strong>Selected Batches:</strong> ${selectedBatchCodes}
-          </div>
+            </div>
+            <strong>Total Batches:</strong> ${selectedBatches.size}<br><br>
           <div class="ingredient-list">
             ${results.map(ingredient => {
               const numberOfUnits = ingredient.quantity / ingredient.unitWeight;
@@ -301,8 +323,12 @@ function BatchCodes() {
             }).join('')}
           </div>
           <div class="summary">
+            ${sortedPizzaTotals.map(([title, count]) => 
+              `${title}: ${count}<br>`
+            ).join('')}
+            <br>
             <strong>Total Pizzas:</strong> ${totalPizzas}<br>
-            <strong>Total Batches:</strong> ${selectedBatches.size}<br>
+            <br>
             <strong>Generated:</strong> ${new Date().toLocaleDateString('en-GB', { 
               weekday: 'long', 
               year: 'numeric', 
