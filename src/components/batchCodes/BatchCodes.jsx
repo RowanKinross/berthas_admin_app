@@ -37,6 +37,7 @@ function BatchCodes() {
   const [wastageExpanded, setWastageExpanded] = useState(false);
   const [selectedBatches, setSelectedBatches] = useState(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,9 +69,21 @@ function BatchCodes() {
 
     const selectedBatchData = batches.filter(batch => selectedBatches.has(batch.id));
     
-    // Create CSV headers
-    const headers = [
-      'Batch Date',
+    // Get unique pizza base IDs (ignoring last character) in sorted order
+    const sortedPizzas = sortPizzas(pizzas);
+    const baseIds = [...new Set(sortedPizzas.map(pizza => pizza.id.slice(0, -1)))];
+    const orderedBaseIds = [];
+    
+    // Maintain sort order while getting unique base IDs
+    sortedPizzas.forEach(pizza => {
+      const baseId = pizza.id.slice(0, -1);
+      if (!orderedBaseIds.includes(baseId)) {
+        orderedBaseIds.push(baseId);
+      }
+    });
+    
+    // Create headers with pizza weight columns
+    const baseHeaders = [
       'Batch Code', 
       'Total Pizzas',
       'Completed',
@@ -83,7 +96,14 @@ function BatchCodes() {
       'Total Wastage',
       'Wastage Notes',
       'Notes',
-      'Pizza Details',
+      'Pizza Details'
+    ];
+    
+    const pizzaWeightHeaders = orderedBaseIds.map(baseId => `${baseId} Avg Weight (g)`);
+    
+    const headers = [
+      ...baseHeaders,
+      ...pizzaWeightHeaders,
       'Ingredient Batch Codes'
     ];
 
@@ -98,6 +118,32 @@ function BatchCodes() {
         `${pizza.pizza_title}: ${pizza.quantity} (First: ${pizza.firstPizzaWeight || '-'}g, Middle: ${pizza.middlePizzaWeight || '-'}g, Last: ${pizza.lastPizzaWeight || '-'}g)`
       ).join('; ') || '';
       
+      // Calculate average weights for each base pizza type
+      const pizzaWeightData = orderedBaseIds.map(baseId => {
+        const matchingPizzas = batch.pizzas?.filter(pizza => pizza.id.slice(0, -1) === baseId) || [];
+        
+        if (matchingPizzas.length === 0) {
+          return '';
+        }
+        
+        // Collect all weights from all pizzas of this base type
+        const allWeights = [];
+        matchingPizzas.forEach(pizza => {
+          [pizza.firstPizzaWeight, pizza.middlePizzaWeight, pizza.lastPizzaWeight].forEach(weight => {
+            if (weight && !isNaN(weight)) {
+              allWeights.push(Number(weight));
+            }
+          });
+        });
+        
+        if (allWeights.length === 0) {
+          return '';
+        }
+        
+        const avgWeight = (allWeights.reduce((sum, w) => sum + w, 0) / allWeights.length).toFixed(1);
+        return avgWeight;
+      });
+      
       const ingredientCodes = batch.pizzas?.flatMap(pizza => 
         Object.entries(pizza.ingredientBatchCodes || {}).map(([ingredient, code]) => 
           code ? `${ingredient}: ${code}` : null
@@ -105,7 +151,6 @@ function BatchCodes() {
       ).join('; ') || '';
 
       return [
-        formatDateDisplay(batch.batch_date),
         batch.batch_code || '',
         batch.num_pizzas || 0,
         batch.completed ? 'Yes' : 'No',
@@ -119,6 +164,7 @@ function BatchCodes() {
         batch.wastage_notes || '',
         batch.notes || '',
         pizzaDetails,
+        ...pizzaWeightData,
         ingredientCodes
       ];
     });
@@ -140,14 +186,34 @@ function BatchCodes() {
     document.body.removeChild(link);
   };
 
-  const toggleBatchSelection = (batchId) => {
+  const toggleBatchSelection = (batchId, index, isShiftClick = false) => {
     setSelectedBatches(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(batchId)) {
-        newSet.delete(batchId);
+      
+      if (isShiftClick && lastSelectedIndex !== null) {
+        // Select range between lastSelectedIndex and current index
+        const sortedBatches = filteredBatches
+          .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+          .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage);
+        
+        const startIndex = Math.min(lastSelectedIndex, index);
+        const endIndex = Math.max(lastSelectedIndex, index);
+        
+        for (let i = startIndex; i <= endIndex; i++) {
+          if (sortedBatches[i]) {
+            newSet.add(sortedBatches[i].id);
+          }
+        }
       } else {
-        newSet.add(batchId);
+        // Normal single selection toggle
+        if (newSet.has(batchId)) {
+          newSet.delete(batchId);
+        } else {
+          newSet.add(batchId);
+        }
       }
+      
+      setLastSelectedIndex(index);
       return newSet;
     });
   };
@@ -159,6 +225,109 @@ function BatchCodes() {
 
   const clearSelection = () => {
     setSelectedBatches(new Set());
+    setLastSelectedIndex(null);
+  };
+
+  const calculateSelectedBatchesIngredients = () => {
+    if (selectedBatches.size === 0) {
+      alert("Please select at least one batch to calculate ingredients.");
+      return;
+    }
+
+    const selectedBatchData = batches.filter(batch => selectedBatches.has(batch.id));
+    
+    // Collect all pizzas from selected batches
+    const allPizzas = selectedBatchData.flatMap(batch => 
+      batch.pizzas?.filter(pizza => pizza.quantity > 0) || []
+    );
+    
+    if (allPizzas.length === 0) {
+      alert("No pizzas found in selected batches.");
+      return;
+    }
+
+    // Calculate total ingredient quantities using existing function logic
+    const ingredientQuantities = calculateIngredientQuantities(allPizzas);
+    
+    // Format results for display
+    const results = sortIngredients(
+      Object.entries(ingredientQuantities).map(([name, data]) => ({
+        name,
+        quantity: data.quantity,
+        unit: data.unit,
+        unitWeight: data.unitWeight
+      }))
+    );
+    
+    const totalPizzas = allPizzas.reduce((sum, pizza) => {
+      if (pizza.id === "DOU_A1" || pizza.id === "DOU_A0") return sum;
+      return sum + (pizza.quantity || 0);
+    }, 0);
+    
+    // Create HTML content for PDF
+    const selectedBatchCodes = selectedBatchData.map(batch => batch.batch_code).join(', ');
+    
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Ingredient Requirements</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; margin-bottom: 20px; }
+            h2 { color: #666; margin-top: 30px; margin-bottom: 15px; }
+            .ingredient-list { margin-bottom: 30px; }
+            .ingredient-item { margin: 8px 0; padding: 5px; border-bottom: 1px dotted #ccc; }
+            .ingredient-name { font-weight: bold; }
+            .ingredient-quantity { float: right; }
+            .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; }
+            .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; }
+            @media print { body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <h1>Ingredient Requirements</h1>
+          <div class="batch-codes">
+            <strong>Selected Batches:</strong> ${selectedBatchCodes}
+          </div>
+          <div class="ingredient-list">
+            ${results.map(ingredient => {
+              const numberOfUnits = ingredient.quantity / ingredient.unitWeight;
+              return `
+                <div class="ingredient-item">
+                  <span class="ingredient-name">${ingredient.name}</span>
+                  <span class="ingredient-quantity">${formatQuantity(numberOfUnits)} ${ingredient.unit}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div class="summary">
+            <strong>Total Pizzas:</strong> ${totalPizzas}<br>
+            <strong>Total Batches:</strong> ${selectedBatches.size}<br>
+            <strong>Generated:</strong> ${new Date().toLocaleDateString('en-GB', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </div>
+        </body>
+      </html>
+    `;
+    
+    // Open new window and print
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.onafterprint = () => {
+        printWindow.close();
+      };
+    };
   };
 
   // Sort ingredients specifically:-
@@ -1082,6 +1251,14 @@ const formatDateDisplay = (dateStr) => {
                 Download CSV ({selectedBatches.size})
               </button>
               <button 
+                className='button completed'
+                onClick={calculateSelectedBatchesIngredients}
+                disabled={selectedBatches.size === 0}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Calculate Ingredients ({selectedBatches.size})
+              </button>
+              <button 
                 className='button draft'
                 onClick={() => {
                   setSelectionMode(false);
@@ -1734,7 +1911,7 @@ const formatDateDisplay = (dateStr) => {
         filteredBatches
         .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
         .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
-        .map(batch => {
+        .map((batch, index) => {
           const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
           
           return (
@@ -1744,7 +1921,10 @@ const formatDateDisplay = (dateStr) => {
                   <input
                     type="checkbox"
                     checked={selectedBatches.has(batch.id)}
-                    onChange={() => toggleBatchSelection(batch.id)}
+                    onChange={(e) => {
+                      const isShiftClick = e.nativeEvent.shiftKey;
+                      toggleBatchSelection(batch.id, index, isShiftClick);
+                    }}
                     onClick={(e) => e.stopPropagation()}
                     style={{ marginRight: '10px', transform: 'scale(1.2)' }}
                   />
