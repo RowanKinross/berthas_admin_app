@@ -35,6 +35,8 @@ function BatchCodes() {
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [wastageExpanded, setWastageExpanded] = useState(false);
+  const [selectedBatches, setSelectedBatches] = useState(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,6 +58,108 @@ function BatchCodes() {
   }
   return pages;
 }
+
+  // CSV Download functionality
+  const downloadSelectedBatchesCSV = () => {
+    if (selectedBatches.size === 0) {
+      alert("Please select at least one batch to download.");
+      return;
+    }
+
+    const selectedBatchData = batches.filter(batch => selectedBatches.has(batch.id));
+    
+    // Create CSV headers
+    const headers = [
+      'Batch Date',
+      'Batch Code', 
+      'Total Pizzas',
+      'Completed',
+      'Ingredients Ordered',
+      'Pizza Numbers Complete',
+      'Dough Ball Wastage',
+      'Tomato Base Wastage (Oven)',
+      'Tomato Base Wastage (Topping)',
+      'Topped Pizza Wastage',
+      'Total Wastage',
+      'Wastage Notes',
+      'Notes',
+      'Pizza Details',
+      'Ingredient Batch Codes'
+    ];
+
+    // Create CSV rows
+    const rows = selectedBatchData.map(batch => {
+      const totalWastage = (batch.dough_ball_wastage || 0) + 
+                          (batch.tomato_base_wastage_oven || 0) + 
+                          (batch.tomato_base_wastage_topping || 0) + 
+                          (batch.topped_pizza_wastage || 0);
+      
+      const pizzaDetails = batch.pizzas?.map(pizza => 
+        `${pizza.pizza_title}: ${pizza.quantity} (First: ${pizza.firstPizzaWeight || '-'}g, Middle: ${pizza.middlePizzaWeight || '-'}g, Last: ${pizza.lastPizzaWeight || '-'}g)`
+      ).join('; ') || '';
+      
+      const ingredientCodes = batch.pizzas?.flatMap(pizza => 
+        Object.entries(pizza.ingredientBatchCodes || {}).map(([ingredient, code]) => 
+          code ? `${ingredient}: ${code}` : null
+        ).filter(Boolean)
+      ).join('; ') || '';
+
+      return [
+        formatDateDisplay(batch.batch_date),
+        batch.batch_code || '',
+        batch.num_pizzas || 0,
+        batch.completed ? 'Yes' : 'No',
+        batch.ingredients_ordered ? 'Yes' : 'No', 
+        batch.pizza_numbers_complete ? 'Yes' : 'No',
+        batch.dough_ball_wastage || 0,
+        batch.tomato_base_wastage_oven || 0,
+        batch.tomato_base_wastage_topping || 0,
+        batch.topped_pizza_wastage || 0,
+        totalWastage,
+        batch.wastage_notes || '',
+        batch.notes || '',
+        pizzaDetails,
+        ingredientCodes
+      ];
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `batches_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const toggleBatchSelection = (batchId) => {
+    setSelectedBatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchId)) {
+        newSet.delete(batchId);
+      } else {
+        newSet.add(batchId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllBatches = () => {
+    const allBatchIds = filteredBatches.map(batch => batch.id);
+    setSelectedBatches(new Set(allBatchIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedBatches(new Set());
+  };
 
   // Sort ingredients specifically:-
   const INGREDIENT_ORDER = [
@@ -941,6 +1045,56 @@ const formatDateDisplay = (dateStr) => {
       {userRole !== 'unit' && (
         <button className='button' onClick={handleAddClick}>+</button>
       )}
+      
+      {/* Selection controls */}
+      {filteredBatches.length > 0 && (
+        <div  style={{ display: 'flex', marginBottom: '15px', alignItems: 'start'   }}>
+          {!selectionMode ? (
+            <button 
+              className='button'
+              onClick={() => setSelectionMode(true)}
+              style={{ fontSize: '12px', padding: '5px 10px'}}
+            >
+              Select Batches
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button 
+                className='button draft'
+                onClick={selectAllBatches}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Select All
+              </button>
+              <button 
+                className='button draft'
+                onClick={clearSelection}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Clear Selection
+              </button>
+              <button 
+                className='button completed'
+                onClick={downloadSelectedBatchesCSV}
+                disabled={selectedBatches.size === 0}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Download CSV ({selectedBatches.size})
+              </button>
+              <button 
+                className='button draft'
+                onClick={() => {
+                  setSelectionMode(false);
+                  setSelectedBatches(new Set());
+                }}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {viewingBatch && !showForm && (
         <div className="batchDetails border" ref={batchDetailsRef}>
           <h2>Batch Details</h2>
@@ -1570,6 +1724,7 @@ const formatDateDisplay = (dateStr) => {
   
       {filteredBatches.length > 0 && (
         <div className='batchHeader container'>
+          {selectionMode && <p>Select</p>}
           <p>Batch Date:</p>
           <p>Ingredients Ordered?</p>
         </div>
@@ -1584,11 +1739,21 @@ const formatDateDisplay = (dateStr) => {
           
           return (
             <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-              <button 
-                className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
-                onClick={() => handleBatchClick(batch)}
-                style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
-              >
+              
+                {selectionMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedBatches.has(batch.id)}
+                    onChange={() => toggleBatchSelection(batch.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ marginRight: '10px', transform: 'scale(1.2)' }}
+                  />
+                )}
+                <button 
+                  className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
+                  onClick={() => handleBatchClick(batch)}
+                  style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
+                >
                 <div className="container" style={{ width: '100%' }}>
                   <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
                   <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
