@@ -114,8 +114,8 @@ const averageOrdering = useMemo(() => {
 
   const pizzaAverages = {};
   Object.keys(pizzaTotals).forEach(pizzaId => {
-    const weeks = Object.keys(pizzaWeeks).filter(key => key.startsWith(pizzaId + '_')).length || 1;
-    pizzaAverages[pizzaId] = Math.round(pizzaTotals[pizzaId] / weeks);
+    // Divide by 4 for proper 4-week average
+    pizzaAverages[pizzaId] = Math.round(pizzaTotals[pizzaId] / 4);
   });
 
   return pizzaAverages;

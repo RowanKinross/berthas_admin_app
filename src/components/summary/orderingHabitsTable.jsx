@@ -90,7 +90,7 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
             <th></th>
             <th>Last Week</th>
             <th>4-Wk Total</th>
-            <th>4-Wk Avg</th>
+            <th>4-Wk Avg (pw)</th>
           </tr>
         </thead>
         <tbody>
@@ -148,19 +148,28 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
                         : pizzaStats[item.id].fourWeekTotal)}
                 </td>
                 <td>
-                  {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
-                    ? (averageOrdering[item.id] || 0)
-                    : (showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
-                        ? (
-                            sleeveAvgTotals[item.sleeveType]
-                              ? (
-                                  isNaN(averageOrdering[item.id] / sleeveAvgTotals[item.sleeveType])
-                                    ? '0%'
-                                    : Math.round((averageOrdering[item.id] / sleeveAvgTotals[item.sleeveType]) * 100) + '%'
-                                )
-                              : '0%'
-                          )
-                        : (averageOrdering[item.id] || 0))}
+                  {(() => {
+                    const value = (item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                      ? (averageOrdering[item.id] || 0)
+                      : (showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
+                          ? (
+                              sleeveAvgTotals[item.sleeveType]
+                                ? (
+                                    isNaN(averageOrdering[item.id] / sleeveAvgTotals[item.sleeveType])
+                                      ? '0%'
+                                      : Math.round((averageOrdering[item.id] / sleeveAvgTotals[item.sleeveType]) * 100) + '%'
+                                  )
+                                : '0%'
+                            )
+                          : (averageOrdering[item.id] || 0));
+                    
+                    // Debug log for sleeveType 0
+                    if (item.sleeveType === '0') {
+                      console.log(`4-week avg display for ${item.name}: showPercent=${showPercent}, averageOrdering=${averageOrdering[item.id]}, fourWeekTotal=${pizzaStats[item.id].fourWeekTotal}, displaying: ${value}`);
+                    }
+                    
+                    return value;
+                  })()}
                 </td>
               </tr>
             );
