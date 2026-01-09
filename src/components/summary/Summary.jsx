@@ -57,20 +57,65 @@ const averageOrdering = useMemo(() => {
   const pizzaTotals = {};
   const pizzaWeeks = {};
 
+  // Calculate 4-week cutoff date
+  const now = new Date();
+  const fourWeeksAgo = new Date(now);
+  fourWeeksAgo.setDate(now.getDate() - 28);
+  
+  // Debug data for HAM_A1 (Hamageddon)
+  const hamOrders = [];
+
   orders.forEach(order => {
     if (!order.delivery_day || order.delivery_day === "tbc") return;
     const delivery = new Date(order.delivery_day);
     const weekKey = `${order.delivery_week}`;
-    Object.entries(order.pizzas || {}).forEach(([pizzaId, pizzaData]) => {
-      pizzaTotals[pizzaId] = (pizzaTotals[pizzaId] || 0) + pizzaData.quantity;
-      pizzaWeeks[`${pizzaId}_${weekKey}`] = true;
-    });
+    
+    // Only include orders from the last 4 weeks
+    if (delivery >= fourWeeksAgo) {
+      Object.entries(order.pizzas || {}).forEach(([pizzaId, pizzaData]) => {
+        pizzaTotals[pizzaId] = (pizzaTotals[pizzaId] || 0) + pizzaData.quantity;
+        pizzaWeeks[`${pizzaId}_${weekKey}`] = true;
+        
+        // Collect HAM_A1 orders for debugging
+        if (pizzaId === 'HAM_A1') {
+          hamOrders.push({
+            orderId: order.id,
+            deliveryDay: order.delivery_day,
+            quantity: pizzaData.quantity,
+            weekKey: weekKey,
+            customer: order.customer_name
+          });
+        }
+      });
+    }
   });
+
+  // Log HAM_A1 orders from last 4 weeks
+  console.group('🍖 HAM_A1 (Hamageddon) Orders - Last 4 Weeks');
+  console.log(`Found ${hamOrders.length} HAM_A1 orders in the last 4 weeks:`);
+  console.log('Four weeks ago cutoff:', fourWeeksAgo.toISOString().split('T')[0]);
+  console.log('Today:', now.toISOString().split('T')[0]);
+  
+  hamOrders.sort((a, b) => new Date(a.deliveryDay) - new Date(b.deliveryDay));
+  
+  let totalHamQuantity = 0;
+  const hamWeeks = new Set();
+  
+  hamOrders.forEach(order => {
+    console.log(`${order.deliveryDay} | Week: ${order.weekKey} | Qty: ${order.quantity} | Customer: ${order.customer} | Order: ${order.orderId}`);
+    totalHamQuantity += order.quantity;
+    hamWeeks.add(order.weekKey);
+  });
+  
+  console.log(`\nTotal HAM_A1 quantity: ${totalHamQuantity}`);
+  console.log(`Number of weeks with HAM_A1 orders: ${hamWeeks.size}`);
+  console.log(`Calculated average: ${hamWeeks.size > 0 ? Math.round(totalHamQuantity / hamWeeks.size) : 0}`);
+  console.groupEnd();
 
   const pizzaAverages = {};
   Object.keys(pizzaTotals).forEach(pizzaId => {
-    const weeks = Object.keys(pizzaWeeks).filter(key => key.startsWith(pizzaId + '_')).length || 1;
-    pizzaAverages[pizzaId] = Math.round(pizzaTotals[pizzaId] / weeks);
+    // Divide by 4 for proper 4-week average
+    pizzaAverages[pizzaId] = Math.round(pizzaTotals[pizzaId] / 4);
   });
 
   return pizzaAverages;
@@ -218,14 +263,14 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     const avgOrder = averageOrdering[item.id] || 0;
     let status = "";
     if (orderedW1 > currentStock) {
-      status = "Short - Urgent!";
+      status = "V LOW";
     } else if ((orderedW1 + orderedW2) > currentStock) {
       status = "Low";
     } else if ((orderedW1 + orderedW2) <= currentStock) {
-      status = "Available";
+      status = "Good";
     }
     if ((currentStock - (orderedW1 + orderedW2 + orderedW3)) > (3 * avgOrder)) {
-      status = "Overstocked";
+      status = "Over";
     }
     
 
@@ -493,7 +538,8 @@ const averageOrderingPercent = {};
           data={stockSummary} 
           showPercent={showPercentStock}
           sleeveDenoms={stockSleeveDenoms}
-          sleeveOnOrderTotals={sleeveOnOrderTotals} 
+          sleeveOnOrderTotals={sleeveOnOrderTotals}
+          averageOrdering={averageOrdering}
           />
         </div>
 
