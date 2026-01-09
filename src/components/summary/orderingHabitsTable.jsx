@@ -16,11 +16,13 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
   const now = new Date();
   const thisSaturday = getSaturday(now);
   const lastSaturday = new Date(thisSaturday); lastSaturday.setDate(thisSaturday.getDate() - 7);
+  const fourWeeksAgo = new Date(now);
+  fourWeeksAgo.setDate(now.getDate() - 28);
 
-  // Build pizzaId -> { lastWeek } map
+  // Build pizzaId -> { lastWeek, fourWeekTotal } map
   const pizzaStats = {};
   summaryOrder.forEach(item => {
-    pizzaStats[item.id] = { lastWeek: 0 };
+    pizzaStats[item.id] = { lastWeek: 0, fourWeekTotal: 0 };
   });
 
   orders.forEach(order => {
@@ -31,15 +33,19 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
       if (delivery >= lastSaturday && delivery < thisSaturday) {
         pizzaStats[pizzaId].lastWeek += pizzaData.quantity || 0;
       }
+      if (delivery >= fourWeeksAgo) {
+        pizzaStats[pizzaId].fourWeekTotal += pizzaData.quantity || 0;
+      }
     });
-
   });
 
   // Calculate sleeve totals for percent
   const sleeveTotals = { '0': 0, '1': 0 };
+  const sleeve4WeekTotals = { '0': 0, '1': 0 };
   summaryOrder.forEach(item => {
     if (item.sleeveType === '0' || item.sleeveType === '1') {
       sleeveTotals[item.sleeveType] += pizzaStats[item.id].lastWeek;
+      sleeve4WeekTotals[item.sleeveType] += pizzaStats[item.id].fourWeekTotal;
     }
   });
   const sleeveAvgTotals = { '0': 0, '1': 0 };
@@ -70,6 +76,8 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
       (!item.isGap && (item.sleeveType === '0' || item.sleeveType === '1')
         ? sum + (field === 'lastWeek'
             ? pizzaStats[item.id].lastWeek
+            : field === 'fourWeekTotal'
+            ? pizzaStats[item.id].fourWeekTotal
             : averageOrdering[item.id] || 0)
         : sum), 0
     );
@@ -81,7 +89,8 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
           <tr>
             <th></th>
             <th>Last Week</th>
-            <th>4-Week Avg</th>
+            <th>4-Wk Total</th>
+            <th>4-Wk Avg</th>
           </tr>
         </thead>
         <tbody>
@@ -90,6 +99,7 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
             if (item.isGap) {
               const prevGapIdx = gapIndices.filter(idx => idx < i).pop() ?? -1;
               const subtotalLastWeek = sumSection(prevGapIdx + 1, i, 'lastWeek');
+              const subtotal4WeekTotal = sumSection(prevGapIdx + 1, i, 'fourWeekTotal');
               const subtotal4Week = summaryOrder
                 .slice(prevGapIdx + 1, i)
                 .reduce((sum, item) =>
@@ -103,10 +113,11 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
                   <tr className="subtotalRow">
                     <td><strong>Subtotal</strong></td>
                     <td><strong>{subtotalLastWeek}</strong></td>
+                    <td><strong>{subtotal4WeekTotal}</strong></td>
                     <td><strong>{subtotal4Week}</strong></td>
                   </tr>
                   <tr key={`gap-${i}`} className="gap-row">
-                    <td colSpan={3} className="gap"></td>
+                    <td colSpan={4} className="gap"></td>
                   </tr>
                 </React.Fragment>
               );
@@ -126,6 +137,15 @@ function OrderingHabitsTable({ pizzas, orders, summaryOrder, averageOrdering, sh
                             ? Math.round((pizzaStats[item.id].lastWeek / sleeveTotals[item.sleeveType]) * 100) + '%'
                             : '0%')
                         : pizzaStats[item.id].lastWeek)}
+                </td>
+                <td>
+                  {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
+                    ? pizzaStats[item.id].fourWeekTotal
+                    : (showPercent && (item.sleeveType === '0' || item.sleeveType === '1')
+                        ? (sleeve4WeekTotals[item.sleeveType]
+                            ? Math.round((pizzaStats[item.id].fourWeekTotal / sleeve4WeekTotals[item.sleeveType]) * 100) + '%'
+                            : '0%')
+                        : pizzaStats[item.id].fourWeekTotal)}
                 </td>
                 <td>
                   {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
