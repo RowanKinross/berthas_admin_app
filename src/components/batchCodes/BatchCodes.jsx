@@ -342,18 +342,10 @@ function BatchCodes() {
       </html>
     `;
     
-    // Open new window and print
+    // Open new window
     const printWindow = window.open('', '_blank');
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-    
-    // Wait for content to load, then print
-    printWindow.onload = () => {
-      printWindow.print();
-      printWindow.onafterprint = () => {
-        printWindow.close();
-      };
-    };
   };
 
   // Sort ingredients specifically:-
