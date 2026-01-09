@@ -263,14 +263,14 @@ const getStockSummary = (stock, pizzas, orders, orderDeliveryDayMap) => {
     const avgOrder = averageOrdering[item.id] || 0;
     let status = "";
     if (orderedW1 > currentStock) {
-      status = "Short - Urgent!";
+      status = "V LOW";
     } else if ((orderedW1 + orderedW2) > currentStock) {
       status = "Low";
     } else if ((orderedW1 + orderedW2) <= currentStock) {
-      status = "Available";
+      status = "Good";
     }
     if ((currentStock - (orderedW1 + orderedW2 + orderedW3)) > (3 * avgOrder)) {
-      status = "Overstocked";
+      status = "Over";
     }
     
 
@@ -538,7 +538,8 @@ const averageOrderingPercent = {};
           data={stockSummary} 
           showPercent={showPercentStock}
           sleeveDenoms={stockSleeveDenoms}
-          sleeveOnOrderTotals={sleeveOnOrderTotals} 
+          sleeveOnOrderTotals={sleeveOnOrderTotals}
+          averageOrdering={averageOrdering}
           />
         </div>
 

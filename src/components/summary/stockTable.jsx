@@ -1,6 +1,6 @@
 import React from 'react';
 
-function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotals }) {
+function StockTable({ data, showPercent = true, sleeveDenoms, sleeveOnOrderTotals, averageOrdering = {} }) {
   if (!data || data.length === 0) {
     return <p>Loading stock...</p>;
   }
@@ -32,10 +32,12 @@ const sumSection = (start, end, field) =>
         <tr>
           <th></th>
           <th title='Current Stock'>Stock</th>
+          <th title='Weeks stock should last based on 4-week average'>Wks</th>
           <th colSpan={3} title='Quantity currently on order'>Ordered</th>
           <th title=''>Status</th>
         </tr>
         <tr>
+          <th></th>
           <th></th>
           <th></th>
           <th title='1 Week Ordered Stock Ratio'>
@@ -68,6 +70,7 @@ const sumSection = (start, end, field) =>
                   <tr className="subtotalRow">
                     <td><strong>Subtotal</strong></td>
                     <td><strong>{subtotalStock}</strong></td>
+                    <td></td>
                     <td><strong>{subtotalOnOrder1}</strong></td>
                     <td><strong>{subtotalOnOrder2}</strong></td>
                     <td><strong>{subtotalOnOrder3}</strong></td>
@@ -93,6 +96,14 @@ const sumSection = (start, end, field) =>
                   : (showPercent && item.ratio != null
                       ? `${item.ratio}%`
                       : item.total)}
+              </td>
+              <td>
+                {(() => {
+                  const weeklyAvg = averageOrdering[item.id] || 0;
+                  if (weeklyAvg === 0) return '∞';
+                  const weeksLeft = Math.round(item.total / weeklyAvg * 10) / 10;
+                  return weeksLeft;
+                })()}
               </td>
               <td>
                 {(item.sleeveType === 'base' || item.id === 'DOU_A0' || item.id === 'DOU_A1')
