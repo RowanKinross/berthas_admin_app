@@ -14,6 +14,8 @@ import Archive from './components/archive/Archive'
 import Summary from './components/summary/Summary'
 import BatchCodes from './components/batchCodes/BatchCodes'
 import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
+import UpdateBanner from './components/UpdateBanner/UpdateBanner';
+import useVersionCheck from './hooks/useVersionCheck';
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -86,9 +88,13 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 };
 
 function App() {
+  const { showUpdateBanner, refreshApp, dismissUpdate } = useVersionCheck();
 
   return (
     <>
+      {showUpdateBanner && (
+        <UpdateBanner onRefresh={refreshApp} onDismiss={dismissUpdate} />
+      )}
       <div className="App">
       </div>
       <Router>

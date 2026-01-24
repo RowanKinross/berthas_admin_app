@@ -1,11 +1,13 @@
 {
   "name": "berthas-admin-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node update-version.js && VITE_APP_VERSION=$npm_package_version vite build",
+    "build:windows": "node update-version.js && set VITE_APP_VERSION=%npm_package_version% && vite build",
+    "update-version": "node update-version.js",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
