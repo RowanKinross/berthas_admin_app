@@ -1445,7 +1445,7 @@ const formatDateDisplay = (dateStr) => {
                 {pizza.photo && (
                   <button
                     type="button"
-                    className='button draft pizzaPhotoButton'
+                    className='button draft pizzaPhotoButton deleteAction'
                     onClick={() => handleInlineSave("pizza", pizza.id, "photo", null)}
                     style={{ fontSize: '12px', padding: '4px 8px' }}
                   >
@@ -1922,7 +1922,7 @@ const formatDateDisplay = (dateStr) => {
           {userRole !== 'unit' && (
             <button
               type="button"
-              className='button draft'
+              className='button draft deleteAction'
               onClick={() => {
                 const confirmed = window.confirm("Are you sure you want to delete this batch?");
                 if (confirmed) {

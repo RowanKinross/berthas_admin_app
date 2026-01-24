@@ -221,6 +221,12 @@ textarea.input {
   min-width: fit-content;
 }
 
+/* Delete Action Buttons - Red Hover Effect */
+.deleteAction:hover {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
 @media (max-width: 530px) {
   .ingredient {
     flex-direction: column;
