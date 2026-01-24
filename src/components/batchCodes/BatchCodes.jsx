@@ -795,6 +795,7 @@ const formatDateDisplay = (dateStr) => {
           firstPizzaWeight: pizza.firstPizzaWeight || null,
           middlePizzaWeight: pizza.middlePizzaWeight || null,
           lastPizzaWeight: pizza.lastPizzaWeight || null,
+          photo: pizza.photo || null,
         })),
         notes: notes,
       });
@@ -964,7 +965,7 @@ const formatDateDisplay = (dateStr) => {
                 }
                 return {
                   ...pizza,
-                  [field]: value === "" ? null : Number(value)
+                  [field]: field === "photo" ? value : (value === "" ? null : Number(value))
                 };
               }
               return pizza;
@@ -989,7 +990,8 @@ const formatDateDisplay = (dateStr) => {
                 }, {}),
                 firstPizzaWeight: null,
                 middlePizzaWeight: null,
-                lastPizzaWeight: null
+                lastPizzaWeight: null,
+                photo: null
               }
             ];
           } else {
@@ -1205,6 +1207,50 @@ const formatDateDisplay = (dateStr) => {
     return window.matchMedia('(max-width: 1024px)').matches;
   };
 
+  // Image compression helper function
+  const compressImage = (file, maxWidth = 400, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions maintaining aspect ratio
+        const aspectRatio = img.width / img.height;
+        canvas.width = maxWidth;
+        canvas.height = maxWidth / aspectRatio;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => img.src = e.target.result;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle photo upload for pizzas
+  const handlePhotoUpload = async (pizzaId, file) => {
+    if (!file || !file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      return;
+    }
+
+    try {
+      // Compress the image
+      const compressedImage = await compressImage(file);
+      
+      // Update the database
+      await handleInlineSave("pizza", pizzaId, "photo", compressedImage);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      alert("Error uploading photo. Please try again.");
+    }
+  };
+
   return (
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
@@ -1331,7 +1377,7 @@ const formatDateDisplay = (dateStr) => {
           </div>
           {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (
   <div key={pizza.id} className='pizzaDetails'>
-  <p>
+  <div>
     <strong>{pizza.pizza_title}</strong>:{" "}
     {editingField === `pizza-${pizza.id}-quantity` ? (
       <input
@@ -1359,7 +1405,55 @@ const formatDateDisplay = (dateStr) => {
         {pizza.quantity}
       </span>
     )}
-  </p>
+    {/* Photo Upload Section */}
+          <div className='pizzaPhotoSection'>
+            <div className='pizzaPhotoContainer'>
+              {pizza.photo && (
+                <img 
+                  src={pizza.photo} 
+                  alt={`${pizza.pizza_title} photo`}
+                  className='pizzaPhoto'
+                  onClick={() => {
+                    // Open image in new window for better viewing
+                    const newWindow = window.open();
+                    newWindow.document.write(`<img src="${pizza.photo}" style="max-width: 100%; max-height: 100vh; object-fit: contain;">`);
+                  }}
+                />
+              )}
+              <div className='pizzaPhotoControls'>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      handlePhotoUpload(pizza.id, file);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                  id={`photo-upload-${pizza.id}`}
+                />
+                <label 
+                  htmlFor={`photo-upload-${pizza.id}`} 
+                  className='button pizzaPhotoButton'
+                  style={{ fontSize: '12px', padding: '4px 8px' }}
+                >
+                  {pizza.photo ? 'Change Photo' : 'Add Photo'}
+                </label>
+                {pizza.photo && (
+                  <button
+                    type="button"
+                    className='button draft pizzaPhotoButton'
+                    onClick={() => handleInlineSave("pizza", pizza.id, "photo", null)}
+                    style={{ fontSize: '12px', padding: '4px 8px', marginLeft: '5px' }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+  </div>
 
     <div className='pizzaWeightsOuter'>
       <div className='pizzaWeights'>
@@ -1442,6 +1536,8 @@ const formatDateDisplay = (dateStr) => {
 
           </div>
           </div>
+          
+          
           </div>
         ))}
         {(() => {
