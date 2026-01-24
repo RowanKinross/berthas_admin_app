@@ -186,7 +186,6 @@ textarea.input {
 /* Pizza Photo Styles */
 .pizzaPhotoSection {
   margin-top: 10px;
-  border-top: 1px solid var(--grey);
   padding-top: 10px;
 }
 
