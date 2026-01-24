@@ -1433,21 +1433,23 @@ const formatDateDisplay = (dateStr) => {
                   style={{ display: 'none' }}
                   id={`photo-upload-${pizza.id}`}
                 />
-                <label 
-                  htmlFor={`photo-upload-${pizza.id}`} 
-                  className='button pizzaPhotoButton'
-                  style={{ fontSize: '12px', padding: '4px 8px' }}
-                >
-                  {pizza.photo ? 'Change Photo' : 'Add Photo'}
-                </label>
+                {!pizza.photo && (
+                  <label 
+                    htmlFor={`photo-upload-${pizza.id}`} 
+                    className='button pizzaPhotoButton'
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                  >
+                    Add Photo
+                  </label>
+                )}
                 {pizza.photo && (
                   <button
                     type="button"
                     className='button draft pizzaPhotoButton'
                     onClick={() => handleInlineSave("pizza", pizza.id, "photo", null)}
-                    style={{ fontSize: '12px', padding: '4px 8px', marginLeft: '5px' }}
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
                   >
-                    Remove
+                    x
                   </button>
                 )}
               </div>
