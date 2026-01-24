@@ -755,10 +755,6 @@ const formatDateDisplay = (dateStr) => {
   });
 
   setIngredientsOrdered(batch.ingredients_ordered || false);
-
-  setTimeout(() => {
-    batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 0);
 };
 
   const handleAddFormSubmit = async (e) => {
@@ -1025,29 +1021,24 @@ const formatDateDisplay = (dateStr) => {
   
 
 
-  // Handle clicks outside the form
+  // Handle clicks outside the form or modal
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (
-        (formRef.current && !formRef.current.contains(e.target)) ||
-        (batchDetailsRef.current && !batchDetailsRef.current.contains(e.target))
-      ) {
-        // Close editing fields when clicking outside
+      if (showForm && formRef.current && !formRef.current.contains(e.target)) {
         setEditingField(null);
         setEditingValue("");
         setShowForm(false);
-        setViewingBatch(null);
       }
     };
 
-    if (showForm || viewingBatch) {
+    if (showForm) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showForm, viewingBatch]);
+  }, [showForm]);
 
   useEffect(() => {
     if (!viewingBatch) return;
@@ -1291,8 +1282,18 @@ const formatDateDisplay = (dateStr) => {
         </div>
       )}
       {viewingBatch && !showForm && (
-        <div className="batchDetails border" ref={batchDetailsRef}>
-          <h2>Batch Details</h2>
+        <div className="modal-overlay" onClick={() => setViewingBatch(null)}>
+          <div className="batchDetails border modal-content" ref={batchDetailsRef} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Batch Details</h2>
+              <button 
+                className="modal-close-button" 
+                onClick={() => setViewingBatch(null)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
           <div >
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
@@ -1834,6 +1835,7 @@ const formatDateDisplay = (dateStr) => {
               Delete batch
             </button>
           )}
+          </div>
           </div>
         </div>
       )}
