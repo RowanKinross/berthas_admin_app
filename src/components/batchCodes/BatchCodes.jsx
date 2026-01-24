@@ -1956,7 +1956,7 @@ const formatDateDisplay = (dateStr) => {
                 >
                 <div className="container" style={{ width: '100%' }}>
                   <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
-                  <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
+                  <p className='batchTextBoxCenter'>{batch.num_pizzas > 0 ? batch.num_pizzas : ''}</p>
                   {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
                 </div>
                 {matchingIngredients.length > 0 && (
