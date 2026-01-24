@@ -755,10 +755,6 @@ const formatDateDisplay = (dateStr) => {
   });
 
   setIngredientsOrdered(batch.ingredients_ordered || false);
-
-  setTimeout(() => {
-    batchDetailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 0);
 };
 
   const handleAddFormSubmit = async (e) => {
@@ -799,6 +795,7 @@ const formatDateDisplay = (dateStr) => {
           firstPizzaWeight: pizza.firstPizzaWeight || null,
           middlePizzaWeight: pizza.middlePizzaWeight || null,
           lastPizzaWeight: pizza.lastPizzaWeight || null,
+          photo: pizza.photo || null,
         })),
         notes: notes,
       });
@@ -968,7 +965,7 @@ const formatDateDisplay = (dateStr) => {
                 }
                 return {
                   ...pizza,
-                  [field]: value === "" ? null : Number(value)
+                  [field]: field === "photo" ? value : (value === "" ? null : Number(value))
                 };
               }
               return pizza;
@@ -993,7 +990,8 @@ const formatDateDisplay = (dateStr) => {
                 }, {}),
                 firstPizzaWeight: null,
                 middlePizzaWeight: null,
-                lastPizzaWeight: null
+                lastPizzaWeight: null,
+                photo: null
               }
             ];
           } else {
@@ -1025,29 +1023,24 @@ const formatDateDisplay = (dateStr) => {
   
 
 
-  // Handle clicks outside the form
+  // Handle clicks outside the form or modal
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (
-        (formRef.current && !formRef.current.contains(e.target)) ||
-        (batchDetailsRef.current && !batchDetailsRef.current.contains(e.target))
-      ) {
-        // Close editing fields when clicking outside
+      if (showForm && formRef.current && !formRef.current.contains(e.target)) {
         setEditingField(null);
         setEditingValue("");
         setShowForm(false);
-        setViewingBatch(null);
       }
     };
 
-    if (showForm || viewingBatch) {
+    if (showForm) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showForm, viewingBatch]);
+  }, [showForm]);
 
   useEffect(() => {
     if (!viewingBatch) return;
@@ -1214,6 +1207,50 @@ const formatDateDisplay = (dateStr) => {
     return window.matchMedia('(max-width: 1024px)').matches;
   };
 
+  // Image compression helper function
+  const compressImage = (file, maxWidth = 400, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions maintaining aspect ratio
+        const aspectRatio = img.width / img.height;
+        canvas.width = maxWidth;
+        canvas.height = maxWidth / aspectRatio;
+        
+        // Draw and compress
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      
+      const reader = new FileReader();
+      reader.onload = (e) => img.src = e.target.result;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle photo upload for pizzas
+  const handlePhotoUpload = async (pizzaId, file) => {
+    if (!file || !file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      return;
+    }
+
+    try {
+      // Compress the image
+      const compressedImage = await compressImage(file);
+      
+      // Update the database
+      await handleInlineSave("pizza", pizzaId, "photo", compressedImage);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      alert("Error uploading photo. Please try again.");
+    }
+  };
+
   return (
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
@@ -1291,8 +1328,18 @@ const formatDateDisplay = (dateStr) => {
         </div>
       )}
       {viewingBatch && !showForm && (
-        <div className="batchDetails border" ref={batchDetailsRef}>
-          <h2>Batch Details</h2>
+        <div className="modal-overlay" onClick={() => setViewingBatch(null)}>
+          <div className="batchDetails border modal-content" ref={batchDetailsRef} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Batch Details</h2>
+              <button 
+                className="modal-close-button" 
+                onClick={() => setViewingBatch(null)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
           <div >
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
@@ -1330,7 +1377,7 @@ const formatDateDisplay = (dateStr) => {
           </div>
           {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (
   <div key={pizza.id} className='pizzaDetails'>
-  <p>
+  <div>
     <strong>{pizza.pizza_title}</strong>:{" "}
     {editingField === `pizza-${pizza.id}-quantity` ? (
       <input
@@ -1358,7 +1405,57 @@ const formatDateDisplay = (dateStr) => {
         {pizza.quantity}
       </span>
     )}
-  </p>
+    {/* Photo Upload Section */}
+          <div className='pizzaPhotoSection'>
+            <div className='pizzaPhotoContainer'>
+              {pizza.photo && (
+                <img 
+                  src={pizza.photo} 
+                  alt={`${pizza.pizza_title} photo`}
+                  className='pizzaPhoto'
+                  onClick={() => {
+                    // Open image in new window for better viewing
+                    const newWindow = window.open();
+                    newWindow.document.write(`<img src="${pizza.photo}" style="max-width: 100%; max-height: 100vh; object-fit: contain;">`);
+                  }}
+                />
+              )}
+              <div className='pizzaPhotoControls'>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      handlePhotoUpload(pizza.id, file);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                  id={`photo-upload-${pizza.id}`}
+                />
+                {!pizza.photo && (
+                  <label 
+                    htmlFor={`photo-upload-${pizza.id}`} 
+                    className='button pizzaPhotoButton'
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                  >
+                    Add Photo
+                  </label>
+                )}
+                {pizza.photo && (
+                  <button
+                    type="button"
+                    className='button draft pizzaPhotoButton deleteAction'
+                    onClick={() => handleInlineSave("pizza", pizza.id, "photo", null)}
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                  >
+                    x
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+  </div>
 
     <div className='pizzaWeightsOuter'>
       <div className='pizzaWeights'>
@@ -1441,6 +1538,8 @@ const formatDateDisplay = (dateStr) => {
 
           </div>
           </div>
+          
+          
           </div>
         ))}
         {(() => {
@@ -1823,7 +1922,7 @@ const formatDateDisplay = (dateStr) => {
           {userRole !== 'unit' && (
             <button
               type="button"
-              className='button draft'
+              className='button draft deleteAction'
               onClick={() => {
                 const confirmed = window.confirm("Are you sure you want to delete this batch?");
                 if (confirmed) {
@@ -1834,6 +1933,7 @@ const formatDateDisplay = (dateStr) => {
               Delete batch
             </button>
           )}
+          </div>
           </div>
         </div>
       )}
@@ -1954,7 +2054,7 @@ const formatDateDisplay = (dateStr) => {
                 >
                 <div className="container" style={{ width: '100%' }}>
                   <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
-                  <p className='batchTextBoxCenter'>{batch.num_pizzas}</p>
+                  <p className='batchTextBoxCenter'>{batch.num_pizzas > 0 ? batch.num_pizzas : ''}</p>
                   {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
                 </div>
                 {matchingIngredients.length > 0 && (
