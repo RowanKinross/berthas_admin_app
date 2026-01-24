@@ -14,6 +14,13 @@ const useVersionCheck = () => {
       
       const serverVersion = await response.json();
       
+      // Debug logging
+      console.log('Version check:', {
+        current: currentVersion,
+        server: serverVersion.version,
+        match: currentVersion === serverVersion.version
+      });
+      
       // Compare versions
       if (serverVersion.version !== currentVersion) {
         setShowUpdateBanner(true);
