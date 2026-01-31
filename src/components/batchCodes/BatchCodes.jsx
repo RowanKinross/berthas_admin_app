@@ -1153,6 +1153,16 @@ const formatDateDisplay = (dateStr) => {
   // Get userRole from localStorage
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
 
+  // Track if selection instruction has been shown
+  const [hasSeenSelectionInstruction, setHasSeenSelectionInstruction] = useState(() => 
+    localStorage.getItem('hasSeenSelectionInstruction') === 'true'
+  );
+
+  // Track if toggle instruction has been shown
+  const [hasSeenToggleInstruction, setHasSeenToggleInstruction] = useState(() => 
+    localStorage.getItem('hasSeenToggleInstruction') === 'true'
+  );
+
   // Helper function to normalize text for search
   const normalizeForSearch = (text) => {
     if (!text) return "";
@@ -1273,8 +1283,14 @@ const formatDateDisplay = (dateStr) => {
 
   // Enhanced batch click handler for selection
   const handleBatchClickWithSelection = (batch, index, event) => {
-    // Desktop: Shift+click for selection
-    if (!isMobileOrTablet() && event.shiftKey) {
+    // Mark instruction as seen when user first interacts with batches
+    if (!hasSeenSelectionInstruction) {
+      setHasSeenSelectionInstruction(true);
+      localStorage.setItem('hasSeenSelectionInstruction', 'true');
+    }
+
+    // Shift+click for range selection (works on all devices)
+    if (event.shiftKey) {
       event.preventDefault();
       if (!selectionMode) {
         setSelectionMode(true);
@@ -1283,13 +1299,24 @@ const formatDateDisplay = (dateStr) => {
       return;
     }
     
-    // Normal click behavior
+    // If already in selection mode, toggle batch selection with normal click
+    if (selectionMode) {
+      event.preventDefault();
+      toggleBatchSelection(batch.id, index, false);
+      return;
+    }
+    
+    // Normal click behavior (open batch details)
     handleBatchClick(batch);
   };
 
-  // Long press handlers for mobile
+  // Long press handlers (works on all devices)
   const handleTouchStart = (batch, index) => {
-    if (!isMobileOrTablet()) return;
+    // Mark instruction as seen when user first interacts with batches
+    if (!hasSeenSelectionInstruction) {
+      setHasSeenSelectionInstruction(true);
+      localStorage.setItem('hasSeenSelectionInstruction', 'true');
+    }
     
     const timer = setTimeout(() => {
       if (!selectionMode) {
@@ -1386,15 +1413,39 @@ const formatDateDisplay = (dateStr) => {
         }}>
           {/* View toggle slider */}
           {filteredBatches.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
               <label className="switch" style={{ position: 'relative' }} title="Switch between List and Calendar view">
                 <input
                   type="checkbox"
                   checked={viewMode === 'calendar'}
-                  onChange={e => setViewMode(e.target.checked ? 'calendar' : 'list')}
+                  onChange={e => {
+                    setViewMode(e.target.checked ? 'calendar' : 'list');
+                    if (!hasSeenToggleInstruction) {
+                      setHasSeenToggleInstruction(true);
+                      localStorage.setItem('hasSeenToggleInstruction', 'true');
+                    }
+                  }}
                 />
                 <span className="slider round"></span>
               </label>
+              {!hasSeenToggleInstruction && viewMode === 'list' && (
+                <div style={{
+                  position: 'absolute',
+                  left: '20px',
+                  top: '-20px',
+                  fontSize: '12px',
+                  color: '#666',
+                  fontStyle: 'italic',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span style={{
+                  rotate:'270deg'}}>↰</span>
+                  <span>Switch to calendar view</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1438,12 +1489,15 @@ const formatDateDisplay = (dateStr) => {
       {filteredBatches.length > 0 && (
         <div  style={{ display: 'flex', marginBottom: '15px', alignItems: 'start'   }}>
           {!selectionMode ? (
-            <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
-              {isMobileOrTablet() 
-                ? 'Long press on a batch to select' 
-                : 'Shift+click on a batch to select'
-              }
-            </div>
+            !hasSeenSelectionInstruction && (
+              <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+                {isMobileOrTablet() 
+                  ? 'Long press on a batch to select' 
+                  : 'Shift+click on a batch to select'
+                }
+
+              </div>
+            )
           ) : (
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button 
