@@ -277,6 +277,32 @@ function BatchCodes() {
     setLastSelectedIndex(null);
   };
 
+  const markSelectedBatchesIngredientsOrdered = async () => {
+    if (selectedBatches.size === 0) {
+      alert("Please select at least one batch to mark ingredients as ordered.");
+      return;
+    }
+
+    try {
+      const updatePromises = Array.from(selectedBatches).map(async (batchId) => {
+        const batchRef = doc(db, "batches", batchId);
+        await updateDoc(batchRef, {
+          ingredients_ordered: true
+        });
+      });
+
+      await Promise.all(updatePromises);
+      alert(`Marked ingredients as ordered for ${selectedBatches.size} batch(es).`);
+      
+      // Clear selection after successful update
+      setSelectionMode(false);
+      setSelectedBatches(new Set());
+    } catch (error) {
+      console.error("Error updating batches:", error);
+      alert("Error marking ingredients as ordered. Please try again.");
+    }
+  };
+
   const calculateSelectedBatchesIngredients = () => {
     if (selectedBatches.size === 0) {
       alert("Please select at least one batch to calculate ingredients.");
@@ -1529,6 +1555,14 @@ const formatDateDisplay = (dateStr) => {
                 style={{ fontSize: '12px', padding: '5px 10px' }}
               >
                 Calculate Ingredients ({selectedBatches.size})
+              </button>
+              <button 
+                className='button completed'
+                onClick={markSelectedBatchesIngredientsOrdered}
+                disabled={selectedBatches.size === 0}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Ingredients Ordered ✓
               </button>
               <button 
                 className='button draft'
