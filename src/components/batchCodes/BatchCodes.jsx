@@ -2303,18 +2303,6 @@ const formatDateDisplay = (dateStr) => {
                           const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
                           return (
                             <div key={batch.id} style={{ marginBottom: '1px' }}>
-                              {selectionMode && (
-                                <input
-                                  type="checkbox"
-                                  checked={selectedBatches.has(batch.id)}
-                                  onChange={(e) => {
-                                    const isShiftClick = e.nativeEvent.shiftKey;
-                                    toggleBatchSelection(batch.id, batchIndex, isShiftClick);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  style={{ marginRight: '2px', transform: 'scale(0.8)' }}
-                                />
-                              )}
                               <button
                                 className={`button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
                                 onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
@@ -2326,22 +2314,39 @@ const formatDateDisplay = (dateStr) => {
                                   padding: '2px 4px', 
                                   width: '100%',
                                   marginBottom: '1px',
-                                  display: 'block'
+                                  display: 'block',
+                                  position: 'relative'
                                 }}
                                 title={`${batch.batch_code} - ${batch.num_pizzas} pizzas ${batch.ingredients_ordered ? '(✓)' : '(✘)'}`}
                               >
+                                
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
                                   <span style={{ fontSize: '9px' }}>{batch.batch_code}</span>
                                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
                                     <span>{batch.num_pizzas}</span>
                                     <span>{batch.ingredients_ordered ? '✓' : '✘'}</span>
                                   </div>
+                                  {selectionMode && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedBatches.has(batch.id)}
+                                    onChange={(e) => {
+                                      const isShiftClick = e.nativeEvent.shiftKey;
+                                      toggleBatchSelection(batch.id, batchIndex, isShiftClick);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{ 
+                                      transform: 'scale(0.7)'
+                                    }}
+                                  />
+                                )}
                                 </div>
                                 {matchingIngredients.length > 0 && (
                                   <div style={{ fontSize: '8px', opacity: 0.8, textAlign: 'center', marginTop: '1px' }}>
                                     {matchingIngredients[0].ingredient}: {matchingIngredients[0].code}
                                   </div>
                                 )}
+                                
                               </button>
                             </div>
                           );
@@ -2370,7 +2375,6 @@ const formatDateDisplay = (dateStr) => {
                 
                 return (
                   <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-                    
                       {selectionMode && (
                         <input
                           type="checkbox"
@@ -2380,7 +2384,9 @@ const formatDateDisplay = (dateStr) => {
                             toggleBatchSelection(batch.id, index, isShiftClick);
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          style={{ marginRight: '10px', transform: 'scale(1.2)' }}
+                          style={{ 
+                            transform: 'scale(1.2)',
+                          }}
                         />
                       )}
                       <button 
@@ -2389,8 +2395,9 @@ const formatDateDisplay = (dateStr) => {
                         onTouchStart={() => handleTouchStart(batch, index)}
                         onTouchEnd={handleTouchEnd}
                         onTouchCancel={handleTouchCancel}
-                        style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
+                        style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}
                       >
+
                       <div className="container" style={{ width: '100%' }}>
                         <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
                         <p className='batchTextBoxCenter'>{batch.num_pizzas > 0 ? batch.num_pizzas : ''}</p>
