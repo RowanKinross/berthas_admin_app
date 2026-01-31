@@ -38,6 +38,7 @@ function BatchCodes() {
   const [selectedBatches, setSelectedBatches] = useState(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
+  const [longPressTimer, setLongPressTimer] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -1267,6 +1268,55 @@ const formatDateDisplay = (dateStr) => {
     return window.matchMedia('(max-width: 1024px)').matches;
   };
 
+  // Enhanced batch click handler for selection
+  const handleBatchClickWithSelection = (batch, index, event) => {
+    // Desktop: Shift+click for selection
+    if (!isMobileOrTablet() && event.shiftKey) {
+      event.preventDefault();
+      if (!selectionMode) {
+        setSelectionMode(true);
+      }
+      toggleBatchSelection(batch.id, index, true);
+      return;
+    }
+    
+    // Normal click behavior
+    handleBatchClick(batch);
+  };
+
+  // Long press handlers for mobile
+  const handleTouchStart = (batch, index) => {
+    if (!isMobileOrTablet()) return;
+    
+    const timer = setTimeout(() => {
+      if (!selectionMode) {
+        setSelectionMode(true);
+      }
+      toggleBatchSelection(batch.id, index);
+      
+      // Add haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // 500ms long press
+    
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleTouchCancel = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
   // Image compression helper function
   const compressImage = (file, maxWidth = 400, quality = 0.7) => {
     return new Promise((resolve) => {
@@ -1385,13 +1435,12 @@ const formatDateDisplay = (dateStr) => {
       {filteredBatches.length > 0 && (
         <div  style={{ display: 'flex', marginBottom: '15px', alignItems: 'start'   }}>
           {!selectionMode ? (
-            <button 
-              className='button'
-              onClick={() => setSelectionMode(true)}
-              style={{ fontSize: '12px', padding: '5px 10px'}}
-            >
-              Select Batches
-            </button>
+            <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+              {isMobileOrTablet() 
+                ? 'Long press on a batch to select' 
+                : 'Shift+click on a batch to select'
+              }
+            </div>
           ) : (
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button 
@@ -2211,7 +2260,10 @@ const formatDateDisplay = (dateStr) => {
                               )}
                               <button
                                 className={`button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
-                                onClick={() => handleBatchClick(batch)}
+                                onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
+                                onTouchStart={() => handleTouchStart(batch, batchIndex)}
+                                onTouchEnd={handleTouchEnd}
+                                onTouchCancel={handleTouchCancel}
                                 style={{ 
                                   fontSize: '10px', 
                                   padding: '2px 4px', 
@@ -2249,7 +2301,6 @@ const formatDateDisplay = (dateStr) => {
           <>
             {/* Batch header */}
             <div className='batchHeader container'>
-              {selectionMode && <p>Select</p>}
               <p>Batch Date:</p>
               <p>Ingredients Ordered?</p>
             </div>
@@ -2277,7 +2328,10 @@ const formatDateDisplay = (dateStr) => {
                       )}
                       <button 
                         className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
-                        onClick={() => handleBatchClick(batch)}
+                        onClick={(e) => handleBatchClickWithSelection(batch, index, e)}
+                        onTouchStart={() => handleTouchStart(batch, index)}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchCancel={handleTouchCancel}
                         style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
                       >
                       <div className="container" style={{ width: '100%' }}>
