@@ -948,9 +948,18 @@ const formatDateDisplay = (dateStr) => {
       }
   
       if (type === "batch") {
-        await updateDoc(batchRef, {
-          [field]: field === "ingredients_ordered" ? !!value : value
-        });
+        if (field === "batch_date") {
+          // When batch date changes, also update the batch code
+          const newBatchCode = formatDateToBatchCode(value);
+          await updateDoc(batchRef, {
+            batch_date: value,
+            batch_code: newBatchCode
+          });
+        } else {
+          await updateDoc(batchRef, {
+            [field]: field === "ingredients_ordered" ? !!value : value
+          });
+        }
       }
 
       if (type === "pizza") {
@@ -1347,7 +1356,36 @@ const formatDateDisplay = (dateStr) => {
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
           <div >
-            <p><strong>Batch Date:</strong> {formatDateDisplay(viewingBatch.batch_date)}</p>
+            <p><strong>Batch Date:</strong>{" "}
+            {editingField === "batch-date" ? (
+              <input
+                type="date"
+                value={editingValue}
+                autoFocus
+                onChange={(e) => setEditingValue(e.target.value)}
+                onBlur={() => handleInlineSave("batch", null, "batch_date", editingValue)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleInlineSave("batch", null, "batch_date", editingValue);
+                  }
+                }}
+              />
+            ) : (
+              <span
+                onClick={() => {
+                  if (userRole === 'admin') {
+                    setEditingField("batch-date");
+                    setEditingValue(viewingBatch.batch_date || "");
+                  }
+                }}
+                style={{ 
+                  cursor: userRole === 'admin' ? 'pointer' : 'default',
+                  textDecoration: userRole === 'admin' ? 'underline' : 'none'
+                }}
+              >
+                {formatDateDisplay(viewingBatch.batch_date)}
+              </span>
+            )}</p>
             <div>
             <div className='dateLabelContainer'>
               <strong>Date Label:</strong>

@@ -20,5 +20,5 @@ const versionInfo = {
 const versionPath = path.join('./public', 'version.json');
 fs.writeFileSync(versionPath, JSON.stringify(versionInfo, null, 2));
 
-console.log(`Updated version.json with version: ${version}`);
-console.log(`Timestamp: ${versionInfo.timestamp}`);
+// console.log(`Updated version.json with version: ${version}`);
+// console.log(`Timestamp: ${versionInfo.timestamp}`);
