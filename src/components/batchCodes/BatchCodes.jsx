@@ -1315,55 +1315,70 @@ const formatDateDisplay = (dateStr) => {
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
       
-      {/* View toggle slider */}
-      {filteredBatches.length > 0 && (
-        <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label className="switch" style={{ position: 'relative' }} title="Switch between List and Calendar view">
+      {/* Add button */}
+          {userRole !== 'unit' && (
+            <button className='button' onClick={handleAddClick}>+</button>
+          )}
+
+
+      {/* Top controls row: View toggle, Search, Add button */}
+      {(filteredBatches.length > 0 || userRole !== 'unit') && (
+        <div style={{ 
+          margin: '15px 0px', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap',
+          gap: '10px' 
+        }}>
+          {/* View toggle slider */}
+          {filteredBatches.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <label className="switch" style={{ position: 'relative' }} title="Switch between List and Calendar view">
+                <input
+                  type="checkbox"
+                  checked={viewMode === 'calendar'}
+                  onChange={e => setViewMode(e.target.checked ? 'calendar' : 'list')}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          )}
+
+          {/* Search box */}
+          {userRole !== 'unit' && batches.length > 0 && (
             <input
-              type="checkbox"
-              checked={viewMode === 'calendar'}
-              onChange={e => setViewMode(e.target.checked ? 'calendar' : 'list')}
+              type="text"
+              placeholder="Search batches or ingredient codes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ flex: '1', maxWidth: '300px', minWidth: '200px' }}
             />
-            <span className="slider round"></span>
-          </label>
+          )}
+
+          
         </div>
       )}
+
       {/* Calendar month navigation */}
       {viewMode === 'calendar' && filteredBatches.length > 0 && (
         <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
           <button 
             onClick={() => navigateMonth(-1)}
-            style={{ fontSize: '10px', padding: '5px' }}
+            style={{ fontSize: '12px', padding: '5px' }}
           >
-            ← Previous
+            ← 
           </button>
           <h3 style={{ margin: 0, minWidth: '150px', textAlign: 'center' }}>
             {currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
           </h3>
           <button 
-            
             onClick={() => navigateMonth(1)}
-            style={{ fontSize: '10px', padding: '5px' }}
+            style={{ fontSize: '12px', padding: '5px' }}
           >
-            Next →
+             →
           </button>
         </div>
-      )}
-      
-      {/* Only show batch search if not unit and there are batches in the database */}
-      {userRole !== 'unit' && batches.length > 0 && (
-        <div className="alignRight">
-          <input
-            type="text"
-            placeholder="Search batches or ingredient codes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      )}
-      {/* Only show add button if not unit */}
-      {userRole !== 'unit' && (
-        <button className='button' onClick={handleAddClick}>+</button>
       )}
       
       {/* Selection controls */}
