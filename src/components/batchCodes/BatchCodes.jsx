@@ -1265,7 +1265,10 @@ const formatDateDisplay = (dateStr) => {
   
   // Add this helper function near the top of your component
   const isMobileOrTablet = () => {
-    return window.matchMedia('(max-width: 1024px)').matches;
+    // Check for touch capability or smaller screens (including tablet landscape)
+    return window.matchMedia('(max-width: 1366px)').matches || 
+           ('ontouchstart' in window) || 
+           (navigator.maxTouchPoints > 0);
   };
 
   // Enhanced batch click handler for selection
