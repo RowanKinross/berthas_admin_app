@@ -38,6 +38,9 @@ function BatchCodes() {
   const [selectedBatches, setSelectedBatches] = useState(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
+  const [longPressTimer, setLongPressTimer] = useState(null);
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -59,6 +62,52 @@ function BatchCodes() {
   }
   return pages;
 }
+
+  // Calendar helper functions
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
+    const daysInMonth = lastDay.getDate();
+    
+    const days = [];
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      days.push(null);
+    }
+    
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+    
+    return days;
+  };
+
+  const formatDateForComparison = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  };
+
+  const getBatchesForDate = (date) => {
+    if (!date) return [];
+    const dateStr = formatDateForComparison(date);
+    return filteredBatches.filter(batch => 
+      formatDateForComparison(batch.batch_date) === dateStr
+    );
+  };
+
+  const navigateMonth = (direction) => {
+    setCurrentMonth(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() + direction);
+      return newDate;
+    });
+  };
 
   // CSV Download functionality
   const downloadSelectedBatchesCSV = () => {
@@ -228,6 +277,32 @@ function BatchCodes() {
     setLastSelectedIndex(null);
   };
 
+  const markSelectedBatchesIngredientsOrdered = async () => {
+    if (selectedBatches.size === 0) {
+      alert("Please select at least one batch to mark ingredients as ordered.");
+      return;
+    }
+
+    try {
+      const updatePromises = Array.from(selectedBatches).map(async (batchId) => {
+        const batchRef = doc(db, "batches", batchId);
+        await updateDoc(batchRef, {
+          ingredients_ordered: true
+        });
+      });
+
+      await Promise.all(updatePromises);
+      alert(`Marked ingredients as ordered for ${selectedBatches.size} batch(es).`);
+      
+      // Clear selection after successful update
+      setSelectionMode(false);
+      setSelectedBatches(new Set());
+    } catch (error) {
+      console.error("Error updating batches:", error);
+      alert("Error marking ingredients as ordered. Please try again.");
+    }
+  };
+
   const calculateSelectedBatchesIngredients = () => {
     if (selectedBatches.size === 0) {
       alert("Please select at least one batch to calculate ingredients.");
@@ -291,17 +366,20 @@ function BatchCodes() {
     const htmlContent = `
       <html>
         <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Ingredients / Bertha's at Home Admin App</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            * { box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; width: 100%; max-width: 95%; overflow-x: hidden; }
+            body { font-family: Arial, sans-serif; margin: 20px; word-wrap: break-word; }
             h1 { color: #333; margin-bottom: 20px; }
             h2 { color: #666; margin-top: 30px; margin-bottom: 15px; }
-            .ingredient-list { margin-bottom: 30px; }
-            .ingredient-item { margin: 8px 0; padding: 5px; border-bottom: 1px dotted #ccc; }
-            .ingredient-name { font-weight: bold; }
-            .ingredient-quantity { float: right; }
-            .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; }
-            .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; }
+            .ingredient-list { margin-bottom: 30px; width: 100%; }
+            .ingredient-item { margin: 8px 0; padding: 5px; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .ingredient-name { font-weight: bold; word-break: break-word; flex: 1; }
+            .ingredient-quantity { margin-left: 10px; flex-shrink: 0; }
+            .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; word-wrap: break-word; width: 100%; }
+            .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; word-wrap: break-word; width: 100%; }
             @media print { body { margin: 0; } }
           </style>
         </head>
@@ -945,9 +1023,18 @@ const formatDateDisplay = (dateStr) => {
       }
   
       if (type === "batch") {
-        await updateDoc(batchRef, {
-          [field]: field === "ingredients_ordered" ? !!value : value
-        });
+        if (field === "batch_date") {
+          // When batch date changes, also update the batch code
+          const newBatchCode = formatDateToBatchCode(value);
+          await updateDoc(batchRef, {
+            batch_date: value,
+            batch_code: newBatchCode
+          });
+        } else {
+          await updateDoc(batchRef, {
+            [field]: field === "ingredients_ordered" ? !!value : value
+          });
+        }
       }
 
       if (type === "pizza") {
@@ -1092,6 +1179,16 @@ const formatDateDisplay = (dateStr) => {
   // Get userRole from localStorage
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
 
+  // Track if selection instruction has been shown
+  const [hasSeenSelectionInstruction, setHasSeenSelectionInstruction] = useState(() => 
+    localStorage.getItem('hasSeenSelectionInstruction') === 'true'
+  );
+
+  // Track if toggle instruction has been shown
+  const [hasSeenToggleInstruction, setHasSeenToggleInstruction] = useState(() => 
+    localStorage.getItem('hasSeenToggleInstruction') === 'true'
+  );
+
   // Helper function to normalize text for search
   const normalizeForSearch = (text) => {
     if (!text) return "";
@@ -1204,7 +1301,76 @@ const formatDateDisplay = (dateStr) => {
   
   // Add this helper function near the top of your component
   const isMobileOrTablet = () => {
-    return window.matchMedia('(max-width: 1024px)').matches;
+    // Check for touch capability or smaller screens (including tablet landscape)
+    return window.matchMedia('(max-width: 1366px)').matches || 
+           ('ontouchstart' in window) || 
+           (navigator.maxTouchPoints > 0);
+  };
+
+  // Enhanced batch click handler for selection
+  const handleBatchClickWithSelection = (batch, index, event) => {
+    // Mark instruction as seen when user first interacts with batches
+    if (!hasSeenSelectionInstruction) {
+      setHasSeenSelectionInstruction(true);
+      localStorage.setItem('hasSeenSelectionInstruction', 'true');
+    }
+
+    // Shift+click for range selection (works on all devices)
+    if (event.shiftKey) {
+      event.preventDefault();
+      if (!selectionMode) {
+        setSelectionMode(true);
+      }
+      toggleBatchSelection(batch.id, index, true);
+      return;
+    }
+    
+    // If already in selection mode, toggle batch selection with normal click
+    if (selectionMode) {
+      event.preventDefault();
+      toggleBatchSelection(batch.id, index, false);
+      return;
+    }
+    
+    // Normal click behavior (open batch details)
+    handleBatchClick(batch);
+  };
+
+  // Long press handlers (works on all devices)
+  const handleTouchStart = (batch, index) => {
+    // Mark instruction as seen when user first interacts with batches
+    if (!hasSeenSelectionInstruction) {
+      setHasSeenSelectionInstruction(true);
+      localStorage.setItem('hasSeenSelectionInstruction', 'true');
+    }
+    
+    const timer = setTimeout(() => {
+      if (!selectionMode) {
+        setSelectionMode(true);
+      }
+      toggleBatchSelection(batch.id, index);
+      
+      // Add haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 500); // 500ms long press
+    
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleTouchCancel = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
   };
 
   // Image compression helper function
@@ -1254,33 +1420,110 @@ const formatDateDisplay = (dateStr) => {
   return (
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
-      {/* Only show batch search if not unit and there are batches in the database */}
-      {userRole !== 'unit' && batches.length > 0 && (
-        <div className="alignRight">
-          <input
-            type="text"
-            placeholder="Search batches or ingredient codes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      
+      {/* Add button */}
+          {userRole !== 'unit' && (
+            <button className='button' onClick={handleAddClick}>+</button>
+          )}
+
+
+      {/* Top controls row: View toggle, Search, Add button */}
+      {(filteredBatches.length > 0 || userRole !== 'unit') && (
+        <div style={{ 
+          margin: '15px 0px', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap',
+          gap: '10px' 
+        }}>
+          {/* View toggle slider */}
+          {filteredBatches.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', position: 'relative' }}>
+              <label className="switch" style={{ position: 'relative' }} title="Switch between List and Calendar view">
+                <input
+                  type="checkbox"
+                  checked={viewMode === 'calendar'}
+                  onChange={e => {
+                    setViewMode(e.target.checked ? 'calendar' : 'list');
+                    if (!hasSeenToggleInstruction) {
+                      setHasSeenToggleInstruction(true);
+                      localStorage.setItem('hasSeenToggleInstruction', 'true');
+                    }
+                  }}
+                />
+                <span className="slider round"></span>
+              </label>
+              {!hasSeenToggleInstruction && viewMode === 'list' && (
+                <div style={{
+                  position: 'absolute',
+                  left: '20px',
+                  top: '-20px',
+                  fontSize: '12px',
+                  color: '#666',
+                  fontStyle: 'italic',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  whiteSpace: 'nowrap'
+                }}>
+                  <span style={{
+                  rotate:'270deg'}}>↰</span>
+                  <span>Switch to calendar view</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Search box */}
+          {userRole !== 'unit' && batches.length > 0 && (
+            <input
+              type="text"
+              placeholder="Search batches or ingredient codes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ flex: '1', maxWidth: '300px', minWidth: '200px' }}
+            />
+          )}
+
+          
         </div>
       )}
-      {/* Only show add button if not unit */}
-      {userRole !== 'unit' && (
-        <button className='button' onClick={handleAddClick}>+</button>
+
+      {/* Calendar month navigation */}
+      {viewMode === 'calendar' && filteredBatches.length > 0 && (
+        <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
+          <button 
+            onClick={() => navigateMonth(-1)}
+            style={{ fontSize: '12px', padding: '5px' }}
+          >
+            ← 
+          </button>
+          <h3 style={{ margin: 0, minWidth: '150px', textAlign: 'center' }}>
+            {currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+          </h3>
+          <button 
+            onClick={() => navigateMonth(1)}
+            style={{ fontSize: '12px', padding: '5px' }}
+          >
+             →
+          </button>
+        </div>
       )}
       
       {/* Selection controls */}
       {filteredBatches.length > 0 && (
         <div  style={{ display: 'flex', marginBottom: '15px', alignItems: 'start'   }}>
           {!selectionMode ? (
-            <button 
-              className='button'
-              onClick={() => setSelectionMode(true)}
-              style={{ fontSize: '12px', padding: '5px 10px'}}
-            >
-              Select Batches
-            </button>
+            !hasSeenSelectionInstruction && (
+              <div style={{ fontSize: '12px', color: '#666', fontStyle: 'italic' }}>
+                {isMobileOrTablet() 
+                  ? 'Long press on a batch to select' 
+                  : 'Shift+click on a batch to select'
+                }
+
+              </div>
+            )
           ) : (
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button 
@@ -1314,6 +1557,14 @@ const formatDateDisplay = (dateStr) => {
                 Calculate Ingredients ({selectedBatches.size})
               </button>
               <button 
+                className='button completed'
+                onClick={markSelectedBatchesIngredientsOrdered}
+                disabled={selectedBatches.size === 0}
+                style={{ fontSize: '12px', padding: '5px 10px' }}
+              >
+                Ingredients Ordered ✓
+              </button>
+              <button 
                 className='button draft'
                 onClick={() => {
                   setSelectionMode(false);
@@ -1344,7 +1595,36 @@ const formatDateDisplay = (dateStr) => {
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
           <div >
-            <p><strong>Batch Date:</strong> {formatDateDisplay(viewingBatch.batch_date)}</p>
+            <p><strong>Batch Date:</strong>{" "}
+            {editingField === "batch-date" ? (
+              <input
+                type="date"
+                value={editingValue}
+                autoFocus
+                onChange={(e) => setEditingValue(e.target.value)}
+                onBlur={() => handleInlineSave("batch", null, "batch_date", editingValue)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleInlineSave("batch", null, "batch_date", editingValue);
+                  }
+                }}
+              />
+            ) : (
+              <span
+                onClick={() => {
+                  if (userRole === 'admin') {
+                    setEditingField("batch-date");
+                    setEditingValue(viewingBatch.batch_date || "");
+                  }
+                }}
+                style={{ 
+                  cursor: userRole === 'admin' ? 'pointer' : 'default',
+                  textDecoration: userRole === 'admin' ? 'underline' : 'none'
+                }}
+              >
+                {formatDateDisplay(viewingBatch.batch_date)}
+              </span>
+            )}</p>
             <div>
             <div className='dateLabelContainer'>
               <strong>Date Label:</strong>
@@ -2018,81 +2298,182 @@ const formatDateDisplay = (dateStr) => {
         </form>
       )}
   
-      {filteredBatches.length > 0 && (
-        <div className='batchHeader container'>
-          {selectionMode && <p>Select</p>}
-          <p>Batch Date:</p>
-          <p>Ingredients Ordered?</p>
-        </div>
-      )}
-
+      {/* Calendar/List View Display */}
       {filteredBatches.length > 0 ? (
-        filteredBatches
-        .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-        .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
-        .map((batch, index) => {
-          const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
-          
-          return (
-            <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-              
-                {selectionMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedBatches.has(batch.id)}
-                    onChange={(e) => {
-                      const isShiftClick = e.nativeEvent.shiftKey;
-                      toggleBatchSelection(batch.id, index, isShiftClick);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ marginRight: '10px', transform: 'scale(1.2)' }}
-                  />
-                )}
-                <button 
-                  className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
-                  onClick={() => handleBatchClick(batch)}
-                  style={{ display: 'flex', flexDirection: 'column', width: '100%' }}
-                >
-                <div className="container" style={{ width: '100%' }}>
-                  <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
-                  <p className='batchTextBoxCenter'>{batch.num_pizzas > 0 ? batch.num_pizzas : ''}</p>
-                  {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
+        viewMode === 'calendar' ? (
+          // Calendar View
+          <div className="calendar-container" style={{ marginBottom: '20px' }}>
+            <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px' }}>
+              {/* Header row */}
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} style={{ padding: '2px', textAlign: 'center', fontWeight: 'bold', fontSize: '10px' }}>
+                  {day}
                 </div>
-                {matchingIngredients.length > 0 && (
-                  <div style={{ 
-                    width: '100%', 
-                    fontSize: '0.8em', 
-                    opacity: 0.8, 
-                    marginTop: '0.25rem',
-                    textAlign: 'left',
-                    paddingLeft: '0.5rem'
-                  }}>
-                    {matchingIngredients.length === 1 ? (
-                      <div>
-                        {matchingIngredients[0].ingredient}: {matchingIngredients[0].code} → {matchingIngredients[0].pizzas.join(', ')}
-                      </div>
-                    ) : (
-                      <ul style={{ margin: 0, paddingLeft: '1rem' }}>
-                        {matchingIngredients.map((match, index) => (
-                          <li key={index}>
-                            {match.ingredient}: {match.code} → {match.pizzas.join(', ')}
-                          </li>
-                        ))}
-                      </ul>
+              ))}
+              
+              {/* Calendar days */}
+              {getDaysInMonth(currentMonth).map((date, index) => {
+                const dayBatches = getBatchesForDate(date);
+                const isToday = date && formatDateForComparison(date) === formatDateForComparison(new Date());
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`calendar-day ${isToday ? 'today' : ''}`}
+                    style={{ 
+                      minHeight: '80px', 
+                      padding: '4px', 
+                      backgroundColor: date ? (isToday ? '#e3f2fd' : '#ffffff') : '#f5f5f5',
+                      border: '1px solid #ddd',
+                      position: 'relative'
+                    }}
+                  >
+                    {date && (
+                      <>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '2px' }}>
+                          {date.getDate()}
+                        </div>
+                        {dayBatches.map((batch, batchIndex) => {
+                          const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
+                          return (
+                            <div key={batch.id} style={{ marginBottom: '1px' }}>
+                              <button
+                                className={`button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
+                                onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
+                                onTouchStart={() => handleTouchStart(batch, batchIndex)}
+                                onTouchEnd={handleTouchEnd}
+                                onTouchCancel={handleTouchCancel}
+                                style={{ 
+                                  fontSize: '10px', 
+                                  padding: '2px 4px', 
+                                  width: '100%',
+                                  marginBottom: '1px',
+                                  display: 'block',
+                                  position: 'relative'
+                                }}
+                                title={`${batch.batch_code} - ${batch.num_pizzas} pizzas ${batch.ingredients_ordered ? '(✓)' : '(✘)'}`}
+                              >
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                                  <span style={{ fontSize: '9px' }}>{batch.batch_code}</span>
+                                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
+                                    <span>{batch.num_pizzas}</span>
+                                    <span>{batch.ingredients_ordered ? '✓' : '✘'}</span>
+                                  </div>
+                                  {selectionMode && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedBatches.has(batch.id)}
+                                    onChange={(e) => {
+                                      const isShiftClick = e.nativeEvent.shiftKey;
+                                      toggleBatchSelection(batch.id, batchIndex, isShiftClick);
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{ 
+                                      transform: 'scale(0.7)'
+                                    }}
+                                  />
+                                )}
+                                </div>
+                                {matchingIngredients.length > 0 && (
+                                  <div style={{ fontSize: '8px', opacity: 0.8, textAlign: 'center', marginTop: '1px' }}>
+                                    {matchingIngredients[0].ingredient}: {matchingIngredients[0].code}
+                                  </div>
+                                )}
+                                
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </>
                     )}
                   </div>
-                )}
-              </button>
+                );
+              })}
             </div>
-          );
-        })
+          </div>
+        ) : (
+          // List View (existing code)
+          <>
+            {/* Batch header */}
+            <div className='batchHeader container'>
+              <p>Batch Date:</p>
+              <p>Ingredients Ordered?</p>
+            </div>
+            
+            {filteredBatches
+              .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+              .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
+              .map((batch, index) => {
+                const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
+                
+                return (
+                  <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
+                      {selectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedBatches.has(batch.id)}
+                          onChange={(e) => {
+                            const isShiftClick = e.nativeEvent.shiftKey;
+                            toggleBatchSelection(batch.id, index, isShiftClick);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ 
+                            transform: 'scale(1.2)',
+                          }}
+                        />
+                      )}
+                      <button 
+                        className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
+                        onClick={(e) => handleBatchClickWithSelection(batch, index, e)}
+                        onTouchStart={() => handleTouchStart(batch, index)}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchCancel={handleTouchCancel}
+                        style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}
+                      >
+
+                      <div className="container" style={{ width: '100%' }}>
+                        <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
+                        <p className='batchTextBoxCenter'>{batch.num_pizzas > 0 ? batch.num_pizzas : ''}</p>
+                        {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
+                      </div>
+                      {matchingIngredients.length > 0 && (
+                        <div style={{ 
+                          width: '100%', 
+                          fontSize: '0.8em', 
+                          opacity: 0.8, 
+                          marginTop: '0.25rem',
+                          textAlign: 'left',
+                          paddingLeft: '0.5rem'
+                        }}>
+                          {matchingIngredients.length === 1 ? (
+                            <div>
+                              {matchingIngredients[0].ingredient}: {matchingIngredients[0].code} → {matchingIngredients[0].pizzas.join(', ')}
+                            </div>
+                          ) : (
+                            <ul style={{ margin: 0, paddingLeft: '1rem' }}>
+                              {matchingIngredients.map((match, index) => (
+                                <li key={index}>
+                                  {match.ingredient}: {match.code} → {match.pizzas.join(', ')}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+          </>
+        )
       ) : (
         <p className='py-3'>
           {batches.length === 0 ? 'Loading batches...' : 'No batches found matching your search.'}
         </p>
       )}
-      {/* Pagination: hide for unit userRole */}
-      {userRole !== 'unit' && (
+      {/* Pagination: hide for unit userRole and calendar view */}
+      {userRole !== 'unit' && viewMode === 'list' && filteredBatches.length > 0 && (
         <div className="pagination">
           {getPagination(currentPage, Math.ceil(filteredBatches.length / batchesPerPage)).map((page, idx) =>
             page === '...' ? (
