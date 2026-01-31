@@ -291,17 +291,20 @@ function BatchCodes() {
     const htmlContent = `
       <html>
         <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Ingredients / Bertha's at Home Admin App</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
+            * { box-sizing: border-box; }
+            html, body { margin: 0; padding: 0; width: 100%; max-width: 95%; overflow-x: hidden; }
+            body { font-family: Arial, sans-serif; margin: 20px; word-wrap: break-word; }
             h1 { color: #333; margin-bottom: 20px; }
             h2 { color: #666; margin-top: 30px; margin-bottom: 15px; }
-            .ingredient-list { margin-bottom: 30px; }
-            .ingredient-item { margin: 8px 0; padding: 5px; border-bottom: 1px dotted #ccc; }
-            .ingredient-name { font-weight: bold; }
-            .ingredient-quantity { float: right; }
-            .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; }
-            .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; }
+            .ingredient-list { margin-bottom: 30px; width: 100%; }
+            .ingredient-item { margin: 8px 0; padding: 5px; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; align-items: center; width: 100%; }
+            .ingredient-name { font-weight: bold; word-break: break-word; flex: 1; }
+            .ingredient-quantity { margin-left: 10px; flex-shrink: 0; }
+            .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; word-wrap: break-word; width: 100%; }
+            .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; word-wrap: break-word; width: 100%; }
             @media print { body { margin: 0; } }
           </style>
         </head>
