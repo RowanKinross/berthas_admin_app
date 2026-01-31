@@ -1315,23 +1315,17 @@ const formatDateDisplay = (dateStr) => {
     <div className='batchCodes navContent'>
       <h2>BATCHES</h2>
       
-      {/* View toggle buttons */}
+      {/* View toggle slider */}
       {filteredBatches.length > 0 && (
-        <div style={{ marginBottom: '15px', display: 'flex', gap: '10px' }}>
-          <button 
-            className={`button ${viewMode === 'list' ? 'completed' : 'draft'}`}
-            onClick={() => setViewMode('list')}
-            style={{ fontSize: '12px', padding: '5px 10px' }}
-          >
-            List View
-          </button>
-          <button 
-            className={`button ${viewMode === 'calendar' ? 'completed' : 'draft'}`}
-            onClick={() => setViewMode('calendar')}
-            style={{ fontSize: '12px', padding: '5px 10px' }}
-          >
-            Calendar View
-          </button>
+        <div style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label className="switch" style={{ position: 'relative' }} title="Switch between List and Calendar view">
+            <input
+              type="checkbox"
+              checked={viewMode === 'calendar'}
+              onChange={e => setViewMode(e.target.checked ? 'calendar' : 'list')}
+            />
+            <span className="slider round"></span>
+          </label>
         </div>
       )}
       {/* Calendar month navigation */}
