@@ -568,7 +568,10 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
         const allBatches = await getDocs(collection(db, "batches"));
         const pizzaBatches = allBatches.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(batch => batch.pizzas?.some(p => p.id === pizzaId))
+          .filter(batch => 
+            batch.pizzas?.some(p => p.id === pizzaId) && 
+            batch.pizza_numbers_complete === true
+          )
           .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // newest first
           .slice(0, 10);
         
