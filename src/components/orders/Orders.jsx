@@ -52,16 +52,24 @@ function Orders() {
   
   // split toggle
   const [splitToggleError, setSplitToggleError] = useState("");
-  const [showSplitHint, setShowSplitHint] = useState(true);
+  const [showSplitHint, setShowSplitHint] = useState(() => 
+    localStorage.getItem('hasSeenSplitInstruction') !== 'true'
+  );
   
   // edit qty hint
-  const [showEditQtyHint, setShowEditQtyHint] = useState(true);
+  const [showEditQtyHint, setShowEditQtyHint] = useState(() => 
+    localStorage.getItem('hasSeenEditQtyInstruction') !== 'true'
+  );
   
   // tool tip on mobile for explaining the buttons
   const [activeTooltip, setActiveTooltip] = useState(null);
 
   // Sleeve Filter:
   const [sleeveFilter, setSleeveFilter] = useState("all");
+
+  // Found stock data
+  const [foundStockData, setFoundStockData] = useState({});
+  const [expandedFoundStock, setExpandedFoundStock] = useState({});
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -554,13 +562,103 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
       );
     };
 
+  // Found stock functions
+  const toggleFoundStock = async (pizzaId) => {
+    const isExpanded = expandedFoundStock[pizzaId];
+    
+    if (!isExpanded) {
+      try {
+        // Get last 10 batches for this pizza type
+        const allBatches = await getDocs(collection(db, "batches"));
+        const pizzaBatches = allBatches.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(batch => {
+            // Check if batch contains this pizza type and is completed
+            if (!batch.pizzas?.some(p => p.id === pizzaId) || batch.pizza_numbers_complete !== true) {
+              return false;
+            }
+            
+            // Check if batch is older than 9 months
+            const batchDate = dayjs(batch.batch_code, 'YYYYMMDD', true);
+            if (!batchDate.isValid()) return false;
+            
+            const nineMonthsAgo = dayjs().subtract(9, 'months');
+            return batchDate.isBefore(nineMonthsAgo);
+          })
+          .sort((a, b) => b.batch_code.localeCompare(a.batch_code)); // newest first
+        
+        setFoundStockData(prev => ({ ...prev, [pizzaId]: pizzaBatches }));
+      } catch (error) {
+        console.error("Error fetching found stock:", error);
+      }
+    }
+    
+    setExpandedFoundStock(prev => ({ ...prev, [pizzaId]: !isExpanded }));
+  };
 
+  const updateBatchQuantity = async (batchId, pizzaId, change) => {
+    try {
+      const batchRef = doc(db, "batches", batchId);
+      const batchDoc = await getDoc(batchRef);
+      const batchData = batchDoc.data();
+      
+      const updatedPizzas = batchData.pizzas.map(pizza => {
+        if (pizza.id === pizzaId) {
+          return { ...pizza, quantity: Math.max(0, pizza.quantity + change) };
+        }
+        return pizza;
+      });
+      
+      await updateDoc(batchRef, { pizzas: updatedPizzas });
+      
+      // Update local state for the specific pizza
+      setFoundStockData(prev => ({
+        ...prev,
+        [pizzaId]: (prev[pizzaId] || []).map(batch => {
+          if (batch.id === batchId) {
+            return { ...batch, pizzas: updatedPizzas };
+          }
+          return batch;
+        })
+      }));
+      
+    } catch (error) {
+      console.error("Error updating batch quantity:", error);
+    }
+  };
 
+  const archivePizza = async (batchId, pizzaId) => {
+    try {
+      const batchRef = doc(db, "batches", batchId);
+      const batchDoc = await getDoc(batchRef);
+      const batchData = batchDoc.data();
+      
+      const updatedPizzas = batchData.pizzas.map(pizza => {
+        if (pizza.id === pizzaId) {
+          return { ...pizza, archived: true };
+        }
+        return pizza;
+      });
+      
+      await updateDoc(batchRef, { pizzas: updatedPizzas });
+      
+      // Update local state
+      setFoundStockData(prev => prev.map(batch => {
+        if (batch.id === batchId) {
+          return { ...batch, pizzas: updatedPizzas };
+        }
+        return batch;
+      }));
+      
+    } catch (error) {
+      console.error("Error archiving pizza:", error);
+    }
+  };
 
-const handleBatchClick = async (pizzaName, batchCode) => {
-  const currentBatches = [...(selectedOrder.pizzas[pizzaName].batchesUsed || [])];
-  const index = currentBatches.findIndex(b => b.batch_number === batchCode);
-  const totalQty = selectedOrder.pizzas[pizzaName].quantity;
+  const handleBatchClick = async (pizzaName, batchCode) => {
+    const currentBatches = [...(selectedOrder.pizzas[pizzaName].batchesUsed || [])];
+    const index = currentBatches.findIndex(b => b.batch_number === batchCode);
+    const totalQty = selectedOrder.pizzas[pizzaName].quantity;
   let newBatches;
   let newQuantity = 0;
   if (isSplitChecked) {
@@ -875,11 +973,18 @@ const orderHasBatchErrors = (order) => {
 
       Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
         const pizzaName = pizzaTitles[pizzaId] || pizzaId;
-        pizzaData.batchesUsed.forEach(b => {
-          const batchDate = formatBatchDate(b.batch_number);
-          const batchCode = b.batch_number || 'unassigned';
-          html += `<p>${pizzaName} x ${b.quantity} batch: ${batchDate ? ` ${batchDate}` : ''}</p>`;
-        });
+        
+        // Check if pizza has batch assignments
+        if (pizzaData.batchesUsed && pizzaData.batchesUsed.length > 0) {
+          pizzaData.batchesUsed.forEach(b => {
+            const batchDate = formatBatchDate(b.batch_number);
+            const batchCode = b.batch_number || 'unassigned';
+            html += `<p>${pizzaName} x ${b.quantity} batch: ${batchDate ? ` ${batchDate}` : ''}</p>`;
+          });
+        } else if (pizzaData.quantity > 0) {
+          // Show pizzas without batch assignments (like dough balls)
+          html += `<p>${pizzaName} x ${pizzaData.quantity} (no batch assigned)</p>`;
+        }
       });
 
 
@@ -945,7 +1050,6 @@ const handlePrintClick = () => {
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
       <div style="margin-bottom: 20px;">
         <strong>Delivery Date:</strong> ${date}<br/>
-        <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
         <strong>Reference:</strong> PO ${po}
       </div>
       <div style="margin-bottom: 20px;">
@@ -982,6 +1086,17 @@ const handlePrintClick = () => {
   html += `
         </tbody>
       </table>
+      <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
+        <h4 style="margin-bottom: 2px;">Goods Recieved By:</h3>
+        <div>
+            <p style="margin:0; padding:2px 0">
+            Signature:____________________</p>
+            <p style="margin:0; padding:2px 0">
+            Print Signature:________________</p>
+            <p style="margin:0; padding:2px 0">
+            Date:________________________</p>
+        </div>
+      </div>
     </div>`;
 
   const printWindow = window.open('', '', 'width=800,height=600');
@@ -1104,6 +1219,24 @@ const handleBulkPrintPackingSlips = () => {
     html += `
           </tbody>
         </table>
+        
+        <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
+          <h3 style="margin-bottom: 20px;">GOODS RECEIVED BY:</h3>
+          <div style="display: flex; justify-content: space-between; gap: 20px;">
+            <div style="flex: 1;">
+              <strong>Signature:</strong><br/>
+              <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 10px;"></div>
+            </div>
+            <div style="flex: 1;">
+              <strong>Print Signature:</strong><br/>
+              <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 10px;"></div>
+            </div>
+            <div style="flex: 1;">
+              <strong>Date:</strong><br/>
+              <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 10px;"></div>
+            </div>
+          </div>
+        </div>
       </div>`;
   });
 
@@ -1535,19 +1668,92 @@ function getPizzaAllocatedTally(pizzaData) {
       )}
     </div>
     <div className="pagination">
-      {Array.from({ length: Math.ceil(filteredOrders.length / ordersPerPage) }, (_, index) => (
-        <button
-          key={index + 1}
-          className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
-          onClick={() => setCurrentPage(index + 1)}
-        >
-          {index + 1}
-        </button>
-      ))}
+      {(() => {
+        const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+        if (totalPages <= 1) return null;
+
+        const buttons = [];
+        
+        // Previous button
+        if (currentPage > 1) {
+          buttons.push(
+            <button
+              key="prev"
+              className="page-button"
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              ‹
+            </button>
+          );
+        }
+
+        // First page
+        if (currentPage > 3) {
+          buttons.push(
+            <button
+              key={1}
+              className="page-button"
+              onClick={() => setCurrentPage(1)}
+            >
+              1
+            </button>
+          );
+          if (currentPage > 4) {
+            buttons.push(<span key="dots1" className="page-dots">...</span>);
+          }
+        }
+
+        // Current page and neighbors
+        const start = Math.max(1, currentPage - 1);
+        const end = Math.min(totalPages, currentPage + 1);
+        
+        for (let i = start; i <= end; i++) {
+          buttons.push(
+            <button
+              key={i}
+              className={`page-button ${currentPage === i ? 'active' : ''}`}
+              onClick={() => setCurrentPage(i)}
+            >
+              {i}
+            </button>
+          );
+        }
+
+        // Last page
+        if (currentPage < totalPages - 2) {
+          if (currentPage < totalPages - 3) {
+            buttons.push(<span key="dots2" className="page-dots">...</span>);
+          }
+          buttons.push(
+            <button
+              key={totalPages}
+              className="page-button"
+              onClick={() => setCurrentPage(totalPages)}
+            >
+              {totalPages}
+            </button>
+          );
+        }
+
+        // Next button
+        if (currentPage < totalPages) {
+          buttons.push(
+            <button
+              key="next"
+              className="page-button"
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              ›
+            </button>
+          );
+        }
+
+        return buttons;
+      })()}
     </div>
     {selectedOrder && (
-        <div className='modal'>
-          <div className='modalContent orderModal' ref={modalRef}>
+        <div className='orderModalOverlay'>
+        <div className='modalContent orderModal' ref={modalRef}>
           <div className='orderDetailsAndSlip'>
             <div>- Order Details -</div>
             {selectedOrder.account_ID !== "WASTAGE" && (
@@ -1727,8 +1933,11 @@ function getPizzaAllocatedTally(pizzaData) {
               className='button pencil clickable'
               title="edit order quantities"
               onClick={() =>{
-                setEditQuantities(q => !q)
-                setShowEditQtyHint(false);
+                setEditQuantities(q => !q);
+                if (showEditQtyHint) {
+                  setShowEditQtyHint(false);
+                  localStorage.setItem('hasSeenEditQtyInstruction', 'true');
+                }
               }}>
               <FontAwesomeIcon
                 icon={faPencilAlt}
@@ -1767,6 +1976,7 @@ function getPizzaAllocatedTally(pizzaData) {
                       setIsSplitChecked(e.target.checked);
                       if (showSplitHint) {
                         setShowSplitHint(false);
+                        localStorage.setItem('hasSeenSplitInstruction', 'true');
                       }
                     }}
                   />
@@ -1806,7 +2016,7 @@ function getPizzaAllocatedTally(pizzaData) {
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
                 <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
-                <p>allocated {getPizzaAllocatedTally(pizzaData).allocated} / </p>
+                <p className='allocatedText'>allocated {getPizzaAllocatedTally(pizzaData).allocated} / </p>
                 {editQuantities ? (
                   <input
                     type="number"
@@ -1888,7 +2098,7 @@ function getPizzaAllocatedTally(pizzaData) {
                     style={{ width: 60 }}
                   />
                 ) : (
-                  <p>{pizzaData.quantity}
+                  <p className='allocatedText'>{pizzaData.quantity}
                   </p>
                 )}
               </div>    
@@ -1929,72 +2139,119 @@ function getPizzaAllocatedTally(pizzaData) {
 
 
               <div className="batchButtonContainer">
-              {batches
-                .filter(batch => {
-                  const pizza = batch.pizzas.find(p => p.id === pizzaName);
-                  return (
-                    pizza &&
-                    getAvailableQuantity(batch, pizzaName, selectedOrder.id) > 0 &&
-                    batch.pizza_numbers_complete === true
-                  );
-                })
-                .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
-                .map((batch, i) => {
-                  const isSelected = (pizzaData.batchesUsed || []).some(b => b.batch_number === batch.batch_code);
-                  const selectedBatch = (pizzaData.batchesUsed || []).find(b => b.batch_number === batch.batch_code);
-                  const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
-                  const quantity = selectedBatch?.quantity || 0;
-                  const hasSelection = (pizzaData.batchesUsed || []).some(b => !!b.batch_number);
+                {batches
+                  .filter(batch => {
+                    const pizza = batch.pizzas.find(p => p.id === pizzaName);
+                    return (
+                      pizza &&
+                      getAvailableQuantity(batch, pizzaName, selectedOrder.id) > 0 &&
+                      batch.pizza_numbers_complete === true
+                    );
+                  })
+                  .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
+                  .map((batch, i) => {
+                    const isSelected = (pizzaData.batchesUsed || []).some(b => b.batch_number === batch.batch_code);
+                    const selectedBatch = (pizzaData.batchesUsed || []).find(b => b.batch_number === batch.batch_code);
+                    const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
+                    const quantity = selectedBatch?.quantity || 0;
+                    const hasSelection = (pizzaData.batchesUsed || []).some(b => !!b.batch_number);
 
-                  return (
-                    <div
-                      key={i}
-                      className={`batchButton 
-                        ${isSelected ? 'selected' : ''} 
-                        ${!isSplitChecked && hasSelection && !isSelected ? 'faded' : ''}`}
-                      onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
-                    >
-                      <div className="batchLabel">
-                        {formatBatchCode(batch.batch_code)} <br /> ({available} available)
+                    return (
+                      <div
+                        key={i}
+                        className={`batchButton 
+                          ${isSelected ? 'selected' : ''} 
+                          ${!isSplitChecked && hasSelection && !isSelected ? 'faded' : ''}`}
+                        onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
+                      >
+                        <div className="batchLabel">
+                          {formatBatchCode(batch.batch_code)} <br /> ({available} available)
+                        </div>
+
+                        {isSplitChecked && isSelected && (
+                          <input
+                            type="number"
+                            min={0}
+                            max={available}
+                            value={
+                              draftBatchQuantities[`${pizzaName}_${batch.batch_code}`] !== undefined
+                                ? draftBatchQuantities[`${pizzaName}_${batch.batch_code}`]
+                                : (quantity === 0 ? "" : quantity)
+                            }
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setDraftBatchQuantities(prev => ({
+                                ...prev,
+                                [`${pizzaName}_${batch.batch_code}`]: val
+                              }));
+                            }}
+                            onBlur={e => {
+                              const val = parseInt(e.target.value, 10);
+                              handleBatchQuantityChange(
+                                pizzaName,
+                                batch.batch_code,
+                                isNaN(val) ? 0 : val
+                              );
+                              setDraftBatchQuantities(prev => {
+                                const updated = { ...prev };
+                                delete updated[`${pizzaName}_${batch.batch_code}`];
+                                return updated;
+                              });
+                            }}
+                          />
+                        )}
                       </div>
+                    );
+                  })}
+              {/* Found Stock - moved to end of batch list */}
+              <div className='foundStockFlex batchButton'>
+                <div 
+                  className="foundStockHeader"
+                  onClick={() => toggleFoundStock(pizzaName)}
+                >
+                  Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}
+                </div>
 
-                      {isSplitChecked && isSelected && (
-                        <input
-                          type="number"
-                          min={0}
-                          max={available}
-                          value={
-                            draftBatchQuantities[`${pizzaName}_${batch.batch_code}`] !== undefined
-                              ? draftBatchQuantities[`${pizzaName}_${batch.batch_code}`]
-                              : (quantity === 0 ? "" : quantity)
-                          }
-                          onClick={e => e.stopPropagation()}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setDraftBatchQuantities(prev => ({
-                              ...prev,
-                              [`${pizzaName}_${batch.batch_code}`]: val
-                            }));
-                          }}
-                          onBlur={e => {
-                            const val = parseInt(e.target.value, 10);
-                            handleBatchQuantityChange(
-                              pizzaName,
-                              batch.batch_code,
-                              isNaN(val) ? 0 : val
-                            );
-                            setDraftBatchQuantities(prev => {
-                              const updated = { ...prev };
-                              delete updated[`${pizzaName}_${batch.batch_code}`];
-                              return updated;
-                            });
-                          }}
-                        />
-                      )}
+                {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
+                  <div className='foundStockData' style={{ 
+                    backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour || '#fff',
+
+                  }}>
+                    <h4 className='foundStockPizza'>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
+                    <div className='foundStockList'>
+                    {foundStockData[pizzaName].map(batch => {
+                      const pizza = batch.pizzas?.find(p => p.id === pizzaName);
+                      if (!pizza || pizza.archived) return null;
+                      
+                      return (
+                        <div key={batch.id} className='foundStockListItem'>
+                          <strong>{formatBatchCode(batch.batch_code)}</strong>
+                          <div>Quantity: {pizza.quantity}</div>
+                          <div className='foundStockButtons'>
+                            <button
+                              className='addMinusButton'
+                              onClick={() => updateBatchQuantity(batch.id, pizzaName, -1)}
+                              disabled={pizza.quantity <= 0}
+                            >
+                              -
+                            </button>
+                            <button
+                              className='addMinusButton'
+                              onClick={() => updateBatchQuantity(batch.id, pizzaName, 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                     </div>
-                  );
-                })}
-            </div>
+                  </div>
+                )}
+              </div>
+              </div>
+
 
             </div>
           ))}
@@ -2162,7 +2419,7 @@ function getPizzaAllocatedTally(pizzaData) {
           )}
           </div>
           <button 
-            className='button'
+            className='button deleteButton'
             onClick={handleOrderDelete}
           >
             <FontAwesomeIcon icon = {faTrash}/>
@@ -2172,6 +2429,7 @@ function getPizzaAllocatedTally(pizzaData) {
         </div>
         </div>
       )}
+
   </div>
   )
 }
