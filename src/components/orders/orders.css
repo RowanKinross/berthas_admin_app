@@ -384,33 +384,36 @@ input:checked + .slider:before {
   display: inline-block;
 }
 
-/* Found Stock Modal */
-.foundStockModal {
-  max-width: 600px;
-}
+/* Found Stock */
 .foundStockHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
+  font-size: x-small;
+  font-style: oblique;
+}
+.foundStockPizza {
+  font-weight: bold;
+  font-size: x-small;
 }
 .foundStockData {
-  max-height: 400px;
-  overflow-y: auto;
+  max-height: 100px;
+  max-width: 300px;
+  font-size: x-small;
+  overflow-y: auto;        
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
 }
 .foundStockList {
   display: flex; 
   align-items: center; 
   justify-content: space-between;
-  padding: 10px;
+  padding: 5px;
   border: 1px solid #ddd;
   margin-bottom: 5px;
-  border-radius: 4px;
 }
 .addMinusButton {
   padding: 0 !important;
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   background-color: var(--dark);
   color: var(--bertha);
 }

@@ -2079,23 +2079,17 @@ function getPizzaAllocatedTally(pizzaData) {
                 })}
             </div>
 
-            <button 
-              className="button button-secondary"
+            <div 
+              className="foundStockHeader"
               onClick={() => toggleFoundStock(pizzaName)}
-              style={{ marginTop: '10px' }}
             >
-              {expandedFoundStock[pizzaName] ? 'Hide Found Stock' : 'Add Found Stock'}
-            </button>
-
+              <p>Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}</p>
+            </div>
             {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
               <div className='foundStockData' style={{ 
-                backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour + '30' || '#fff',
-                marginTop: '10px',
-                padding: '10px',
-                borderRadius: '5px',
-                border: `2px solid ${pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour || '#ccc'}`
+                backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour  || '#fff',
               }}>
-                <h4>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
+                <h4 className='foundStockPizza'>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
                 {foundStockData[pizzaName].map(batch => {
                   const pizza = batch.pizzas?.find(p => p.id === pizzaName);
                   if (!pizza || pizza.archived) return null;
