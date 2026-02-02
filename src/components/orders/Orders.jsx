@@ -951,12 +951,18 @@ const orderHasBatchErrors = (order) => {
   const generatePDF = () => {
     const selected = orders.filter(o => selectedOrders.includes(o.id));
 
-    let html = `<html><head><title>Combined Orders</title>
+    let html = `<html>
+    <head><title>Combined Orders</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 20px; }
       .order-block { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
       h3 { margin-top: 0; }
-    </style></head><body>`;
+    </style>
+    
+    </head>
+    
+    <body>
+    `;
 
     selected.forEach(order => {
       let customerName;
@@ -967,9 +973,12 @@ const orderHasBatchErrors = (order) => {
       } else {
         customerName = order.customer_name || order.account_ID;
       }
-      html += `<div class="order-block">
-        <h3>${customerName}</h3>
-        <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
+      
+      html += `
+      <div class="order-block" style="display: flex; justify-content: space-between; margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem;">
+        <div style="width: 65%;">
+          <h3 style="margin-top: 0;">${customerName}</h3>
+          <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
 
       Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
         const pizzaName = pizzaTitles[pizzaId] || pizzaId;
@@ -987,8 +996,17 @@ const orderHasBatchErrors = (order) => {
         }
       });
 
-
-      html += `</div>`;
+      html += `
+        </div>
+        <div style="width: 30%; height: min-content; border-radius: 5px; border: 1px solid #909090; padding: 15px;">
+          <p style="margin:0; padding:4px 0">
+          Signature:____________</p>
+          <p style="margin:0; padding:4px 0">
+          Name:_______________</p>
+          <p style="margin:0; padding:4px 0">
+          Date:________________</p>
+        </div>
+      </div>`;
     });
 
     html += `</body></html>`;
