@@ -973,11 +973,18 @@ const orderHasBatchErrors = (order) => {
 
       Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
         const pizzaName = pizzaTitles[pizzaId] || pizzaId;
-        pizzaData.batchesUsed.forEach(b => {
-          const batchDate = formatBatchDate(b.batch_number);
-          const batchCode = b.batch_number || 'unassigned';
-          html += `<p>${pizzaName} x ${b.quantity} batch: ${batchDate ? ` ${batchDate}` : ''}</p>`;
-        });
+        
+        // Check if pizza has batch assignments
+        if (pizzaData.batchesUsed && pizzaData.batchesUsed.length > 0) {
+          pizzaData.batchesUsed.forEach(b => {
+            const batchDate = formatBatchDate(b.batch_number);
+            const batchCode = b.batch_number || 'unassigned';
+            html += `<p>${pizzaName} x ${b.quantity} batch: ${batchDate ? ` ${batchDate}` : ''}</p>`;
+          });
+        } else if (pizzaData.quantity > 0) {
+          // Show pizzas without batch assignments (like dough balls)
+          html += `<p>${pizzaName} x ${pizzaData.quantity} (no batch assigned)</p>`;
+        }
       });
 
 
