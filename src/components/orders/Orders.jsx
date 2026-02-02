@@ -720,8 +720,10 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
 
   const validateAndUpdateOrderStatus = async (order) => {
     const hasErrors = orderHasBatchErrors(order);
+    
+    // Don't downgrade from "packed" status - only upgrade
     const newStatus = hasErrors ? "order placed" : "ready to pack";
-    if (order.order_status !== newStatus) {
+    if (order.order_status !== newStatus && order.order_status !== "packed") {
       const updatedOrder = { ...order, order_status: newStatus };
       setSelectedOrder(updatedOrder); // update local for temp purposes
       try {
