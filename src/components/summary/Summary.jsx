@@ -527,7 +527,7 @@ const averageOrderingPercent = {};
               onClick={() => setShowBatchBuilder(true)}
               title="Open Batch Builder Tool"
             >
-              🔧 Test Scenarios
+              🔧 Batch Builder
             </button>
           </div>
           <PlannedTable 

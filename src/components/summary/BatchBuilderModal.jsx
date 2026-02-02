@@ -314,7 +314,7 @@ function BatchBuilderModal({
                         })()} 
                       </td>
                       <td>
-                        {avgWeeklyOrders > 0 ? `${projectedWeeks}wks` : '-'}
+                        {avgWeeklyOrders > 0 ? `${projectedWeeks} wks` : '-'}
                       </td>
                       <td>
                         {avgPercent != null && avgPercent !== '' ? `${avgPercent}%` : '-'}
