@@ -3,6 +3,10 @@ import { db } from '../firebase/firebase';
 import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
+import ReactCrop from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -41,6 +45,16 @@ function BatchCodes() {
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Photo cropping and editing states
+  const [showImageCrop, setShowImageCrop] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [crop, setCrop] = useState({ aspect: 3 });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const [rotation, setRotation] = useState(0);
+  const [currentPizzaId, setCurrentPizzaId] = useState(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(null); // Track which pizza is uploading
+  const imageRef = useRef(null);
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -1417,22 +1431,79 @@ const formatDateDisplay = (dateStr) => {
     });
   };
 
-  // Handle photo upload for pizzas
-  const handlePhotoUpload = async (pizzaId, file) => {
+  // Handle initial photo selection - opens crop modal
+  const handlePhotoSelect = (pizzaId, file) => {
     if (!file || !file.type.startsWith('image/')) {
       alert('Please select a valid image file.');
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result);
+      setCurrentPizzaId(pizzaId);
+      setCrop({ aspect: 3, width: 150, height: 50 });
+      setCompletedCrop(null);
+      setRotation(0);
+      setShowImageCrop(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handle final photo upload after cropping
+  const handlePhotoUpload = async () => {
+    if (!completedCrop || !imageRef.current || !currentPizzaId) return;
+
     try {
-      // Compress the image
-      const compressedImage = await compressImage(file);
+      setUploadingPhoto(currentPizzaId);
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const image = imageRef.current;
+
+      // Calculate crop dimensions
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+
+      canvas.width = completedCrop.width * scaleX;
+      canvas.height = completedCrop.height * scaleY;
+
+      // Apply rotation
+      if (rotation !== 0) {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        ctx.translate(centerX, centerY);
+        ctx.rotate((rotation * Math.PI) / 180);
+        ctx.translate(-centerX, -centerY);
+      }
+
+      ctx.drawImage(
+        image,
+        completedCrop.x * scaleX,
+        completedCrop.y * scaleY,
+        completedCrop.width * scaleX,
+        completedCrop.height * scaleY,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      // Convert to data URL with compression
+      const croppedImageData = canvas.toDataURL('image/jpeg', 0.7);
       
       // Update the database
-      await handleInlineSave("pizza", pizzaId, "photo", compressedImage);
+      await handleInlineSave("pizza", currentPizzaId, "photo", croppedImageData);
+      
+      // Close modal
+      setShowImageCrop(false);
+      setCropImageSrc("");
+      setCurrentPizzaId(null);
     } catch (error) {
       console.error("Error uploading photo:", error);
       alert("Error uploading photo. Please try again.");
+    } finally {
+      setUploadingPhoto(null);
     }
   };
 
@@ -1708,16 +1779,26 @@ const formatDateDisplay = (dateStr) => {
           <div className='pizzaPhotoSection'>
             <div className='pizzaPhotoContainer'>
               {pizza.photo && (
-                <img 
-                  src={pizza.photo} 
-                  alt={`${pizza.pizza_title} photo`}
-                  className='pizzaPhoto'
-                  onClick={() => {
-                    // Open image in new window for better viewing
-                    const newWindow = window.open();
-                    newWindow.document.write(`<img src="${pizza.photo}" style="max-width: 100%; max-height: 100vh; object-fit: contain;">`);
-                  }}
-                />
+                <>
+                  <img 
+                    src={pizza.photo} 
+                    alt={`${pizza.pizza_title} photo`}
+                    className='pizzaPhoto'
+                    onClick={() => {
+                      // Open image in new window for better viewing
+                      const newWindow = window.open();
+                      newWindow.document.write(`<img src="${pizza.photo}" style="max-width: 100%; max-height: 100vh; object-fit: contain;">`);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className='button pizzaPhotoButton deleteAction'
+                    onClick={() => handleInlineSave("pizza", pizza.id, "photo", null)}
+                    title="Remove photo"
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                </>
               )}
               <div className='pizzaPhotoControls'>
                 <input
@@ -1727,8 +1808,10 @@ const formatDateDisplay = (dateStr) => {
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
-                      handlePhotoUpload(pizza.id, file);
+                      handlePhotoSelect(pizza.id, file);
                     }
+                    // Reset the input so same file can be selected again
+                    e.target.value = '';
                   }}
                   style={{ display: 'none' }}
                   id={`photo-upload-${pizza.id}`}
@@ -1739,18 +1822,8 @@ const formatDateDisplay = (dateStr) => {
                     className='button pizzaPhotoButton'
                     style={{ fontSize: '12px', padding: '4px 8px' }}
                   >
-                    Add Photo
+                    {uploadingPhoto === pizza.id ? "Uploading..." : "Add Photo"}
                   </label>
-                )}
-                {pizza.photo && (
-                  <button
-                    type="button"
-                    className='button draft pizzaPhotoButton deleteAction'
-                    onClick={() => handleInlineSave("pizza", pizza.id, "photo", null)}
-                    style={{ fontSize: '12px', padding: '4px 8px' }}
-                  >
-                    x
-                  </button>
                 )}
               </div>
             </div>
@@ -2222,7 +2295,7 @@ const formatDateDisplay = (dateStr) => {
           {userRole !== 'unit' && (
             <button
               type="button"
-              className='button draft deleteAction'
+              className='button deleteAction'
               onClick={() => {
                 const confirmed = window.confirm("Are you sure you want to delete this batch?");
                 if (confirmed) {
@@ -2230,7 +2303,7 @@ const formatDateDisplay = (dateStr) => {
               }
             }}
             >
-              Delete batch
+              <FontAwesomeIcon icon={faTrash} />
             </button>
           )}
           </div>
@@ -2509,6 +2582,108 @@ const formatDateDisplay = (dateStr) => {
               </button>
             )
           )}
+        </div>
+      )}
+
+      {/* Image Cropping Modal */}
+      {showImageCrop && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '20px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ marginBottom: '15px' }}>
+              <h3>Crop & Rotate Photo</h3>
+              <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  className="button"
+                  onClick={() => setRotation(r => r - 90)}
+                  style={{ fontSize: '12px', padding: '5px 10px' }}
+                >
+                  Rotate ↺
+                </button>
+                <button
+                  className="button"
+                  onClick={() => setRotation(r => r + 90)}
+                  style={{ fontSize: '12px', padding: '5px 10px' }}
+                >
+                  Rotate ↻
+                </button>
+                <span style={{ fontSize: '12px', color: '#666' }}>
+                  Rotation: {rotation}°
+                </span>
+              </div>
+            </div>
+
+            <ReactCrop
+              crop={crop}
+              onChange={(newCrop) => setCrop(newCrop)}
+              onComplete={(newCrop) => setCompletedCrop(newCrop)}
+              aspect={3}
+              style={{ maxWidth: '500px', maxHeight: '400px' }}
+            >
+              <img
+                ref={imageRef}
+                src={cropImageSrc}
+                style={{
+                  transform: `rotate(${rotation}deg)`,
+                  maxWidth: '100%',
+                  maxHeight: '400px'
+                }}
+                onLoad={() => {
+                  if (imageRef.current) {
+                    const { width, height } = imageRef.current;
+                    const cropHeight = Math.min(height * 0.4, width / 3);
+                    const cropWidth = cropHeight * 3;
+                    setCrop({
+                      unit: 'px',
+                      width: cropWidth,
+                      height: cropHeight,
+                      x: (width - cropWidth) / 2,
+                      y: (height - cropHeight) / 2,
+                      aspect: 3
+                    });
+                  }
+                }}
+              />
+            </ReactCrop>
+
+            <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                className="button button-secondary"
+                onClick={() => {
+                  setShowImageCrop(false);
+                  setCropImageSrc("");
+                  setCurrentPizzaId(null);
+                }}
+                disabled={uploadingPhoto}
+              >
+                Cancel
+              </button>
+              <button
+                className="button"
+                onClick={handlePhotoUpload}
+                disabled={!completedCrop || uploadingPhoto}
+              >
+                {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
