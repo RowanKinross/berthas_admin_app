@@ -1633,19 +1633,92 @@ function getPizzaAllocatedTally(pizzaData) {
       )}
     </div>
     <div className="pagination">
-      {Array.from({ length: Math.ceil(filteredOrders.length / ordersPerPage) }, (_, index) => (
-        <button
-          key={index + 1}
-          className={`page-button ${currentPage === index + 1 ? 'active' : ''}`}
-          onClick={() => setCurrentPage(index + 1)}
-        >
-          {index + 1}
-        </button>
-      ))}
+      {(() => {
+        const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+        if (totalPages <= 1) return null;
+
+        const buttons = [];
+        
+        // Previous button
+        if (currentPage > 1) {
+          buttons.push(
+            <button
+              key="prev"
+              className="page-button"
+              onClick={() => setCurrentPage(currentPage - 1)}
+            >
+              ‹
+            </button>
+          );
+        }
+
+        // First page
+        if (currentPage > 3) {
+          buttons.push(
+            <button
+              key={1}
+              className="page-button"
+              onClick={() => setCurrentPage(1)}
+            >
+              1
+            </button>
+          );
+          if (currentPage > 4) {
+            buttons.push(<span key="dots1" className="page-dots">...</span>);
+          }
+        }
+
+        // Current page and neighbors
+        const start = Math.max(1, currentPage - 1);
+        const end = Math.min(totalPages, currentPage + 1);
+        
+        for (let i = start; i <= end; i++) {
+          buttons.push(
+            <button
+              key={i}
+              className={`page-button ${currentPage === i ? 'active' : ''}`}
+              onClick={() => setCurrentPage(i)}
+            >
+              {i}
+            </button>
+          );
+        }
+
+        // Last page
+        if (currentPage < totalPages - 2) {
+          if (currentPage < totalPages - 3) {
+            buttons.push(<span key="dots2" className="page-dots">...</span>);
+          }
+          buttons.push(
+            <button
+              key={totalPages}
+              className="page-button"
+              onClick={() => setCurrentPage(totalPages)}
+            >
+              {totalPages}
+            </button>
+          );
+        }
+
+        // Next button
+        if (currentPage < totalPages) {
+          buttons.push(
+            <button
+              key="next"
+              className="page-button"
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              ›
+            </button>
+          );
+        }
+
+        return buttons;
+      })()}
     </div>
     {selectedOrder && (
-        <div className='modal'>
-          <div className='modalContent orderModal' ref={modalRef}>
+        <div className='orderModalOverlay'>
+        <div className='modalContent orderModal' ref={modalRef}>
           <div className='orderDetailsAndSlip'>
             <div>- Order Details -</div>
             {selectedOrder.account_ID !== "WASTAGE" && (
