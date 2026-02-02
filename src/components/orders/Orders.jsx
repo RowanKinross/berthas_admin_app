@@ -1221,22 +1221,16 @@ const handleBulkPrintPackingSlips = () => {
         </table>
         
         <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
-          <h3 style="margin-bottom: 20px;">GOODS RECEIVED BY:</h3>
-          <div style="display: flex; justify-content: space-between; gap: 20px;">
-            <div style="flex: 1;">
-              <strong>Signature:</strong><br/>
-              <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 10px;"></div>
-            </div>
-            <div style="flex: 1;">
-              <strong>Print Signature:</strong><br/>
-              <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 10px;"></div>
-            </div>
-            <div style="flex: 1;">
-              <strong>Date:</strong><br/>
-              <div style="border-bottom: 1px solid #000; height: 40px; margin-top: 10px;"></div>
-            </div>
-          </div>
+        <h4 style="margin-bottom: 2px;">Goods Recieved By:</h3>
+        <div>
+            <p style="margin:0; padding:2px 0">
+            Signature:____________________</p>
+            <p style="margin:0; padding:2px 0">
+            Print Signature:________________</p>
+            <p style="margin:0; padding:2px 0">
+            Date:________________________</p>
         </div>
+      </div>
       </div>`;
   });
 
