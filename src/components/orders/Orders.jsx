@@ -63,6 +63,10 @@ function Orders() {
   // Sleeve Filter:
   const [sleeveFilter, setSleeveFilter] = useState("all");
 
+  // Found stock data
+  const [foundStockData, setFoundStockData] = useState({});
+  const [expandedFoundStock, setExpandedFoundStock] = useState({});
+
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
   const parsed = dayjs(code, 'YYYYMMDD', true);
@@ -554,13 +558,92 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
       );
     };
 
+  // Found stock functions
+  const toggleFoundStock = async (pizzaId) => {
+    const isExpanded = expandedFoundStock[pizzaId];
+    
+    if (!isExpanded) {
+      try {
+        // Get last 10 batches for this pizza type
+        const allBatches = await getDocs(collection(db, "batches"));
+        const pizzaBatches = allBatches.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(batch => batch.pizzas?.some(p => p.id === pizzaId))
+          .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // newest first
+          .slice(0, 10);
+        
+        setFoundStockData(prev => ({ ...prev, [pizzaId]: pizzaBatches }));
+      } catch (error) {
+        console.error("Error fetching found stock:", error);
+      }
+    }
+    
+    setExpandedFoundStock(prev => ({ ...prev, [pizzaId]: !isExpanded }));
+  };
 
+  const updateBatchQuantity = async (batchId, pizzaId, change) => {
+    try {
+      const batchRef = doc(db, "batches", batchId);
+      const batchDoc = await getDoc(batchRef);
+      const batchData = batchDoc.data();
+      
+      const updatedPizzas = batchData.pizzas.map(pizza => {
+        if (pizza.id === pizzaId) {
+          return { ...pizza, quantity: Math.max(0, pizza.quantity + change) };
+        }
+        return pizza;
+      });
+      
+      await updateDoc(batchRef, { pizzas: updatedPizzas });
+      
+      // Update local state for the specific pizza
+      setFoundStockData(prev => ({
+        ...prev,
+        [pizzaId]: (prev[pizzaId] || []).map(batch => {
+          if (batch.id === batchId) {
+            return { ...batch, pizzas: updatedPizzas };
+          }
+          return batch;
+        })
+      }));
+      
+    } catch (error) {
+      console.error("Error updating batch quantity:", error);
+    }
+  };
 
+  const archivePizza = async (batchId, pizzaId) => {
+    try {
+      const batchRef = doc(db, "batches", batchId);
+      const batchDoc = await getDoc(batchRef);
+      const batchData = batchDoc.data();
+      
+      const updatedPizzas = batchData.pizzas.map(pizza => {
+        if (pizza.id === pizzaId) {
+          return { ...pizza, archived: true };
+        }
+        return pizza;
+      });
+      
+      await updateDoc(batchRef, { pizzas: updatedPizzas });
+      
+      // Update local state
+      setFoundStockData(prev => prev.map(batch => {
+        if (batch.id === batchId) {
+          return { ...batch, pizzas: updatedPizzas };
+        }
+        return batch;
+      }));
+      
+    } catch (error) {
+      console.error("Error archiving pizza:", error);
+    }
+  };
 
-const handleBatchClick = async (pizzaName, batchCode) => {
-  const currentBatches = [...(selectedOrder.pizzas[pizzaName].batchesUsed || [])];
-  const index = currentBatches.findIndex(b => b.batch_number === batchCode);
-  const totalQty = selectedOrder.pizzas[pizzaName].quantity;
+  const handleBatchClick = async (pizzaName, batchCode) => {
+    const currentBatches = [...(selectedOrder.pizzas[pizzaName].batchesUsed || [])];
+    const index = currentBatches.findIndex(b => b.batch_number === batchCode);
+    const totalQty = selectedOrder.pizzas[pizzaName].quantity;
   let newBatches;
   let newQuantity = 0;
   if (isSplitChecked) {
@@ -1996,6 +2079,54 @@ function getPizzaAllocatedTally(pizzaData) {
                 })}
             </div>
 
+            <button 
+              className="button button-secondary"
+              onClick={() => toggleFoundStock(pizzaName)}
+              style={{ marginTop: '10px' }}
+            >
+              {expandedFoundStock[pizzaName] ? 'Hide Found Stock' : 'Add Found Stock'}
+            </button>
+
+            {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
+              <div className='foundStockData' style={{ 
+                backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour + '30' || '#fff',
+                marginTop: '10px',
+                padding: '10px',
+                borderRadius: '5px',
+                border: `2px solid ${pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour || '#ccc'}`
+              }}>
+                <h4>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
+                {foundStockData[pizzaName].map(batch => {
+                  const pizza = batch.pizzas?.find(p => p.id === pizzaName);
+                  if (!pizza || pizza.archived) return null;
+                  
+                  return (
+                    <div key={batch.id} className='foundStockList'>
+                      <div>
+                        <strong>{formatBatchCode(batch.batch_code)}</strong>
+                        <div>Quantity: {pizza.quantity}</div>
+                      </div>
+                      <div className='foundStockButtons'>
+                        <button
+                          className='button addMinusButton'
+                          onClick={() => updateBatchQuantity(batch.id, pizzaName, -1)}
+                          disabled={pizza.quantity <= 0}
+                        >
+                          -
+                        </button>
+                        <button
+                          className='button addMinusButton'
+                          onClick={() => updateBatchQuantity(batch.id, pizzaName, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             </div>
           ))}
           {editQuantities && (
@@ -2172,6 +2303,7 @@ function getPizzaAllocatedTally(pizzaData) {
         </div>
         </div>
       )}
+
   </div>
   )
 }

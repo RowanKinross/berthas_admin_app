@@ -384,6 +384,52 @@ input:checked + .slider:before {
   display: inline-block;
 }
 
+/* Found Stock Modal */
+.foundStockModal {
+  max-width: 600px;
+}
+.foundStockHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.foundStockData {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.foundStockList {
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  padding: 10px;
+  border: 1px solid #ddd;
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+.addMinusButton {
+  padding: 0 !important;
+  width: 30px;
+  height: 30px;
+  background-color: var(--dark);
+  color: var(--bertha);
+}
+.foundStockButtons {
+  display: flex;
+  align-items: center;
+}
+.foundStockCloseButton {
+  background-color: transparent !important;
+  border: transparent !important;
+  color: var(--dark) !important;
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
 .mobile-tooltip {
   position: absolute;
   bottom: 100%;
