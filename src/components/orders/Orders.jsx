@@ -37,6 +37,11 @@ function Orders() {
   const [batchErrors, setBatchErrors] = useState({});
   const [isSplitChecked, setIsSplitChecked] = useState(false);
   const [editQuantities, setEditQuantities] = useState(false);
+  
+  // Press and hold selection state
+  const [pressTimer, setPressTimer] = useState(null);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 25;
@@ -782,11 +787,79 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
   }, [selectedOrder]);
 
 
-  const handleOrderClick = useCallback((order) => {
-    setSelectedOrder(order);
-    setViewModal(true)
-    setSplitToggleError("");
-  }, [])
+  const handleOrderClick = useCallback((order, event) => {
+    // Check for shift+click
+    if (event?.shiftKey) {
+      event.preventDefault();
+      toggleOrderSelection(order.id);
+      return;
+    }
+    
+    // Normal click - open modal if not in select mode
+    if (!selectMode) {
+      setSelectedOrder(order);
+      setViewModal(true);
+      setSplitToggleError("");
+    } else {
+      toggleOrderSelection(order.id);
+    }
+  }, [selectMode])
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectMode(true);
+    setSelectedOrders(prev => {
+      if (prev.includes(orderId)) {
+        const newSelection = prev.filter(id => id !== orderId);
+        // Exit select mode if no orders selected
+        if (newSelection.length === 0) {
+          setSelectMode(false);
+        }
+        return newSelection;
+      } else {
+        return [...prev, orderId];
+      }
+    });
+  };
+
+  const handlePressStart = useCallback((order, event) => {
+    const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+    const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+    
+    setStartPos({ x: clientX, y: clientY });
+    setHasMoved(false);
+    
+    const timer = setTimeout(() => {
+      if (!hasMoved) {
+        toggleOrderSelection(order.id);
+      }
+    }, 800);
+    
+    setPressTimer(timer);
+  }, [hasMoved]);
+
+  const handlePressMove = useCallback((event) => {
+    if (pressTimer) {
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+      
+      const deltaX = Math.abs(clientX - startPos.x);
+      const deltaY = Math.abs(clientY - startPos.y);
+      
+      // If moved more than 10px, cancel the press timer
+      if (deltaX > 10 || deltaY > 10) {
+        setHasMoved(true);
+        clearTimeout(pressTimer);
+        setPressTimer(null);
+      }
+    }
+  }, [pressTimer, startPos]);
+
+  const handlePressEnd = useCallback(() => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+  }, [pressTimer]);
 
   const handleCloseModal = useCallback(() => {
     setSelectedOrder(null);
@@ -951,12 +1024,18 @@ const orderHasBatchErrors = (order) => {
   const generatePDF = () => {
     const selected = orders.filter(o => selectedOrders.includes(o.id));
 
-    let html = `<html><head><title>Combined Orders</title>
+    let html = `<html>
+    <head><title>Combined Orders</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 20px; }
       .order-block { margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem; }
       h3 { margin-top: 0; }
-    </style></head><body>`;
+    </style>
+    
+    </head>
+    
+    <body>
+    `;
 
     selected.forEach(order => {
       let customerName;
@@ -967,9 +1046,12 @@ const orderHasBatchErrors = (order) => {
       } else {
         customerName = order.customer_name || order.account_ID;
       }
-      html += `<div class="order-block">
-        <h3>${customerName}</h3>
-        <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
+      
+      html += `
+      <div class="order-block" style="display: flex; justify-content: space-between; margin-bottom: 2rem; border-bottom: 1px solid #ccc; padding-bottom: 1rem;">
+        <div style="width: 65%;">
+          <h3 style="margin-top: 0;">${customerName}</h3>
+          <p><strong>Total Pizzas:</strong> ${order.pizzaTotal}</p>`;
 
       Object.entries(order.pizzas).forEach(([pizzaId, pizzaData]) => {
         const pizzaName = pizzaTitles[pizzaId] || pizzaId;
@@ -987,8 +1069,17 @@ const orderHasBatchErrors = (order) => {
         }
       });
 
-
-      html += `</div>`;
+      html += `
+        </div>
+        <div style="width: 30%; height: min-content; border-radius: 5px; border: 1px solid #909090; padding: 15px;">
+          <p style="margin:0; padding:4px 0">
+          Signature:____________</p>
+          <p style="margin:0; padding:4px 0">
+          Name:_______________</p>
+          <p style="margin:0; padding:4px 0">
+          Date:________________</p>
+        </div>
+      </div>`;
     });
 
     html += `</body></html>`;
@@ -1032,7 +1123,9 @@ const handlePrintClick = () => {
   <div style="page-break-after: always; font-family: Arial, sans-serif; font-size: 14px; padding: 40px; max-width: 700px; margin: auto;">
 
   <div style=" margin-bottom: 20px;">
-  <img src="/bertha_logo_bw.png" style="max-height: 80px;" />
+  <object data="/bertha_logo_bw.png" type="image/png" style="max-height: 100px; width: auto;">
+    <img src="/bertha_logo_bw.png" style="max-height: 100px;" alt="Bertha's Logo" />
+  </object>
   </div>
   
   <h2 style="text-align: center; margin-bottom: 30px;">PACKING SLIP</h2>
@@ -1086,7 +1179,7 @@ const handlePrintClick = () => {
   html += `
         </tbody>
       </table>
-      <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
+      <div style="margin-top: 40px; padding-top: 20px;">
         <h4 style="margin-bottom: 2px;">Goods Recieved By:</h3>
         <div>
             <p style="margin:0; padding:2px 0">
@@ -1166,10 +1259,12 @@ const handleBulkPrintPackingSlips = () => {
     ].filter(Boolean).join('<br/>');
 
     html += `
-      <div class="packing-slip">
-        <div style="margin-bottom: 20px;">
-          <img src="/bertha_logo_bw.png" />
-        </div>
+    <div class="packing-slip">
+    <div style=" margin-bottom: 20px;">
+      <object data="/bertha_logo_bw.png" type="image/png" style="max-height: 100px; width: auto;">
+        <img src="/bertha_logo_bw.png" style="max-height: 100px;" alt="Bertha's Logo" />
+      </object>
+    </div>
         <h2 style="text-align: center; margin-bottom: 30px;">PACKING SLIP</h2>
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
           <div style="border: 1px solid #000; padding: 10px; width: 48%;">
@@ -1216,10 +1311,10 @@ const handleBulkPrintPackingSlips = () => {
     });
 
     html += `
-          </tbody>
+        </tbody>
         </table>
         
-        <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
+        <div style="margin-top: 40px; padding-top: 20px;">
         <h4 style="margin-bottom: 2px;">Goods Recieved By:</h3>
         <div>
             <p style="margin:0; padding:2px 0">
@@ -1238,9 +1333,29 @@ const handleBulkPrintPackingSlips = () => {
   const printWindow = window.open('', '', 'width=800,height=600');
   printWindow.document.write(html);
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-  printWindow.close();
+  
+  printWindow.onload = () => {
+    const logoImg = printWindow.document.querySelector('img');
+    
+    if (logoImg) {
+      logoImg.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      };
+      // Fallback in case onload never fires (e.g., cached images)
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }, 1000);
+    } else {
+      // No image? Just print
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
 };
 
 
@@ -1460,20 +1575,20 @@ function getPizzaAllocatedTally(pizzaData) {
           </label>
         </div>
 
-    <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
+    <div className='today'><span className='deliveryToday'>Today: {dayjs().format('ddd DD-MM-YYYY')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
       <div className='selectCancel' {...(selectedOrders.length > 0 && { 'data-count': selectedOrders.length })}>
-        <button
-          className='button'
-          onClick={() => {
-            if (selectMode) {
-              setSelectedOrders([]); // clear selected orders when exiting selection mode
-            }
-            setSelectMode(!selectMode);
-          }}
+        {selectMode && (
+          <button
+            className='button'
+            onClick={() => {
+              setSelectedOrders([]);
+              setSelectMode(false);
+            }}
           >
-          {selectMode ? "Cancel Selection" : "Select Orders"}
-        </button>
+            Cancel Selection ({selectedOrders.length})
+          </button>
+        )}
         {selectMode && (
           <button
             className='button button-secondary'
@@ -1629,8 +1744,16 @@ function getPizzaAllocatedTally(pizzaData) {
               ${order.complete ? 'complete' : ''} 
               ${order.order_status === 'ready to pack' ? 'allocated' : ''}
               ${order.order_status === 'packed' ? 'packed' : ''}
+              ${selectedOrders.includes(order.id) ? 'selected' : ''}
               `}
-              onClick={() => handleOrderClick(order)}
+              onClick={(e) => handleOrderClick(order, e)}
+              onMouseDown={(e) => handlePressStart(order, e)}
+              onTouchStart={(e) => handlePressStart(order, e)}
+              onMouseMove={handlePressMove}
+              onTouchMove={handlePressMove}
+              onMouseUp={handlePressEnd}
+              onTouchEnd={handlePressEnd}
+              onMouseLeave={handlePressEnd}
               >
             <div>{order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name}</div>
             <div>{order.pizzaTotal}</div>

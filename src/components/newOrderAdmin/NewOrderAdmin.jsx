@@ -48,10 +48,6 @@ const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
 };
 const handleFilterChange = (event) => {
-  // Don't change filter for SAMPLES - always keep it as "all"
-  if (selectedCustomerId === "SAMPLES/6UGM") {
-    return;
-  }
   setFilterCriteria(event.target.value);
 };
 
@@ -376,7 +372,8 @@ const handleSubmit = async (event) => {
   setValidated(true);
   setSubmitting(true); // ✅ prevent further submissions
 
-  if (selectedCustomerId && filterCriteria) {
+  // Update default pizza view in Firestore (skip for SAMPLES)
+  if (selectedCustomerId && filterCriteria && selectedCustomerId !== "SAMPLES/6UGM") {
   const customerDoc = customerData.find(c => c.account_ID === selectedCustomerId);
   if (customerDoc && customerDoc.id) {
     await updateDoc(doc(db, "customers", customerDoc.id), {
