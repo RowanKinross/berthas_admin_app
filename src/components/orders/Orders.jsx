@@ -52,10 +52,14 @@ function Orders() {
   
   // split toggle
   const [splitToggleError, setSplitToggleError] = useState("");
-  const [showSplitHint, setShowSplitHint] = useState(true);
+  const [showSplitHint, setShowSplitHint] = useState(() => 
+    localStorage.getItem('hasSeenSplitInstruction') !== 'true'
+  );
   
   // edit qty hint
-  const [showEditQtyHint, setShowEditQtyHint] = useState(true);
+  const [showEditQtyHint, setShowEditQtyHint] = useState(() => 
+    localStorage.getItem('hasSeenEditQtyInstruction') !== 'true'
+  );
   
   // tool tip on mobile for explaining the buttons
   const [activeTooltip, setActiveTooltip] = useState(null);
@@ -1821,8 +1825,11 @@ function getPizzaAllocatedTally(pizzaData) {
               className='button pencil clickable'
               title="edit order quantities"
               onClick={() =>{
-                setEditQuantities(q => !q)
-                setShowEditQtyHint(false);
+                setEditQuantities(q => !q);
+                if (showEditQtyHint) {
+                  setShowEditQtyHint(false);
+                  localStorage.setItem('hasSeenEditQtyInstruction', 'true');
+                }
               }}>
               <FontAwesomeIcon
                 icon={faPencilAlt}
@@ -1861,6 +1868,7 @@ function getPizzaAllocatedTally(pizzaData) {
                       setIsSplitChecked(e.target.checked);
                       if (showSplitHint) {
                         setShowSplitHint(false);
+                        localStorage.setItem('hasSeenSplitInstruction', 'true');
                       }
                     }}
                   />
