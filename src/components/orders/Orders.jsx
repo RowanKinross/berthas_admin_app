@@ -1575,7 +1575,7 @@ function getPizzaAllocatedTally(pizzaData) {
           </label>
         </div>
 
-    <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
+    <div className='today'><span className='deliveryToday'>Today: {dayjs().format('ddd DD-MM-YYYY')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
       <div className='selectCancel' {...(selectedOrders.length > 0 && { 'data-count': selectedOrders.length })}>
         {selectMode && (
