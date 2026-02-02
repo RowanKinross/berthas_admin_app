@@ -1309,6 +1309,12 @@ const formatDateDisplay = (dateStr) => {
 
   // Enhanced batch click handler for selection
   const handleBatchClickWithSelection = (batch, index, event) => {
+    // Only allow selection functionality for admin users
+    if (userRole !== 'admin') {
+      handleBatchClick(batch);
+      return;
+    }
+    
     // Mark instruction as seen when user first interacts with batches
     if (!hasSeenSelectionInstruction) {
       setHasSeenSelectionInstruction(true);
@@ -1336,8 +1342,13 @@ const formatDateDisplay = (dateStr) => {
     handleBatchClick(batch);
   };
 
-  // Long press handlers (works on all devices)
+  // Long press handlers (works on all devices) - only for admin users
   const handleTouchStart = (batch, index) => {
+    // Only allow selection for admin users
+    if (userRole !== 'admin') {
+      return;
+    }
+    
     // Mark instruction as seen when user first interacts with batches
     if (!hasSeenSelectionInstruction) {
       setHasSeenSelectionInstruction(true);
@@ -1354,9 +1365,17 @@ const formatDateDisplay = (dateStr) => {
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 500); // 500ms long press
+    }, 800); // 800ms long press (increased from 500ms to be less sensitive)
     
     setLongPressTimer(timer);
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user is scrolling
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
   };
 
   const handleTouchEnd = () => {
@@ -1511,8 +1530,8 @@ const formatDateDisplay = (dateStr) => {
         </div>
       )}
       
-      {/* Selection controls */}
-      {filteredBatches.length > 0 && (
+      {/* Selection controls - only for admin users */}
+      {userRole === 'admin' && filteredBatches.length > 0 && (
         <div  style={{ display: 'flex', marginBottom: '15px', alignItems: 'start'   }}>
           {!selectionMode ? (
             !hasSeenSelectionInstruction && (
@@ -2341,6 +2360,7 @@ const formatDateDisplay = (dateStr) => {
                                 className={`button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
                                 onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
                                 onTouchStart={() => handleTouchStart(batch, batchIndex)}
+                                onTouchMove={handleTouchMove}
                                 onTouchEnd={handleTouchEnd}
                                 onTouchCancel={handleTouchCancel}
                                 style={{ 
@@ -2360,7 +2380,7 @@ const formatDateDisplay = (dateStr) => {
                                     <span>{batch.num_pizzas}</span>
                                     <span>{batch.ingredients_ordered ? '✓' : '✘'}</span>
                                   </div>
-                                  {selectionMode && (
+                                  {userRole === 'admin' && selectionMode && (
                                   <input
                                     type="checkbox"
                                     checked={selectedBatches.has(batch.id)}
@@ -2409,7 +2429,7 @@ const formatDateDisplay = (dateStr) => {
                 
                 return (
                   <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
-                      {selectionMode && (
+                      {userRole === 'admin' && selectionMode && (
                         <input
                           type="checkbox"
                           checked={selectedBatches.has(batch.id)}
@@ -2427,6 +2447,7 @@ const formatDateDisplay = (dateStr) => {
                         className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
                         onClick={(e) => handleBatchClickWithSelection(batch, index, e)}
                         onTouchStart={() => handleTouchStart(batch, index)}
+                        onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         onTouchCancel={handleTouchCancel}
                         style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}
