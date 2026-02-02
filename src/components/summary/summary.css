@@ -142,3 +142,37 @@
     padding: 12px 0px !important;
   }
 }
+
+/* Planned header controls */
+.planned-header-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-right: 20px;
+}
+
+.batch-builder-btn {
+  background: var(--bertha);
+  color: var(--dark);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .planned-header-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .batch-builder-btn {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
