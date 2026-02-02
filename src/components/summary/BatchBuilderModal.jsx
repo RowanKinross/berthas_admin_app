@@ -226,13 +226,13 @@ function BatchBuilderModal({
                       <React.Fragment key={`subtotal-gap-${i}`}>
                         <tr className="subtotal-row">
                           <td><strong>Subtotal</strong></td>
-                          <td><strong>-</strong></td>
+                          <td></td>
                           <td><strong>{subtotalW1}</strong></td>
                           <td><strong>{subtotalW2}</strong></td>
                           <td><strong>{subtotalW3}</strong></td>
-                          <td><strong>-</strong></td>
-                          <td><strong>-</strong></td>
-                          <td><strong>-</strong></td>
+                          <td></td>
+                          <td></td>
+                          <td></td>
                         </tr>
                         <tr key={`gap-${i}`} className="gap-row">
                           <td colSpan="8" className="gap-cell"></td>
