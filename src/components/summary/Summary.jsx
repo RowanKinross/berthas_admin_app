@@ -5,6 +5,7 @@ import StockTable from './stockTable';
 import PlannedTable from './plannedTable';
 import OrderingHabitsTable from './orderingHabitsTable';
 import OrderingHabitsByCustomer from './orderingHabitsByCustomer';
+import BatchBuilderModal from './BatchBuilderModal';
 import './summary.css';
 
 function Summary() {
@@ -16,6 +17,9 @@ function Summary() {
   const [showPercentStock, setShowPercentStock] = useState(false);
   const [showPercentPlanned, setShowPercentPlanned] = useState(false);
   const [showPercentOrdered, setShowPercentOrdered] = useState(false);
+  
+  // batch builder modal
+  const [showBatchBuilder, setShowBatchBuilder] = useState(false);
 
   const toDate = (d) => (d?.toDate ? d.toDate() : (d instanceof Date ? d : new Date(d)));
 
@@ -509,14 +513,23 @@ const averageOrderingPercent = {};
 
         <div className='summaryContainer'>
           <h3>Planned Stock</h3>
-          <label className="switch percentNumberSlider" title="Switch between percent & quantity">
-            <input
-              type="checkbox"
-              checked={showPercentPlanned}
-              onChange={e => setShowPercentPlanned(e.target.checked)}
-            />
-            <span className="slider round"></span>
-          </label>
+          <div className="planned-header-controls">
+            <label className="switch percentNumberSlider" title="Switch between percent & quantity">
+              <input
+                type="checkbox"
+                checked={showPercentPlanned}
+                onChange={e => setShowPercentPlanned(e.target.checked)}
+              />
+              <span className="slider round"></span>
+            </label>
+            <button 
+              className="batch-builder-btn"
+              onClick={() => setShowBatchBuilder(true)}
+              title="Open Batch Builder Tool"
+            >
+              🔧 Test Scenarios
+            </button>
+          </div>
           <PlannedTable 
           data={plannedSummary} 
           showPercent={showPercentPlanned}
@@ -556,6 +569,16 @@ const averageOrderingPercent = {};
             <OrderingHabitsByCustomer orders={orders} />
           </div>
       </div>
+      
+      <BatchBuilderModal
+        isOpen={showBatchBuilder}
+        onClose={() => setShowBatchBuilder(false)}
+        stockSummary={stockSummary}
+        plannedSummary={plannedSummary}
+        pizzas={pizzas}
+        averageOrdering={averageOrdering}
+        averageOrderingPercent={averageOrderingPercent}
+      />
     </div>
   );
 }

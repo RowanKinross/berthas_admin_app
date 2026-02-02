@@ -1,0 +1,253 @@
+.batch-builder-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.batch-builder-modal {
+  background: var(--pale);
+  border-radius: 8px;
+  max-width: 95vw;
+  max-height: 90vh;
+  width: 1200px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.batch-builder-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: var(--pale);
+  border-radius: 8px 8px 0 0;
+}
+
+.batch-builder-header h3 {
+  margin: 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  align-self: flex-end;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--dark);
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.batch-builder-content {
+  padding: 20px;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.week-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.week-selector label {
+  font-weight: 500;
+  color: #333;
+}
+
+.week-selector select {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.reset-button {
+  color: var(--dark);
+  background-color: var(--berthaLight);
+  border: solid 1px var(--dark);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+
+
+.batch-builder-table-container {
+  flex: 1;
+  overflow: auto;
+  border-radius: 4px;
+}
+
+.batch-builder-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.batch-builder-table th {
+  background: var(--pale);
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #dee2e6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  font-size: 13px;
+}
+
+.batch-builder-table td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.pizza-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--dark);
+  white-space: nowrap;
+}
+
+.week-input {
+  width: 60px;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.week-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.change-indicator {
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.change-indicator.positive {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.change-indicator.negative {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.change-indicator.neutral {
+  background: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+}
+
+.gap-row {
+  height: 20px;
+}
+
+.gap-cell {
+  border-bottom: 2px solid #dee2e6 !important;
+  background: #f8f9fa;
+  padding: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .batch-builder-modal {
+    width: 95vw;
+    height: 90vh;
+    margin: 5vh auto;
+  }
+
+  .batch-builder-header {
+    padding: 15px;
+  }
+
+  .batch-builder-content {
+    padding: 15px;
+  }
+
+  .batch-builder-table th,
+  .batch-builder-table td {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+
+  .week-input {
+    width: 50px;
+    font-size: 12px;
+  }
+
+  .pizza-badge {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+}
+
+/* Ensure table headers don't get cut off */
+.batch-builder-table thead th:first-child {
+  min-width: 80px;
+}
+
+.batch-builder-table thead th:nth-child(2),
+.batch-builder-table thead th:nth-child(6),
+.batch-builder-table thead th:nth-child(7) {
+  min-width: 90px;
+}
+
+.batch-builder-table thead th:nth-child(3),
+.batch-builder-table thead th:nth-child(4),
+.batch-builder-table thead th:nth-child(5) {
+  min-width: 80px;
+}
+
+.batch-builder-table thead th:last-child {
+  min-width: 70px;
+}
