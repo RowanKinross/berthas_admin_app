@@ -202,10 +202,42 @@ function BatchBuilderModal({
               <tbody>
                 {projectedData.map((item, i) => {
                   if (item.isGap) {
+                    // Calculate subtotal for the section before this gap
+                    const gapIndices = projectedData
+                      .map((gapItem, idx) => gapItem.isGap ? idx : null)
+                      .filter(idx => idx !== null);
+                    
+                    const prevGapIdx = gapIndices.filter(idx => idx < i).pop() ?? -1;
+                    
+                    // Helper function to sum values in a section
+                    const sumSection = (start, end, getValue) =>
+                      projectedData.slice(start, end).reduce((sum, sectionItem) => {
+                        if (sectionItem.isGap || sectionItem.sleeveType === 'base') return sum;
+                        return sum + (getValue(sectionItem) || 0);
+                      }, 0);
+                    
+                    // Calculate subtotals
+                    const subtotalStock = sumSection(prevGapIdx + 1, i, (item) => item.total);
+                    const subtotalW1 = sumSection(prevGapIdx + 1, i, (item) => testInputs[item.id]?.w1);
+                    const subtotalW2 = sumSection(prevGapIdx + 1, i, (item) => testInputs[item.id]?.w2);
+                    const subtotalW3 = sumSection(prevGapIdx + 1, i, (item) => testInputs[item.id]?.w3);
+                    
                     return (
-                      <tr key={`gap-${i}`} className="gap-row">
-                        <td colSpan="8" className="gap-cell"></td>
-                      </tr>
+                      <React.Fragment key={`subtotal-gap-${i}`}>
+                        <tr className="subtotal-row">
+                          <td><strong>Subtotal</strong></td>
+                          <td></td>
+                          <td><strong>{subtotalW1}</strong></td>
+                          <td><strong>{subtotalW2}</strong></td>
+                          <td><strong>{subtotalW3}</strong></td>
+                          <td></td>
+                          <td></td>
+                          <td></td>
+                        </tr>
+                        <tr key={`gap-${i}`} className="gap-row">
+                          <td colSpan="8" className="gap-cell"></td>
+                        </tr>
+                      </React.Fragment>
                     );
                   }
 
