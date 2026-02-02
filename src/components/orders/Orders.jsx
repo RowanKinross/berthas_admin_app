@@ -1050,7 +1050,9 @@ const handlePrintClick = () => {
   <div style="page-break-after: always; font-family: Arial, sans-serif; font-size: 14px; padding: 40px; max-width: 700px; margin: auto;">
 
   <div style=" margin-bottom: 20px;">
-  <img src="/bertha_logo_bw.png" style="max-height: 80px;" />
+  <object data="/bertha_logo_bw.png" type="image/png" style="max-height: 100px; width: auto;">
+    <img src="/bertha_logo_bw.png" style="max-height: 100px;" alt="Bertha's Logo" />
+  </object>
   </div>
   
   <h2 style="text-align: center; margin-bottom: 30px;">PACKING SLIP</h2>
@@ -1104,7 +1106,7 @@ const handlePrintClick = () => {
   html += `
         </tbody>
       </table>
-      <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
+      <div style="margin-top: 40px; padding-top: 20px;">
         <h4 style="margin-bottom: 2px;">Goods Recieved By:</h3>
         <div>
             <p style="margin:0; padding:2px 0">
@@ -1184,10 +1186,12 @@ const handleBulkPrintPackingSlips = () => {
     ].filter(Boolean).join('<br/>');
 
     html += `
-      <div class="packing-slip">
-        <div style="margin-bottom: 20px;">
-          <img src="/bertha_logo_bw.png" />
-        </div>
+    <div class="packing-slip">
+    <div style=" margin-bottom: 20px;">
+      <object data="/bertha_logo_bw.png" type="image/png" style="max-height: 100px; width: auto;">
+        <img src="/bertha_logo_bw.png" style="max-height: 100px;" alt="Bertha's Logo" />
+      </object>
+    </div>
         <h2 style="text-align: center; margin-bottom: 30px;">PACKING SLIP</h2>
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
           <div style="border: 1px solid #000; padding: 10px; width: 48%;">
@@ -1234,10 +1238,10 @@ const handleBulkPrintPackingSlips = () => {
     });
 
     html += `
-          </tbody>
+        </tbody>
         </table>
         
-        <div style="margin-top: 40px; border-top: 2px solid #000; padding-top: 20px;">
+        <div style="margin-top: 40px; padding-top: 20px;">
         <h4 style="margin-bottom: 2px;">Goods Recieved By:</h3>
         <div>
             <p style="margin:0; padding:2px 0">
@@ -1256,9 +1260,29 @@ const handleBulkPrintPackingSlips = () => {
   const printWindow = window.open('', '', 'width=800,height=600');
   printWindow.document.write(html);
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
-  printWindow.close();
+  
+  printWindow.onload = () => {
+    const logoImg = printWindow.document.querySelector('img');
+    
+    if (logoImg) {
+      logoImg.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      };
+      // Fallback in case onload never fires (e.g., cached images)
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }, 1000);
+    } else {
+      // No image? Just print
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
 };
 
 
