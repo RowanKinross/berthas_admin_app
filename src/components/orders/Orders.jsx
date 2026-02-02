@@ -568,12 +568,20 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
         const allBatches = await getDocs(collection(db, "batches"));
         const pizzaBatches = allBatches.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(batch => 
-            batch.pizzas?.some(p => p.id === pizzaId) && 
-            batch.pizza_numbers_complete === true
-          )
-          .sort((a, b) => b.batch_code.localeCompare(a.batch_code)) // newest first
-          .slice(0, 10);
+          .filter(batch => {
+            // Check if batch contains this pizza type and is completed
+            if (!batch.pizzas?.some(p => p.id === pizzaId) || batch.pizza_numbers_complete !== true) {
+              return false;
+            }
+            
+            // Check if batch is older than 9 months
+            const batchDate = dayjs(batch.batch_code, 'YYYYMMDD', true);
+            if (!batchDate.isValid()) return false;
+            
+            const nineMonthsAgo = dayjs().subtract(9, 'months');
+            return batchDate.isBefore(nineMonthsAgo);
+          })
+          .sort((a, b) => b.batch_code.localeCompare(a.batch_code)); // newest first
         
         setFoundStockData(prev => ({ ...prev, [pizzaId]: pizzaBatches }));
       } catch (error) {
