@@ -296,6 +296,7 @@ input:checked + .slider:before {
   text-align: center;
   cursor: pointer;
   min-width: 100px;
+  max-height: fit-content;
   background: white;
   font-size: 12px;
 }
@@ -385,52 +386,59 @@ input:checked + .slider:before {
 }
 
 /* Found Stock */
+.batchFoundColumns {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.foundStockFlex {
+  display: flex;
+  min-height: 56px;
+  border: 2px dashed #dedede !important;
+  flex-direction: column;
+  align-items: start;
+  justify-content: start;
+}
 .foundStockHeader {
+  margin-top: 10px;
   font-size: x-small;
   font-style: oblique;
+  color: #9a9a9a;
 }
 .foundStockPizza {
   font-weight: bold;
   font-size: x-small;
 }
 .foundStockData {
-  max-height: 100px;
-  max-width: 300px;
-  font-size: x-small;
-  overflow-y: auto;        
-  margin-top: 10px;
+  width: 250px;
+  font-size: x-small;       
+  margin: 5px 5px 0 0;
   padding: 10px;
   border-radius: 5px;
 }
 .foundStockList {
+  max-height: 100px;
+  overflow-y: auto;
+}
+.foundStockListItem {
   display: flex; 
   align-items: center; 
   justify-content: space-between;
   padding: 5px;
   border: 1px solid #ddd;
-  margin-bottom: 5px;
+  margin: 2px 2px 5px 2px;
 }
 .addMinusButton {
   padding: 0 !important;
+  margin: 1px !important;
   width: 20px;
   height: 20px;
-  background-color: var(--dark);
-  color: var(--bertha);
+  background-color: transparent !important;
+  color: var(--dark) !important;
 }
 .foundStockButtons {
   display: flex;
   align-items: center;
-}
-.foundStockCloseButton {
-  background-color: transparent !important;
-  border: transparent !important;
-  color: var(--dark) !important;
-  text-decoration: none;
-  font-weight: 500;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
-  transition: background-color 0.3s, color 0.3s;
 }
 
 .mobile-tooltip {

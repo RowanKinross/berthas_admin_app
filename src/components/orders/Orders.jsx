@@ -2012,114 +2012,119 @@ function getPizzaAllocatedTally(pizzaData) {
 
 
               <div className="batchButtonContainer">
-              {batches
-                .filter(batch => {
-                  const pizza = batch.pizzas.find(p => p.id === pizzaName);
-                  return (
-                    pizza &&
-                    getAvailableQuantity(batch, pizzaName, selectedOrder.id) > 0 &&
-                    batch.pizza_numbers_complete === true
-                  );
-                })
-                .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
-                .map((batch, i) => {
-                  const isSelected = (pizzaData.batchesUsed || []).some(b => b.batch_number === batch.batch_code);
-                  const selectedBatch = (pizzaData.batchesUsed || []).find(b => b.batch_number === batch.batch_code);
-                  const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
-                  const quantity = selectedBatch?.quantity || 0;
-                  const hasSelection = (pizzaData.batchesUsed || []).some(b => !!b.batch_number);
+                {batches
+                  .filter(batch => {
+                    const pizza = batch.pizzas.find(p => p.id === pizzaName);
+                    return (
+                      pizza &&
+                      getAvailableQuantity(batch, pizzaName, selectedOrder.id) > 0 &&
+                      batch.pizza_numbers_complete === true
+                    );
+                  })
+                  .sort((a, b) => a.batch_code.localeCompare(b.batch_code))
+                  .map((batch, i) => {
+                    const isSelected = (pizzaData.batchesUsed || []).some(b => b.batch_number === batch.batch_code);
+                    const selectedBatch = (pizzaData.batchesUsed || []).find(b => b.batch_number === batch.batch_code);
+                    const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
+                    const quantity = selectedBatch?.quantity || 0;
+                    const hasSelection = (pizzaData.batchesUsed || []).some(b => !!b.batch_number);
 
-                  return (
-                    <div
-                      key={i}
-                      className={`batchButton 
-                        ${isSelected ? 'selected' : ''} 
-                        ${!isSplitChecked && hasSelection && !isSelected ? 'faded' : ''}`}
-                      onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
-                    >
-                      <div className="batchLabel">
-                        {formatBatchCode(batch.batch_code)} <br /> ({available} available)
+                    return (
+                      <div
+                        key={i}
+                        className={`batchButton 
+                          ${isSelected ? 'selected' : ''} 
+                          ${!isSplitChecked && hasSelection && !isSelected ? 'faded' : ''}`}
+                        onClick={() => handleBatchClick(pizzaName, batch.batch_code)}
+                      >
+                        <div className="batchLabel">
+                          {formatBatchCode(batch.batch_code)} <br /> ({available} available)
+                        </div>
+
+                        {isSplitChecked && isSelected && (
+                          <input
+                            type="number"
+                            min={0}
+                            max={available}
+                            value={
+                              draftBatchQuantities[`${pizzaName}_${batch.batch_code}`] !== undefined
+                                ? draftBatchQuantities[`${pizzaName}_${batch.batch_code}`]
+                                : (quantity === 0 ? "" : quantity)
+                            }
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setDraftBatchQuantities(prev => ({
+                                ...prev,
+                                [`${pizzaName}_${batch.batch_code}`]: val
+                              }));
+                            }}
+                            onBlur={e => {
+                              const val = parseInt(e.target.value, 10);
+                              handleBatchQuantityChange(
+                                pizzaName,
+                                batch.batch_code,
+                                isNaN(val) ? 0 : val
+                              );
+                              setDraftBatchQuantities(prev => {
+                                const updated = { ...prev };
+                                delete updated[`${pizzaName}_${batch.batch_code}`];
+                                return updated;
+                              });
+                            }}
+                          />
+                        )}
                       </div>
+                    );
+                  })}
+              {/* Found Stock - moved to end of batch list */}
+              <div className='foundStockFlex batchButton'>
+                <div 
+                  className="foundStockHeader"
+                  onClick={() => toggleFoundStock(pizzaName)}
+                >
+                  Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}
+                </div>
 
-                      {isSplitChecked && isSelected && (
-                        <input
-                          type="number"
-                          min={0}
-                          max={available}
-                          value={
-                            draftBatchQuantities[`${pizzaName}_${batch.batch_code}`] !== undefined
-                              ? draftBatchQuantities[`${pizzaName}_${batch.batch_code}`]
-                              : (quantity === 0 ? "" : quantity)
-                          }
-                          onClick={e => e.stopPropagation()}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setDraftBatchQuantities(prev => ({
-                              ...prev,
-                              [`${pizzaName}_${batch.batch_code}`]: val
-                            }));
-                          }}
-                          onBlur={e => {
-                            const val = parseInt(e.target.value, 10);
-                            handleBatchQuantityChange(
-                              pizzaName,
-                              batch.batch_code,
-                              isNaN(val) ? 0 : val
-                            );
-                            setDraftBatchQuantities(prev => {
-                              const updated = { ...prev };
-                              delete updated[`${pizzaName}_${batch.batch_code}`];
-                              return updated;
-                            });
-                          }}
-                        />
-                      )}
+                {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
+                  <div className='foundStockData' style={{ 
+                    backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour || '#fff',
+
+                  }}>
+                    <h4 className='foundStockPizza'>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
+                    <div className='foundStockList'>
+                    {foundStockData[pizzaName].map(batch => {
+                      const pizza = batch.pizzas?.find(p => p.id === pizzaName);
+                      if (!pizza || pizza.archived) return null;
+                      
+                      return (
+                        <div key={batch.id} className='foundStockListItem'>
+                          <strong>{formatBatchCode(batch.batch_code)}</strong>
+                          <div>Quantity: {pizza.quantity}</div>
+                          <div className='foundStockButtons'>
+                            <button
+                              className='addMinusButton'
+                              onClick={() => updateBatchQuantity(batch.id, pizzaName, -1)}
+                              disabled={pizza.quantity <= 0}
+                            >
+                              -
+                            </button>
+                            <button
+                              className='addMinusButton'
+                              onClick={() => updateBatchQuantity(batch.id, pizzaName, 1)}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                     </div>
-                  );
-                })}
-            </div>
-
-            <div 
-              className="foundStockHeader"
-              onClick={() => toggleFoundStock(pizzaName)}
-            >
-              <p>Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}</p>
-            </div>
-            {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
-              <div className='foundStockData' style={{ 
-                backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour  || '#fff',
-              }}>
-                <h4 className='foundStockPizza'>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
-                {foundStockData[pizzaName].map(batch => {
-                  const pizza = batch.pizzas?.find(p => p.id === pizzaName);
-                  if (!pizza || pizza.archived) return null;
-                  
-                  return (
-                    <div key={batch.id} className='foundStockList'>
-                      <div>
-                        <strong>{formatBatchCode(batch.batch_code)}</strong>
-                        <div>Quantity: {pizza.quantity}</div>
-                      </div>
-                      <div className='foundStockButtons'>
-                        <button
-                          className='button addMinusButton'
-                          onClick={() => updateBatchQuantity(batch.id, pizzaName, -1)}
-                          disabled={pizza.quantity <= 0}
-                        >
-                          -
-                        </button>
-                        <button
-                          className='button addMinusButton'
-                          onClick={() => updateBatchQuantity(batch.id, pizzaName, 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                  </div>
+                )}
               </div>
-            )}
+              </div>
+
 
             </div>
           ))}
