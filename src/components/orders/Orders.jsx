@@ -1184,7 +1184,6 @@ const handleBulkPrintPackingSlips = () => {
         <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
           <div style="margin-bottom: 20px;">
             <strong>Delivery Date:</strong> ${date}<br/>
-            <strong>Invoice Number:</strong> INV-${order.id.slice(-4).toUpperCase()}<br/>
             <strong>Reference:</strong> PO ${po}
           </div>
           <div style="margin-bottom: 20px;">
