@@ -16,6 +16,10 @@
 .space {
   padding-right: 2%;
 }
+.allocatedText {
+  font-size: small !important;
+  font-style: oblique;
+}
 
 .clickable {
   cursor: pointer;
@@ -39,6 +43,10 @@
 .modalFooter {
   display: flex;
   justify-content: space-between;
+}
+
+.deleteButton {
+  background-color: red !important;
 }
 
 

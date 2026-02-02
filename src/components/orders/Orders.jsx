@@ -1981,7 +1981,7 @@ function getPizzaAllocatedTally(pizzaData) {
               {/* Show pizza name and total quantity ONCE */}
               <div className='flexRow'>
                 <p className='space'>{pizzaTitles[pizzaName] || pizzaName}:</p>
-                <p>allocated {getPizzaAllocatedTally(pizzaData).allocated} / </p>
+                <p className='allocatedText'>allocated {getPizzaAllocatedTally(pizzaData).allocated} / </p>
                 {editQuantities ? (
                   <input
                     type="number"
@@ -2063,7 +2063,7 @@ function getPizzaAllocatedTally(pizzaData) {
                     style={{ width: 60 }}
                   />
                 ) : (
-                  <p>{pizzaData.quantity}
+                  <p className='allocatedText'>{pizzaData.quantity}
                   </p>
                 )}
               </div>    
@@ -2384,7 +2384,7 @@ function getPizzaAllocatedTally(pizzaData) {
           )}
           </div>
           <button 
-            className='button'
+            className='button deleteButton'
             onClick={handleOrderDelete}
           >
             <FontAwesomeIcon icon = {faTrash}/>
