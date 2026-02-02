@@ -37,6 +37,11 @@ function Orders() {
   const [batchErrors, setBatchErrors] = useState({});
   const [isSplitChecked, setIsSplitChecked] = useState(false);
   const [editQuantities, setEditQuantities] = useState(false);
+  
+  // Press and hold selection state
+  const [pressTimer, setPressTimer] = useState(null);
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
   // pagination
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 25;
@@ -782,11 +787,79 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
   }, [selectedOrder]);
 
 
-  const handleOrderClick = useCallback((order) => {
-    setSelectedOrder(order);
-    setViewModal(true)
-    setSplitToggleError("");
-  }, [])
+  const handleOrderClick = useCallback((order, event) => {
+    // Check for shift+click
+    if (event?.shiftKey) {
+      event.preventDefault();
+      toggleOrderSelection(order.id);
+      return;
+    }
+    
+    // Normal click - open modal if not in select mode
+    if (!selectMode) {
+      setSelectedOrder(order);
+      setViewModal(true);
+      setSplitToggleError("");
+    } else {
+      toggleOrderSelection(order.id);
+    }
+  }, [selectMode])
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectMode(true);
+    setSelectedOrders(prev => {
+      if (prev.includes(orderId)) {
+        const newSelection = prev.filter(id => id !== orderId);
+        // Exit select mode if no orders selected
+        if (newSelection.length === 0) {
+          setSelectMode(false);
+        }
+        return newSelection;
+      } else {
+        return [...prev, orderId];
+      }
+    });
+  };
+
+  const handlePressStart = useCallback((order, event) => {
+    const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+    const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+    
+    setStartPos({ x: clientX, y: clientY });
+    setHasMoved(false);
+    
+    const timer = setTimeout(() => {
+      if (!hasMoved) {
+        toggleOrderSelection(order.id);
+      }
+    }, 800);
+    
+    setPressTimer(timer);
+  }, [hasMoved]);
+
+  const handlePressMove = useCallback((event) => {
+    if (pressTimer) {
+      const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+      const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+      
+      const deltaX = Math.abs(clientX - startPos.x);
+      const deltaY = Math.abs(clientY - startPos.y);
+      
+      // If moved more than 10px, cancel the press timer
+      if (deltaX > 10 || deltaY > 10) {
+        setHasMoved(true);
+        clearTimeout(pressTimer);
+        setPressTimer(null);
+      }
+    }
+  }, [pressTimer, startPos]);
+
+  const handlePressEnd = useCallback(() => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
+    }
+  }, [pressTimer]);
 
   const handleCloseModal = useCallback(() => {
     setSelectedOrder(null);
@@ -1505,17 +1578,17 @@ function getPizzaAllocatedTally(pizzaData) {
     <div className='today'><span className='deliveryToday'>Today: {dayjs().format('DD/MM/YYYY').replace(/\//g, '-')}</span></div>
     <div className='selectOrdersAndSearchOrders'>
       <div className='selectCancel' {...(selectedOrders.length > 0 && { 'data-count': selectedOrders.length })}>
-        <button
-          className='button'
-          onClick={() => {
-            if (selectMode) {
-              setSelectedOrders([]); // clear selected orders when exiting selection mode
-            }
-            setSelectMode(!selectMode);
-          }}
+        {selectMode && (
+          <button
+            className='button'
+            onClick={() => {
+              setSelectedOrders([]);
+              setSelectMode(false);
+            }}
           >
-          {selectMode ? "Cancel Selection" : "Select Orders"}
-        </button>
+            Cancel Selection ({selectedOrders.length})
+          </button>
+        )}
         {selectMode && (
           <button
             className='button button-secondary'
@@ -1671,8 +1744,16 @@ function getPizzaAllocatedTally(pizzaData) {
               ${order.complete ? 'complete' : ''} 
               ${order.order_status === 'ready to pack' ? 'allocated' : ''}
               ${order.order_status === 'packed' ? 'packed' : ''}
+              ${selectedOrders.includes(order.id) ? 'selected' : ''}
               `}
-              onClick={() => handleOrderClick(order)}
+              onClick={(e) => handleOrderClick(order, e)}
+              onMouseDown={(e) => handlePressStart(order, e)}
+              onTouchStart={(e) => handlePressStart(order, e)}
+              onMouseMove={handlePressMove}
+              onTouchMove={handlePressMove}
+              onMouseUp={handlePressEnd}
+              onTouchEnd={handlePressEnd}
+              onMouseLeave={handlePressEnd}
               >
             <div>{order.customer_name === 'SAMPLES' ? `SAMPLE: ${order.sample_customer_name}` :  order.customer_name === 'Weddings & Private Events' ? `Wedding/Event: ${order.sample_customer_name}`: order.customer_name}</div>
             <div>{order.pizzaTotal}</div>
