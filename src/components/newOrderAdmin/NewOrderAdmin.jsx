@@ -48,6 +48,10 @@ const capitalizeWords = (str) => {
   return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
 };
 const handleFilterChange = (event) => {
+  // Don't change filter for SAMPLES - always keep it as "all"
+  if (selectedCustomerId === "SAMPLES/6UGM") {
+    return;
+  }
   setFilterCriteria(event.target.value);
 };
 
@@ -145,7 +149,12 @@ useEffect(() => {
     if (customer) {
       setCustomerAddress(`${customer.name_number} ${customer.street}, ${customer.city}, ${customer.postcode}`);
       setEditableEmail(customer.email);
-      setFilterCriteria(customer.default_pizza_view || "withSleeve");
+      // Always use "all" for SAMPLES, otherwise use customer's default view
+      if (selectedCustomerId === "SAMPLES/6UGM") {
+        setFilterCriteria("all");
+      } else {
+        setFilterCriteria(customer.default_pizza_view || "withSleeve");
+      }
     } else {
       setCustomerAddress("");
       setEditableEmail("");

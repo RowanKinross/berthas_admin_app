@@ -424,6 +424,12 @@ const updateDeliveryDate = async (orderId, newDate) => {
     }
   };
     getCustomer();
+    
+    // Auto-validate order status when modal opens
+    if (selectedOrder && !selectedOrder.complete) {
+      // console.log("🚀 Modal opened for order:", selectedOrder.customer_name);
+      validateAndUpdateOrderStatus(selectedOrder);
+    }
   }, [selectedOrder]);
 
 
@@ -552,7 +558,7 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
 
 
 const handleBatchClick = async (pizzaName, batchCode) => {
-  const currentBatches = [...selectedOrder.pizzas[pizzaName].batchesUsed];
+  const currentBatches = [...(selectedOrder.pizzas[pizzaName].batchesUsed || [])];
   const index = currentBatches.findIndex(b => b.batch_number === batchCode);
   const totalQty = selectedOrder.pizzas[pizzaName].quantity;
   let newBatches;
@@ -697,22 +703,53 @@ const handleBatchClick = async (pizzaName, batchCode) => {
 
 
 const orderHasBatchErrors = (order) => {
+  // console.log("🔍 Checking batch errors for order:", order.customer_name);
+  // console.log("📋 Order pizzas:", Object.keys(order.pizzas));
+  
   return Object.entries(order.pizzas).some(([pizzaName, pizzaData]) => {
     const totalOrdered = pizzaData.quantity;
+    // console.log(`🍕 Checking ${pizzaName}: ordered=${totalOrdered}`);
+    
+    // Skip pizzas with 0 quantity (deleted pizzas)
+    if (!totalOrdered || totalOrdered <= 0) {
+      // console.log(`⏭️ Skipping ${pizzaName} - quantity is 0 or undefined`);
+      return false;
+    }
+    
+    // Safety check for batchesUsed
+    if (!pizzaData.batchesUsed) {
+      // console.log(`❌ ${pizzaName} - No batchesUsed property`);
+      return true;
+    }
+    
     const selectedBatches = pizzaData.batchesUsed.filter(b => b.batch_number);
     const totalAssigned = selectedBatches.reduce((sum, b) => sum + (b.quantity || 0), 0);
-    if (selectedBatches.length === 0) return true;
+    // console.log(`📦 ${pizzaName} batches:`, selectedBatches.map(b => `${b.batch_number}(${b.quantity})`).join(', '));
+    // console.log(`📊 ${pizzaName} assigned=${totalAssigned} vs ordered=${totalOrdered}`);
+    
+    if (selectedBatches.length === 0) {
+      // console.log(`❌ ${pizzaName} - No batches selected`);
+      return true;
+    }
     if (!isSplitChecked) {
       const batch = batches.find(b => b.batch_code === selectedBatches[0]?.batch_number);
-      if (!batch) return true;
+      if (!batch) {
+        // console.log(`❌ ${pizzaName} - Batch not found:`, selectedBatches[0]?.batch_number);
+        return true;
+      }
       const available = getAvailableQuantity(batch, pizzaName, order.id);
-      return available < totalOrdered;
+      const hasError = available < totalOrdered;
+      // console.log(`📊 ${pizzaName} - available=${available}, hasError=${hasError}`);
+      return hasError;
     } else {
       const anyOverused = selectedBatches.some(b => {
         const batch = batches.find(batch => batch.batch_code === b.batch_number);
         return !batch || b.quantity > getAvailableQuantity(batch, pizzaName, order.id);
       });
-      return anyOverused || totalAssigned !== totalOrdered;
+      const mismatch = totalAssigned !== totalOrdered;
+      const hasError = anyOverused || mismatch;
+      // console.log(`📊 ${pizzaName} split mode - overused=${anyOverused}, mismatch=${mismatch}, hasError=${hasError}`);
+      return hasError;
     }
   });
 };
@@ -1773,7 +1810,7 @@ function getPizzaAllocatedTally(pizzaData) {
                 {editQuantities ? (
                   <input
                     type="number"
-                    min={1}
+                    min={0}
                     value={draftQuantities[pizzaName] ?? pizzaData.quantity}
                     onChange={e => {
                       const val = parseInt(e.target.value, 10) || 0;
@@ -1781,37 +1818,68 @@ function getPizzaAllocatedTally(pizzaData) {
                     }}
                     onBlur={async () => {
                       const newQty = draftQuantities[pizzaName] ?? pizzaData.quantity;
-                      // Update order in Firestore
-                      await updateDoc(doc(db, "orders", selectedOrder.id), {
-                        [`pizzas.${pizzaName}.quantity`]: newQty,
-                        pizzaTotal: calculatePizzaTotal({
-                          ...selectedOrder.pizzas,
-                          [pizzaName]: { ...pizzaData, quantity: newQty }
-                        }),
-                      });
-                      // Update local state
-                      setSelectedOrder(prev => ({
-                        ...prev,
-                        pizzas: {
-                          ...prev.pizzas,
-                          [pizzaName]: {
-                            ...prev.pizzas[pizzaName],
-                            quantity: newQty,
-                          }
-                        },
-                        pizzaTotal: calculatePizzaTotal({
-                          ...prev.pizzas,
-                          [pizzaName]: { ...prev.pizzas[pizzaName], quantity: newQty }
-                        }),
-                      }));
-                      // Now update batch allocations for all assigned batches
-                      const batchesUsed = selectedOrder.pizzas[pizzaName].batchesUsed || [];
-                      for (const batch of batchesUsed) {
-                        await syncPizzaAllocation({
-                          pizzaId: pizzaName,
-                          batchCode: batch.batch_number,
-                          quantity: isSplitChecked ? batch.quantity : newQty
+                      
+                      if (newQty > 0) {
+                        // Update order in Firestore
+                        await updateDoc(doc(db, "orders", selectedOrder.id), {
+                          [`pizzas.${pizzaName}.quantity`]: newQty,
+                          pizzaTotal: calculatePizzaTotal({
+                            ...selectedOrder.pizzas,
+                            [pizzaName]: { ...pizzaData, quantity: newQty }
+                          }),
                         });
+                        // Update local state
+                        setSelectedOrder(prev => ({
+                          ...prev,
+                          pizzas: {
+                            ...prev.pizzas,
+                            [pizzaName]: {
+                              ...prev.pizzas[pizzaName],
+                              quantity: newQty,
+                            }
+                          },
+                          pizzaTotal: calculatePizzaTotal({
+                            ...prev.pizzas,
+                            [pizzaName]: { ...prev.pizzas[pizzaName], quantity: newQty }
+                          }),
+                        }));
+                        // Now update batch allocations for all assigned batches
+                        const batchesUsed = selectedOrder.pizzas[pizzaName].batchesUsed || [];
+                        for (const batch of batchesUsed) {
+                          await syncPizzaAllocation({
+                            pizzaId: pizzaName,
+                            batchCode: batch.batch_number,
+                            quantity: isSplitChecked ? batch.quantity : newQty
+                          });
+                        }
+                      } else {
+                        // Remove pizza from Firestore completely if set to 0
+                        await updateDoc(doc(db, "orders", selectedOrder.id), {
+                          [`pizzas.${pizzaName}`]: deleteField(),
+                          pizzaTotal: calculatePizzaTotal(
+                            Object.fromEntries(
+                              Object.entries(selectedOrder.pizzas).filter(([id]) => id !== pizzaName)
+                            )
+                          ),
+                        });
+                        // Remove from local state
+                        setSelectedOrder(prev => {
+                          const newPizzas = { ...prev.pizzas };
+                          delete newPizzas[pizzaName];
+                          return {
+                            ...prev,
+                            pizzas: newPizzas,
+                            pizzaTotal: calculatePizzaTotal(newPizzas),
+                          };
+                        });
+                        // Remove batch allocations
+                        const batchesUsed = selectedOrder.pizzas[pizzaName].batchesUsed || [];
+                        for (const batch of batchesUsed) {
+                          await removePizzaAllocationFromBatch({
+                            pizzaId: pizzaName,
+                            batchCode: batch.batch_number
+                          });
+                        }
                       }
                     }}
                     onKeyDown={e => {
