@@ -107,6 +107,28 @@ function BatchBuilderModal({
     return ratios;
   }, [projectedData]);
 
+  // Check if any changes have been made from original values
+  const hasChanges = useMemo(() => {
+    if (!plannedSummary || !testInputs) return false;
+    
+    return plannedSummary.some(item => {
+      if (item.isGap) return false;
+      
+      const currentInputs = testInputs[item.id];
+      const originalValues = {
+        w1: item.stockNumbers?.w1 || 0,
+        w2: item.stockNumbers?.w2 || 0,
+        w3: item.stockNumbers?.w3 || 0
+      };
+      
+      return currentInputs && (
+        currentInputs.w1 !== originalValues.w1 ||
+        currentInputs.w2 !== originalValues.w2 ||
+        currentInputs.w3 !== originalValues.w3
+      );
+    });
+  }, [testInputs, plannedSummary]);
+
   const handleInputChange = (pizzaId, week, value) => {
     const numValue = Math.max(0, parseInt(value) || 0);
     setTestInputs(prev => ({
@@ -146,7 +168,9 @@ function BatchBuilderModal({
         
         <div className="batch-builder-content">
           <div className="controls">
-            <button className="reset-button" onClick={resetInputs}>Reset to Current</button>
+            {hasChanges && (
+              <button className="reset-button" onClick={resetInputs}>Reset to Current</button>
+            )}
           </div>
 
           <div className="batch-builder-table-container">
