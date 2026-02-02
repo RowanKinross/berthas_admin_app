@@ -1354,9 +1354,17 @@ const formatDateDisplay = (dateStr) => {
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 500); // 500ms long press
+    }, 800); // 800ms long press (increased from 500ms to be less sensitive)
     
     setLongPressTimer(timer);
+  };
+
+  const handleTouchMove = () => {
+    // Cancel long press if user is scrolling
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
   };
 
   const handleTouchEnd = () => {
@@ -2341,6 +2349,7 @@ const formatDateDisplay = (dateStr) => {
                                 className={`button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
                                 onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
                                 onTouchStart={() => handleTouchStart(batch, batchIndex)}
+                                onTouchMove={handleTouchMove}
                                 onTouchEnd={handleTouchEnd}
                                 onTouchCancel={handleTouchCancel}
                                 style={{ 
@@ -2427,6 +2436,7 @@ const formatDateDisplay = (dateStr) => {
                         className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
                         onClick={(e) => handleBatchClickWithSelection(batch, index, e)}
                         onTouchStart={() => handleTouchStart(batch, index)}
+                        onTouchMove={handleTouchMove}
                         onTouchEnd={handleTouchEnd}
                         onTouchCancel={handleTouchCancel}
                         style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}
