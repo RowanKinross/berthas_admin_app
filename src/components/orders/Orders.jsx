@@ -2279,11 +2279,11 @@ function getPizzaAllocatedTally(pizzaData) {
                     );
                   })}
               {/* Found Stock - moved to end of batch list */}
-              <div className='foundStockFlex batchButton'>
-                <div 
-                  className="foundStockHeader"
-                  onClick={() => toggleFoundStock(pizzaName)}
-                >
+              <div className='foundStockFlex batchButton'
+                    onClick={() => toggleFoundStock(pizzaName)}>
+                  <div 
+                    className="foundStockHeader"
+                  >
                   Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}
                 </div>
 
