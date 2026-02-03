@@ -1086,8 +1086,7 @@ const orderHasBatchErrors = (order) => {
     html += `</body></html>`;
 
     const printWindow = window.open('', '', 'width=800,height=600');
-    printWindow.document.write(html);
-    printWindow.document.close();
+    printWindow.document.body.innerHTML = html;
     printWindow.focus();
   };
 
@@ -1192,8 +1191,7 @@ const handlePrintClick = () => {
     </div>`;
 
   const printWindow = window.open('', '', 'width=800,height=600');
-  printWindow.document.write(html);
-  printWindow.document.close();
+  printWindow.document.body.innerHTML = html;
   printWindow.focus();
 };
 
@@ -1308,8 +1306,7 @@ const handleBulkPrintPackingSlips = () => {
   html += `</body></html>`;
 
   const printWindow = window.open('', '', 'width=800,height=600');
-  printWindow.document.write(html);
-  printWindow.document.close();
+  printWindow.document.body.innerHTML = html;
   printWindow.focus();
 };
 
