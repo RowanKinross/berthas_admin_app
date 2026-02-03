@@ -573,22 +573,21 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
     
     if (!isExpanded) {
       try {
-        // Get last 10 batches for this pizza type
+        // Get all batches for this pizza type
         const allBatches = await getDocs(collection(db, "batches"));
+        const nineMonthsAgo = dayjs().subtract(9, 'months');
+        
         const pizzaBatches = allBatches.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(batch => {
-            // Check if batch contains this pizza type and is completed
+            // Show all batches that contain this pizza type and are completed
             if (!batch.pizzas?.some(p => p.id === pizzaId) || batch.pizza_numbers_complete !== true) {
               return false;
             }
             
-            // Check if batch is older than 9 months
-            const batchDate = dayjs(batch.batch_code, 'YYYYMMDD', true);
-            if (!batchDate.isValid()) return false;
-            
-            const nineMonthsAgo = dayjs().subtract(9, 'months');
-            return batchDate.isBefore(nineMonthsAgo);
+            // Filter by date - only show batches from last 9 months
+            const batchDate = dayjs(batch.batch_code, 'DDMMYYYY');
+            return batchDate.isValid() && batchDate.isAfter(nineMonthsAgo);
           })
           .sort((a, b) => b.batch_code.localeCompare(a.batch_code)); // newest first
         
@@ -2279,11 +2278,11 @@ function getPizzaAllocatedTally(pizzaData) {
                     );
                   })}
               {/* Found Stock - moved to end of batch list */}
-              <div className='foundStockFlex batchButton'>
-                <div 
-                  className="foundStockHeader"
-                  onClick={() => toggleFoundStock(pizzaName)}
-                >
+              <div className='foundStockFlex batchButton'
+                    onClick={() => toggleFoundStock(pizzaName)}>
+                  <div 
+                    className="foundStockHeader"
+                  >
                   Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}
                 </div>
 
@@ -2296,23 +2295,29 @@ function getPizzaAllocatedTally(pizzaData) {
                     <div className='foundStockList'>
                     {foundStockData[pizzaName].map(batch => {
                       const pizza = batch.pizzas?.find(p => p.id === pizzaName);
-                      if (!pizza || pizza.archived) return null;
+                      if (!pizza) return null;
                       
                       return (
                         <div key={batch.id} className='foundStockListItem'>
                           <strong>{formatBatchCode(batch.batch_code)}</strong>
-                          <div>Quantity: {pizza.quantity}</div>
+                          <div>Available: {getAvailableQuantity(batch, pizzaName, selectedOrder.id)} {pizza.archived ? '(archived)' : ''}</div>
                           <div className='foundStockButtons'>
                             <button
                               className='addMinusButton'
-                              onClick={() => updateBatchQuantity(batch.id, pizzaName, -1)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateBatchQuantity(batch.id, pizzaName, -1);
+                              }}
                               disabled={pizza.quantity <= 0}
                             >
                               -
                             </button>
                             <button
                               className='addMinusButton'
-                              onClick={() => updateBatchQuantity(batch.id, pizzaName, 1)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateBatchQuantity(batch.id, pizzaName, 1);
+                              }}
                             >
                               +
                             </button>
