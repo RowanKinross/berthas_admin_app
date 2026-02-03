@@ -1197,29 +1197,7 @@ const handlePrintClick = () => {
   const printWindow = window.open('', '', 'width=800,height=600');
   printWindow.document.write(html);
   printWindow.document.close();
-
-    printWindow.onload = () => {
-    const logoImg = printWindow.document.querySelector('img');
-    
-    if (logoImg) {
-      logoImg.onload = () => {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      };
-      // Fallback in case onload never fires (e.g., cached images)
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      }, 1000);
-    } else {
-      // No image? Just print
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }
-  };
+  printWindow.focus();
 };
 
 
@@ -1335,29 +1313,7 @@ const handleBulkPrintPackingSlips = () => {
   const printWindow = window.open('', '', 'width=800,height=600');
   printWindow.document.write(html);
   printWindow.document.close();
-  
-  printWindow.onload = () => {
-    const logoImg = printWindow.document.querySelector('img');
-    
-    if (logoImg) {
-      logoImg.onload = () => {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      };
-      // Fallback in case onload never fires (e.g., cached images)
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      }, 1000);
-    } else {
-      // No image? Just print
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    }
-  };
+  printWindow.focus();
 };
 
 
