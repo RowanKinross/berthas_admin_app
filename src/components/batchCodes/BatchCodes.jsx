@@ -2528,7 +2528,7 @@ const formatDateDisplay = (dateStr) => {
                                 onTouchEnd={handleTouchEnd}
                                 onTouchCancel={handleTouchCancel}
                                 style={{ 
-                                  fontSize: '10px', 
+                                  fontSize: '12px', 
                                   padding: '2px 4px', 
                                   width: '100%',
                                   marginBottom: '1px',
@@ -2539,6 +2539,7 @@ const formatDateDisplay = (dateStr) => {
                               >
                                 
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
+                                  <span className='batchType'>{batch.batch_type ? `${batch.batch_type.toUpperCase()}` : 'PIZZAS'}</span>
                                   <span style={{ fontSize: '9px' }}>{batch.batch_code}</span>
                                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
                                     <span>{batch.num_pizzas}</span>
