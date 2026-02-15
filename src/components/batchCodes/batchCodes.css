@@ -111,12 +111,23 @@ textarea.input {
   display:flex;
 }
 .dateLabelContent {
+  display:flex;
   margin-left: 10px;
+  justify-content: space-between;
   border: solid 1px var(--darkLight);
   border-radius: 5px;
   padding: 0 4px;
+  width: 200px;
 }
-
+.madeOn, .bestBefore {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.madeOnBBF {
+  font-size: 9px;
+  font-weight: bold;
+}
 
 .center {
   justify-content: center;

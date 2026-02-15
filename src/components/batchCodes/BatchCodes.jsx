@@ -1722,8 +1722,14 @@ const formatDateDisplay = (dateStr) => {
             <div className='dateLabelContainer'>
               <strong>Date Label:</strong>
               <div className='dateLabelContent'>
-                <div>{getBatchDate(viewingBatch.batch_date)}</div>
-                <div>{getBestBeforeDate(viewingBatch.batch_date)}</div>
+                <div className='madeOn'>
+                  <div className='madeOnBBF'>Made On:</div>
+                  <div>{getBatchDate(viewingBatch.batch_date)}</div>
+                </div>
+                <div className='bestBefore'>
+                  <div className='madeOnBBF'>Best Before:</div>
+                  <div>{getBestBeforeDate(viewingBatch.batch_date)}</div>
+                </div>
               </div>
             </div>
               <strong>Ingredients Ordered:</strong>{" "}
