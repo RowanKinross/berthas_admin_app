@@ -21,6 +21,7 @@ function BatchCodes() {
   const [ingredientsOrdered, setIngredientsOrdered] = useState(false);
   const [pizzaNumbersComplete, setPizzaNumbersComplete] = useState(false);
   const [notes, setNotes] = useState("");
+  const [productType, setProductType] = useState("pizzas"); // 'dough balls', 'pizzas', 'starter'
   
   // Wastage tracking fields
   const [doughBallWastage, setDoughBallWastage] = useState(0);
@@ -2344,29 +2345,105 @@ const formatDateDisplay = (dateStr) => {
             />
           </Form.Label>
           </div>
-          <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
+          
+          <Form.Label column sm={3}><strong>Batch Type:</strong></Form.Label>
           <Col>
-          {sortPizzas(pizzas).map((pizza) => (
-          <div key={pizza.id} className='pizzaDetails'>
-            <div className="pizza-info">
-              <strong>{pizza.pizza_title}</strong>
-              <input
-                className='inputNumber'
-                type="number"
-                name="quantity"
-                value={pizza.quantity || ""}
-                placeholder='0'
-                onChange={(e) => handleQuantityChange(e, pizza.id)}
+            <div>
+              <Form.Check
+                type="radio"
+                id="pizzas-radio"
+                name="productType"
+                value="pizzas"
+                label="Pizzas"
+                checked={productType === "pizzas"}
+                onChange={(e) => setProductType(e.target.value)}
+                inline
+              />
+              <Form.Check
+                type="radio"
+                id="dough-balls-radio"
+                name="productType"
+                value="dough balls"
+                label="Dough Balls"
+                checked={productType === "dough balls"}
+                onChange={(e) => setProductType(e.target.value)}
+                inline
+              />
+              <Form.Check
+                type="radio"
+                id="starter-radio"
+                name="productType"
+                value="starter"
+                label="Starter"
+                checked={productType === "starter"}
+                onChange={(e) => setProductType(e.target.value)}
+                inline
               />
             </div>
-          </div>
-        ))}
-
-
-            <div className='total'>
-              <h6><strong>Total: </strong>{totalPizzas}</h6>
-            </div>
           </Col>
+          
+          {productType === "pizzas" && (
+            <>
+              <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
+              <Col>
+                {sortPizzas(pizzas).filter(pizza => pizza.id !== "DOU_A0" && pizza.id !== "DOU_A1").map((pizza) => (
+                  <div key={pizza.id} className='pizzaDetails'>
+                    <div className="pizza-info">
+                      <strong>{pizza.pizza_title}</strong>
+                      <input
+                        className='inputNumber'
+                        type="number"
+                        name="quantity"
+                        value={pizza.quantity || ""}
+                        placeholder='0'
+                        onChange={(e) => handleQuantityChange(e, pizza.id)}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className='total'>
+                  <h6><strong>Total: </strong>{totalPizzas}</h6>
+                </div>
+              </Col>
+            </>
+          )}
+          
+          {productType === "dough balls" && (
+            <>
+              <Form.Label column sm={3}><strong>Dough Balls:</strong></Form.Label>
+              <Col>
+                {sortPizzas(pizzas).filter(pizza => pizza.id === "DOU_A0" || pizza.id === "DOU_A1").map((pizza) => (
+                  <div key={pizza.id} className='pizzaDetails'>
+                    <div className="pizza-info">
+                      <strong>{pizza.pizza_title}</strong>
+                      <input
+                        className='inputNumber'
+                        type="number"
+                        name="quantity"
+                        value={pizza.quantity || ""}
+                        placeholder='0'
+                        onChange={(e) => handleQuantityChange(e, pizza.id)}
+                      />
+                    </div>
+                  </div>
+                ))}
+                <div className='total'>
+                  <h6><strong>Total: </strong>{totalPizzas}</h6>
+                </div>
+              </Col>
+            </>
+          )}
+          
+          {productType === "starter" && (
+            <>
+              <Form.Label column sm={3}><strong>Starter:</strong></Form.Label>
+              <Col>
+                <div style={{padding: '10px', fontStyle: 'italic'}}>
+                  Mix sizes
+                </div>
+              </Col>
+            </>
+          )}
           <div>
             <Form.Label>Notes</Form.Label>
             <Form.Control
