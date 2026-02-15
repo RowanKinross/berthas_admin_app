@@ -21,7 +21,7 @@ function BatchCodes() {
   const [ingredientsOrdered, setIngredientsOrdered] = useState(false);
   const [pizzaNumbersComplete, setPizzaNumbersComplete] = useState(false);
   const [notes, setNotes] = useState("");
-  const [productType, setProductType] = useState("pizzas"); // 'dough balls', 'pizzas', 'starter'
+  const [batchType, setbatchType] = useState("pizzas"); // 'dough balls', 'pizzas', 'starter'
   
   // Wastage tracking fields
   const [doughBallWastage, setDoughBallWastage] = useState(0);
@@ -867,6 +867,7 @@ const formatDateDisplay = (dateStr) => {
         batch_date: batchDate,
         num_pizzas: totalPizzasExcludingDough,
         batch_code: batchCode,
+        batch_type: batchType,
         completed: completed,
         ingredients_ordered: ingredientsOrdered,
         pizza_numbers_complete: pizzaNumbersComplete,
@@ -895,6 +896,7 @@ const formatDateDisplay = (dateStr) => {
       setShowForm(false);
       setBatchDate("");
       setBatchCode("");
+      setbatchType("pizzas");
       setCompleted(false);
       setIngredientsOrdered(false);
       setNotes("")
@@ -1743,8 +1745,12 @@ const formatDateDisplay = (dateStr) => {
 
           </div>
           <div className='pizzaDisplayTitles'> 
-            <h4 className='pizzaWeightsOuter'>Pizzas:</h4>
-            <h6 className='pizzaWeightsOuter pizzaWeights'>Pizza Weights:</h6>
+            <h4 className='pizzaWeightsOuter'>
+              {viewingBatch.batch_type === 'dough balls' ? 'Dough Balls:' : 
+               viewingBatch.batch_type === 'starter' ? 'Starter:' : 'Pizzas:'}
+            </h4>
+            <h6 className='pizzaWeightsOuter pizzaWeights'>{viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Weights:' : 
+               viewingBatch.batch_type === 'starter' ? '' : 'Pizzas Weights:'}</h6>
           </div>
           {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (
   <div key={pizza.id} className='pizzaDetails'>
@@ -1927,7 +1933,8 @@ const formatDateDisplay = (dateStr) => {
     style={{ fontStyle: 'italic', cursor: 'pointer' }}
     onClick={() => setShowPizzaPicker(true)}
   >
-    + add a pizza type
+    {viewingBatch.batch_type === 'dough balls' ? '+ Add Dough Ball Type' : 
+  viewingBatch.batch_type === 'starter' ? '' : '+ Add a Pizza Type:'}
   </span>
 ) : (
   <select
@@ -1941,10 +1948,13 @@ const formatDateDisplay = (dateStr) => {
     }}
     onBlur={() => setShowPizzaPicker(false)} // hide dropdown if user clicks away
   >
-    <option value="">Select pizza...</option>
+    <option value="">Select...</option>
     {sortPizzas(
     pizzas
-      .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id)))
+      .filter(p => !viewingBatch.pizzas.some(v => v.id === p.id))
+      .filter(p => viewingBatch.batch_type === "dough balls" 
+        ? (p.id === "DOU_A0" || p.id === "DOU_A1")
+        : (p.id !== "DOU_A0" && p.id !== "DOU_A1")))
       .map(pizza => (
         <option key={pizza.id} value={pizza.id}>
           {pizza.pizza_title}
@@ -2140,7 +2150,9 @@ const formatDateDisplay = (dateStr) => {
           </div>
 
           <p className='pizzaNumbers'>
-            <strong>Pizza numbers complete:</strong>{" "}
+            <strong>              
+              {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Numbers Complete:' : 
+               viewingBatch.batch_type === 'starter' ? 'Starter Made:' : 'Pizzas Numbers Complete:'}</strong>{" "}
             <input
               type="checkbox"
               checked={viewingBatch.pizza_numbers_complete || false}
@@ -2352,37 +2364,37 @@ const formatDateDisplay = (dateStr) => {
               <Form.Check
                 type="radio"
                 id="pizzas-radio"
-                name="productType"
+                name="batchType"
                 value="pizzas"
                 label="Pizzas"
-                checked={productType === "pizzas"}
-                onChange={(e) => setProductType(e.target.value)}
+                checked={batchType === "pizzas"}
+                onChange={(e) => setbatchType(e.target.value)}
                 inline
               />
               <Form.Check
                 type="radio"
                 id="dough-balls-radio"
-                name="productType"
+                name="batchType"
                 value="dough balls"
                 label="Dough Balls"
-                checked={productType === "dough balls"}
-                onChange={(e) => setProductType(e.target.value)}
+                checked={batchType === "dough balls"}
+                onChange={(e) => setbatchType(e.target.value)}
                 inline
               />
               <Form.Check
                 type="radio"
                 id="starter-radio"
-                name="productType"
+                name="batchType"
                 value="starter"
                 label="Starter"
-                checked={productType === "starter"}
-                onChange={(e) => setProductType(e.target.value)}
+                checked={batchType === "starter"}
+                onChange={(e) => setbatchType(e.target.value)}
                 inline
               />
             </div>
           </Col>
           
-          {productType === "pizzas" && (
+          {batchType === "pizzas" && (
             <>
               <Form.Label column sm={3}><strong>Number of Pizzas:</strong></Form.Label>
               <Col>
@@ -2408,7 +2420,7 @@ const formatDateDisplay = (dateStr) => {
             </>
           )}
           
-          {productType === "dough balls" && (
+          {batchType === "dough balls" && (
             <>
               <Form.Label column sm={3}><strong>Dough Balls:</strong></Form.Label>
               <Col>
@@ -2434,7 +2446,7 @@ const formatDateDisplay = (dateStr) => {
             </>
           )}
           
-          {productType === "starter" && (
+          {batchType === "starter" && (
             <>
               <Form.Label column sm={3}><strong>Starter:</strong></Form.Label>
               <Col>
