@@ -857,15 +857,15 @@ const formatDateDisplay = (dateStr) => {
       return;
     }
     try {
-      // Calculate total pizzas excluding dough balls
-      const totalPizzasExcludingDough = pizzas
-        .filter(pizza => pizza.quantity > 0 && pizza.id !== "DOU_A1" && pizza.id !== "DOU_A0")
+      // Calculate total pizzas including all types
+      const totalPizzas = pizzas
+        .filter(pizza => pizza.quantity > 0)
         .reduce((sum, pizza) => sum + pizza.quantity, 0);
 
       // Add new batch
       await addDoc(collection(db, "batches"), {
         batch_date: batchDate,
-        num_pizzas: totalPizzasExcludingDough,
+        num_pizzas: totalPizzas,
         batch_code: batchCode,
         batch_type: batchType,
         completed: completed,
@@ -1967,7 +1967,7 @@ const formatDateDisplay = (dateStr) => {
         );
       })()}
           
-          <p className="alignRight"><strong>Total Pizzas:</strong> {viewingBatch.num_pizzas}</p>
+          <p className="alignRight"><strong>Total:</strong> {viewingBatch.num_pizzas}</p>
           
           {/* Wastage tracking - collapsible - only for pizzas */}
           {viewingBatch.batch_type === "pizzas" && (
@@ -2616,10 +2616,11 @@ const formatDateDisplay = (dateStr) => {
                         onTouchCancel={handleTouchCancel}
                         style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}
                       >
-
+                      <span className='batchType'>{(batch.batch_type || 'PIZZAS').toUpperCase()}</span>
                       <div className="container" style={{ width: '100%' }}>
-                        <p className='batchTextBoxes'>{formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
-                        <p className='batchTextBoxCenter'>{batch.num_pizzas > 0 ? batch.num_pizzas : ''}</p>
+                        <p className='batchTextBoxes'>
+                          {formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
+                        <p className='batchTextBoxCenter'> {batch.num_pizzas}</p>
                         {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
                       </div>
                       {matchingIngredients.length > 0 && (

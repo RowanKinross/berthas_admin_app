@@ -4,6 +4,9 @@
   justify-content: space-between !important;
   margin: 2px;
 }
+.batchType {
+  color: var(--pale);
+}
 .batchText {
   text-align: left;
   font-weight: bold;
@@ -67,7 +70,7 @@ textarea.input {
   width: 50px;
 }
 .draft {
-  background-color: var(--grey);
+  background-color: var(--darkGrey);
 }
 
 .batchTextBoxEnd{
