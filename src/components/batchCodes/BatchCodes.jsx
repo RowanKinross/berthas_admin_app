@@ -2228,8 +2228,8 @@ const formatDateDisplay = (dateStr) => {
               );
             })}
             
-            {/* Vacuum Bags - always shown for every batch */}
-            {(() => {
+            {/* Vacuum Bags - shown for all batches except starter */}
+            {viewingBatch.batch_type !== 'starter' && (() => {
               const vacuumBagsBatchCode = viewingBatch.pizzas
                 .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
                 .find(code => code) || '';
