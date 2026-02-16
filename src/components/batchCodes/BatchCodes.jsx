@@ -2480,7 +2480,7 @@ const formatDateDisplay = (dateStr) => {
           <div className='container center'>
               <button
                 type="button"
-                className='button draft'
+                className='button buttonDraft'
                 onClick={handleAddFormSubmit}
               >
                 Save new batch</button>

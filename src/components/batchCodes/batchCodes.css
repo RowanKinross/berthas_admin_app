@@ -82,6 +82,9 @@ textarea.input {
 .inputNumber{
   width: 50px;
 }
+.buttonDraft {
+  background-color: var(--grey);
+}
 .draft {
   background-color: var(--berthaLighter);
 }
