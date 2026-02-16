@@ -52,35 +52,64 @@ const MixCalculator = ({ onTotalsChange }) => {
 
   const fixedMixSizes = getFixedMixSizes();
   const variableMixSizes = getVariableMixSizes();
-  const allMixSizes = [...fixedMixSizes, ...variableMixSizes];
 
-  // State for quantities of each mix size - use base names to persist values
+  // State for quantities of each mix size - separate frozen and restaurant
   const [quantities, setQuantities] = useState({
     'Top up': 1,
+    '30kg Dough Balls (10%)': 0
+  });
+  
+  const [frozenQuantities, setFrozenQuantities] = useState({
     '50kg': 0,
     '45kg': 0,
     '35kg': 0,
     '30kg': 0,
-    '15kg': 0,
-    '30kg Dough Balls (10%)': 0
+    '15kg': 0
+  });
+  
+  const [restaurantQuantities, setRestaurantQuantities] = useState({
+    '50kg': 0,
+    '45kg': 0,
+    '35kg': 0,
+    '30kg': 0,
+    '15kg': 0
   });
 
-  // Get quantity for a mix size based on its base name
-  const getQuantityForSize = (sizeName) => {
-    if (sizeName === 'Top up' || sizeName === '30kg Dough Balls (10%)') {
-      return quantities[sizeName] || 0;
-    }
-    // For the main sizes, extract the base name (e.g., '50kg (3%)' -> '50kg')
+  // Get quantity for fixed sizes (Top up, 30kg Dough Balls)
+  const getFixedQuantity = (sizeName) => {
+    return quantities[sizeName] || 0;
+  };
+  
+  // Get quantity for frozen sizes
+  const getFrozenQuantity = (sizeName) => {
     const baseName = sizeName.split(' (')[0];
-    return quantities[baseName] || 0;
+    return frozenQuantities[baseName] || 0;
+  };
+  
+  // Get quantity for restaurant sizes
+  const getRestaurantQuantity = (sizeName) => {
+    const baseName = sizeName.split(' (')[0];
+    return restaurantQuantities[baseName] || 0;
   };
 
-  const handleQuantityChange = (sizeName, value) => {
-    const baseName = sizeName === 'Top up' || sizeName === '30kg Dough Balls (10%)' 
-      ? sizeName 
-      : sizeName.split(' (')[0];
-      
+  const handleFixedQuantityChange = (sizeName, value) => {
     setQuantities(prev => ({
+      ...prev,
+      [sizeName]: parseInt(value) || 0
+    }));
+  };
+  
+  const handleFrozenQuantityChange = (sizeName, value) => {
+    const baseName = sizeName.split(' (')[0];
+    setFrozenQuantities(prev => ({
+      ...prev,
+      [baseName]: parseInt(value) || 0
+    }));
+  };
+  
+  const handleRestaurantQuantityChange = (sizeName, value) => {
+    const baseName = sizeName.split(' (')[0];
+    setRestaurantQuantities(prev => ({
       ...prev,
       [baseName]: parseInt(value) || 0
     }));
@@ -90,8 +119,27 @@ const MixCalculator = ({ onTotalsChange }) => {
   const calculateTotals = () => {
     const totals = { water: 0, starter: 0, rye: 0, caputo: 0 };
     
-    allMixSizes.forEach(size => {
-      const qty = getQuantityForSize(size.name);
+    // Add fixed mix sizes
+    fixedMixSizes.forEach(size => {
+      const qty = getFixedQuantity(size.name);
+      totals.water += size.water * qty;
+      totals.starter += size.starter * qty;
+      totals.rye += size.rye * qty;
+      totals.caputo += size.caputo * qty;
+    });
+    
+    // Add frozen quantities
+    variableMixSizes.forEach(size => {
+      const qty = getFrozenQuantity(size.name);
+      totals.water += size.water * qty;
+      totals.starter += size.starter * qty;
+      totals.rye += size.rye * qty;
+      totals.caputo += size.caputo * qty;
+    });
+    
+    // Add restaurant quantities
+    variableMixSizes.forEach(size => {
+      const qty = getRestaurantQuantity(size.name);
       totals.water += size.water * qty;
       totals.starter += size.starter * qty;
       totals.rye += size.rye * qty;
@@ -110,7 +158,9 @@ const MixCalculator = ({ onTotalsChange }) => {
     }
   }, [totals, onTotalsChange]);
 
-  const hasAnyQuantity = Object.values(quantities).some(qty => qty > 0);
+  const hasAnyQuantity = Object.values(quantities).some(qty => qty > 0) || 
+                         Object.values(frozenQuantities).some(qty => qty > 0) ||
+                         Object.values(restaurantQuantities).some(qty => qty > 0);
 
   return (
     <div className="mix-calculator-container">
@@ -122,8 +172,8 @@ const MixCalculator = ({ onTotalsChange }) => {
         <Form.Control
           type="number"
           min="0"
-          value={getQuantityForSize('Top up')}
-          onChange={(e) => handleQuantityChange('Top up', e.target.value)}
+          value={getFixedQuantity('Top up')}
+          onChange={(e) => handleFixedQuantityChange('Top up', e.target.value)}
           className="mix-input"
         />
       </div>
@@ -167,8 +217,8 @@ const MixCalculator = ({ onTotalsChange }) => {
             <Form.Control
               type="number"
               min="0"
-              value={getQuantityForSize(size.name)}
-              onChange={(e) => handleQuantityChange(size.name, e.target.value)}
+              value={getFrozenQuantity(size.name)}
+              onChange={(e) => handleFrozenQuantityChange(size.name, e.target.value)}
               className="mix-input"
             />
           </div>
@@ -184,8 +234,8 @@ const MixCalculator = ({ onTotalsChange }) => {
             <Form.Control
               type="number"
               min="0"
-              value={getQuantityForSize(size.name)}
-              onChange={(e) => handleQuantityChange(size.name, e.target.value)}
+              value={getRestaurantQuantity(size.name)}
+              onChange={(e) => handleRestaurantQuantityChange(size.name, e.target.value)}
               className="mix-input"
             />
           </div>
@@ -203,8 +253,8 @@ const MixCalculator = ({ onTotalsChange }) => {
         <Form.Control
           type="number"
           min="0"
-          value={getQuantityForSize('30kg Dough Balls (10%)')}
-          onChange={(e) => handleQuantityChange('30kg Dough Balls (10%)', e.target.value)}
+          value={getFixedQuantity('30kg Dough Balls (10%)')}
+          onChange={(e) => handleFixedQuantityChange('30kg Dough Balls (10%)', e.target.value)}
           className="mix-input"
         />
       </div>
