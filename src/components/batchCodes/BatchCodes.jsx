@@ -1198,31 +1198,42 @@ const formatDateDisplay = (dateStr) => {
     if (viewingBatch.batch_type === 'starter' && viewingBatch.mixQuantities?.totals) {
       setStarterMixTotals(viewingBatch.mixQuantities.totals);
     }
-  
-    const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
-  
-    const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
-    const requiredIngredients = Object.keys(ingredientQuantities);
-  
-    const mergedIngredientCodes = {};
-    selectedPizzas.forEach(pizza => {
-      Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
-        if (code?.trim()) {
-          mergedIngredientCodes[ingredient] = code.trim();
-        }
-      });
-    });
-  
-    const allFilled =
-      requiredIngredients.length > 0 &&
-      requiredIngredients.every(
-        ingredient =>
-          mergedIngredientCodes[ingredient] &&
-          mergedIngredientCodes[ingredient].trim() !== ""
+
+    let shouldBeCompleted = false;
+
+    if (viewingBatch.batch_type === 'starter') {
+      // For starter batches, check ingredient batch codes and starter made checkbox
+      const requiredIngredients = ['Rye Flour', 'Flour (Caputo Red)'];
+      const allIngredientCodesPresent = requiredIngredients.every(ingredient => 
+        viewingBatch.ingredientBatchCodes?.[ingredient]?.trim()
       );
-  
-  
-    const shouldBeCompleted = allFilled && !!viewingBatch.pizza_numbers_complete;
+      
+      shouldBeCompleted = allIngredientCodesPresent && !!viewingBatch.pizza_numbers_complete;
+    } else {
+      // For pizza/dough ball batches, use existing logic
+      const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
+      const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
+      const requiredIngredients = Object.keys(ingredientQuantities);
+    
+      const mergedIngredientCodes = {};
+      selectedPizzas.forEach(pizza => {
+        Object.entries(pizza.ingredientBatchCodes || {}).forEach(([ingredient, code]) => {
+          if (code?.trim()) {
+            mergedIngredientCodes[ingredient] = code.trim();
+          }
+        });
+      });
+    
+      const allFilled =
+        requiredIngredients.length > 0 &&
+        requiredIngredients.every(
+          ingredient =>
+            mergedIngredientCodes[ingredient] &&
+            mergedIngredientCodes[ingredient].trim() !== ""
+        );
+    
+      shouldBeCompleted = allFilled && !!viewingBatch.pizza_numbers_complete;
+    }
 
     if (viewingBatch.completed !== shouldBeCompleted) {
       const batchRef = doc(db, "batches", viewingBatch.id);

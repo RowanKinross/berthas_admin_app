@@ -1,5 +1,5 @@
 .batchDiv {
-  background-color: var(--bertha);
+  background-color: var(--berthas);
   display: flex;
   justify-content: space-evenly !important;
   margin: 6px 0px;
