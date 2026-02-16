@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form } from 'react-bootstrap';
 import './MixCalculator.css';
 
-const MixCalculator = ({ onTotalsChange }) => {
+const MixCalculator = ({ onTotalsChange, onQuantitiesChange, batchId, initialQuantities, hideResults = false }) => {
   // State for starter percentage toggle (true = 3%, false = 2.5%)
   const [isThreePercent, setIsThreePercent] = useState(true);
 
@@ -77,9 +77,9 @@ const MixCalculator = ({ onTotalsChange }) => {
 
   // Get quantity for fixed sizes (Top up, 30kg Dough Balls)
   const getFixedQuantity = (sizeName) => {
-    // Remove colon from the name to match state keys
-    const stateName = sizeName.replace(':', '');
-    return quantities[stateName] || 0;
+    // Remove colon from size name to match quantities keys
+    const keyName = sizeName.replace(':', '');
+    return quantities[keyName] || 0;
   };
   
   // Get quantity for frozen sizes
@@ -159,6 +159,38 @@ const MixCalculator = ({ onTotalsChange }) => {
       onTotalsChange(totals);
     }
   }, [totals, onTotalsChange]);
+
+  // Update parent component when quantities change
+  useEffect(() => {
+    if (onQuantitiesChange) {
+      const allQuantities = {
+        isThreePercent,
+        fixedQuantities: quantities,
+        frozenQuantities,
+        restaurantQuantities,
+        totals
+      };
+      onQuantitiesChange(allQuantities);
+    }
+  }, [quantities, frozenQuantities, restaurantQuantities, isThreePercent, totals, onQuantitiesChange]);
+
+  // Initialize from props if provided
+  useEffect(() => {
+    if (initialQuantities) {
+      if (initialQuantities.isThreePercent !== undefined) {
+        setIsThreePercent(initialQuantities.isThreePercent);
+      }
+      if (initialQuantities.fixedQuantities) {
+        setQuantities(initialQuantities.fixedQuantities);
+      }
+      if (initialQuantities.frozenQuantities) {
+        setFrozenQuantities(initialQuantities.frozenQuantities);
+      }
+      if (initialQuantities.restaurantQuantities) {
+        setRestaurantQuantities(initialQuantities.restaurantQuantities);
+      }
+    }
+  }, [initialQuantities]);
 
   const hasAnyQuantity = Object.values(quantities).some(qty => qty > 0) || 
                          Object.values(frozenQuantities).some(qty => qty > 0) ||
@@ -262,7 +294,7 @@ const MixCalculator = ({ onTotalsChange }) => {
       </div>
 
       {/* Results Column */}
-      {hasAnyQuantity && (
+      {hasAnyQuantity && !hideResults && (
         <div className="mix-results-section">
           <div className="mix-results-column">
             <div className="mix-result-item">

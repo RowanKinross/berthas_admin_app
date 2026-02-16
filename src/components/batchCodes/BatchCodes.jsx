@@ -7,7 +7,7 @@ import MixCalculator from './MixCalculator';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faPencilAlt } from '@fortawesome/free-solid-svg-icons';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -38,6 +38,11 @@ function BatchCodes() {
   const [loading, setLoading] = useState(true);
   const [viewingBatch, setViewingBatch] = useState(null); // Track viewing mode
   const batchDetailsRef = useRef(null);
+  
+  // Starter batch specific state
+  const [starterMixTotals, setStarterMixTotals] = useState({ water: 0, starter: 0, rye: 0, caputo: 0 });
+  const [starterIngredientCodes, setStarterIngredientCodes] = useState({});
+  const [formMixQuantities, setFormMixQuantities] = useState(null);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,6 +53,8 @@ function BatchCodes() {
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'calendar'
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [editingMixQuantities, setEditingMixQuantities] = useState(false);
+  const [mixCalculatorInitialized, setMixCalculatorInitialized] = useState(false);
 
   // Photo cropping and editing states
   const [showImageCrop, setShowImageCrop] = useState(false);
@@ -731,6 +738,7 @@ const formatDateDisplay = (dateStr) => {
   setPizzas(pizzas.map(pizza => ({ ...pizza, quantity: 0 })));
   setIngredientBatchCodes({});
   setNotes("")
+  setFormMixQuantities(null); // Clear mix quantities
 }; 
 
 
@@ -837,17 +845,26 @@ const formatDateDisplay = (dateStr) => {
   setEditingValue("");
   setWastageExpanded(false);
   
-  setViewingBatch({
-    ...batch,
-    ingredientBatchCodes: batch.pizzas.reduce((acc, pizza) => {
-      pizza.ingredients.forEach(ingredient => {
-        if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
-          acc[ingredient] = pizza.ingredientBatchCodes[ingredient];
-        }
-      });
-      return acc;
-    }, {})
-  });
+  if (batch.batch_type === 'starter') {
+    // For starter batches, use ingredient codes directly from batch
+    setViewingBatch({
+      ...batch,
+      ingredientBatchCodes: batch.ingredientBatchCodes || {}
+    });
+  } else {
+    // For pizza/dough ball batches, aggregate from pizzas
+    setViewingBatch({
+      ...batch,
+      ingredientBatchCodes: batch.pizzas.reduce((acc, pizza) => {
+        pizza.ingredients.forEach(ingredient => {
+          if (pizza.ingredientBatchCodes && pizza.ingredientBatchCodes[ingredient]) {
+            acc[ingredient] = pizza.ingredientBatchCodes[ingredient];
+          }
+        });
+        return acc;
+      }, {})
+    });
+  }
 
   setIngredientsOrdered(batch.ingredients_ordered || false);
 };
@@ -865,7 +882,7 @@ const formatDateDisplay = (dateStr) => {
         .reduce((sum, pizza) => sum + pizza.quantity, 0);
 
       // Add new batch
-      await addDoc(collection(db, "batches"), {
+      const batchData = {
         batch_date: batchDate,
         num_pizzas: totalPizzas,
         batch_code: batchCode,
@@ -877,7 +894,17 @@ const formatDateDisplay = (dateStr) => {
         tomato_base_wastage_oven: tomatoBaseWastageOven,
         tomato_base_wastage_topping: tomatoBaseWastageTopping,
         topped_pizza_wastage: toppedPizzaWastage,
-        pizzas: pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
+        notes: notes,
+      };
+      
+      // Add mix quantities for starter batches
+      if (batchType === "starter" && formMixQuantities) {
+        batchData.mixQuantities = formMixQuantities;
+      }
+      
+      // Add pizzas for non-starter batches
+      if (batchType !== "starter") {
+        batchData.pizzas = pizzas.filter(pizza => pizza.quantity > 0).map(pizza => ({
           id: pizza.id,
           quantity: pizza.quantity,
           quantity_on_order: 0,
@@ -892,10 +919,13 @@ const formatDateDisplay = (dateStr) => {
           middlePizzaWeight: pizza.middlePizzaWeight || null,
           lastPizzaWeight: pizza.lastPizzaWeight || null,
           photo: pizza.photo || null,
-        })),
-        notes: notes,
-        batch_breakdown: batchBreakdown,
-      });
+        }));
+      } else {
+        // For starter batches, add empty pizzas array
+        batchData.pizzas = [];
+      }
+      
+      await addDoc(collection(db, "batches"), batchData);
       setShowForm(false);
       setBatchDate("");
       setBatchCode("");
@@ -908,6 +938,7 @@ const formatDateDisplay = (dateStr) => {
       setTomatoBaseWastageOven(0);
       setTomatoBaseWastageTopping(0);
       setToppedPizzaWastage(0);
+      setFormMixQuantities(null);
       const querySnapshot = await getDocs(collection(db, "batches"));
       const batchesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -928,6 +959,8 @@ const formatDateDisplay = (dateStr) => {
       await deleteDoc(batchRef);
       
       setViewingBatch(null)
+      setEditingMixQuantities(false)
+      setMixCalculatorInitialized(false)
 
       const querySnapshot = await getDocs(collection(db, "batches"));
       const batchesData = querySnapshot.docs.map(doc => ({
@@ -1054,6 +1087,11 @@ const formatDateDisplay = (dateStr) => {
             batch_date: value,
             batch_code: newBatchCode
           });
+        } else if (field === "ingredientBatchCodes") {
+          // Handle starter batch ingredient codes
+          await updateDoc(batchRef, {
+            ingredientBatchCodes: value
+          });
         } else {
           await updateDoc(batchRef, {
             [field]: field === "ingredients_ordered" ? !!value : value
@@ -1155,6 +1193,11 @@ const formatDateDisplay = (dateStr) => {
 
   useEffect(() => {
     if (!viewingBatch) return;
+  
+    // Set starter mix totals for starter batches
+    if (viewingBatch.batch_type === 'starter' && viewingBatch.mixQuantities?.totals) {
+      setStarterMixTotals(viewingBatch.mixQuantities.totals);
+    }
   
     const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
   
@@ -1679,13 +1722,13 @@ const formatDateDisplay = (dateStr) => {
         </div>
       )}
       {viewingBatch && !showForm && (
-        <div className="modal-overlay" onClick={() => setViewingBatch(null)}>
+        <div className="modal-overlay" onClick={() => { setViewingBatch(null); setEditingMixQuantities(false); setMixCalculatorInitialized(false); }}>
           <div className="batchDetails border modal-content" ref={batchDetailsRef} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Batch Details</h2>
               <button 
                 className="modal-close-button" 
-                onClick={() => setViewingBatch(null)}
+                onClick={() => { setViewingBatch(null); setEditingMixQuantities(false); setMixCalculatorInitialized(false); }}
                 type="button"
               >
                 ×
@@ -1759,14 +1802,227 @@ const formatDateDisplay = (dateStr) => {
             </div>
 
           </div>
-          <div className='pizzaDisplayTitles'> 
-            <h4 className='pizzaWeightsOuter'>
-              {viewingBatch.batch_type === 'dough balls' ? 'Dough Balls:' : 
-               viewingBatch.batch_type === 'starter' ? 'Starter:' : 'Pizzas:'}
-            </h4>
-            <h6 className='pizzaWeightsOuter pizzaWeights'>{viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Weights:' : 
-               viewingBatch.batch_type === 'starter' ? '' : 'Pizzas Weights:'}</h6>
-          </div>
+          
+          {/* Conditional content based on batch type */}
+          {viewingBatch.batch_type === 'starter' ? (
+            /* Starter Batch Display */
+            <div>
+              <div className='pizzaDisplayTitles'> 
+                <h4 className='pizzaWeightsOuter'>
+                  Mixes: 
+                  <button 
+                    onClick={async () => {
+                      if (editingMixQuantities) {
+                        // Save changes and exit edit mode
+                        try {
+                          const batchRef = doc(db, "batches", viewingBatch.id);
+                          await updateDoc(batchRef, { mixQuantities: formMixQuantities });
+                          
+                          setViewingBatch(prev => ({
+                            ...prev,
+                            mixQuantities: formMixQuantities
+                          }));
+                          
+                          setEditingMixQuantities(false);
+                          setMixCalculatorInitialized(false);
+                        } catch (error) {
+                          console.error("Error saving mix quantities:", error);
+                          alert("Failed to save mix quantities. Please try again.");
+                        }
+                      } else {
+                        // Enter edit mode
+                        setEditingMixQuantities(true);
+                        setMixCalculatorInitialized(false);
+                      }
+                    }}
+                    style={{ marginLeft: '10px', fontSize: '14px', padding: '4px 8px' }}
+                    className='button'
+                  >
+                    <FontAwesomeIcon icon={faPencilAlt} />
+                  </button>
+                </h4>
+              </div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                {editingMixQuantities ? (
+                  <div>
+                    <MixCalculator 
+                      onTotalsChange={setStarterMixTotals} 
+                      batchId={viewingBatch.id}
+                      initialQuantities={viewingBatch.mixQuantities}
+                      hideResults={true}
+                      onQuantitiesChange={(quantities) => {
+                        // Store the quantities for saving  
+                        setFormMixQuantities(quantities);
+                        // Update the totals for live ingredient requirements display
+                        if (quantities.totals) {
+                          setStarterMixTotals(quantities.totals);
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  viewingBatch.mixQuantities ? (
+                    <div style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '5px' }}>
+                    <div className="mix-display-container">
+                      {/* Display Top Up */}
+                      {viewingBatch.mixQuantities.fixedQuantities?.['Top up'] > 0 && (
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>Top Up:</strong> {viewingBatch.mixQuantities.fixedQuantities['Top up']}
+                        </div>
+                      )}
+                      {/* Display starter percentage */}
+                      {viewingBatch.mixQuantities.isThreePercent !== undefined && (
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                          <em>Starter {viewingBatch.mixQuantities.isThreePercent ? '3%' : '2.5%'}:</em>
+                        </div>
+                      )}
+
+                      {/* Display Frozen quantities */}
+                      <div className='mix-input-row'>
+                      <div><strong>Frozen: </strong></div>
+                      {Object.entries(viewingBatch.mixQuantities.frozenQuantities || {})
+                        .filter(([_, qty]) => qty > 0)
+                        .map(([size, qty]) => (
+                          <div style={{ marginLeft: '20px' }}>
+                            {size} x {qty}
+                          </div>
+                        ))
+                      }
+                      </div>
+                      
+                      {/* Display Restaurant quantities */}
+                      <div className='mix-input-row'>
+                      <div><strong>Restaurant: </strong></div>
+                      {Object.entries(viewingBatch.mixQuantities.restaurantQuantities || {})
+                        .filter(([_, qty]) => qty > 0)
+                        .map(([size, qty]) => (
+                          <div style={{ marginLeft: '20px' }}>
+                            {size} x {qty}
+                          </div>
+                        ))
+                      }
+                      </div>
+                      
+                      {/* Display Dough Balls */}
+                      {viewingBatch.mixQuantities.fixedQuantities?.['30kg Dough Balls (10%)'] > 0 && (
+                        <>
+                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                          <em>Starter 10%:</em>
+                        </div>
+                        <div style={{ marginBottom: '8px' }}>
+                          <strong>30kg Dough Balls:</strong> {viewingBatch.mixQuantities.fixedQuantities['30kg Dough Balls (10%)']}
+                        </div>
+                        </>
+                      )}
+                      
+
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontStyle: 'italic', color: '#666' }}>
+                    No mix data recorded for this batch
+                  </div>
+                )
+                )}
+              </div>
+              
+              {(starterMixTotals.water > 0 || starterMixTotals.starter > 0 || starterMixTotals.rye > 0 || starterMixTotals.caputo > 0) && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h4>Starter Feed:</h4>
+                  <div style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '5px' }}>
+                    <div><strong>70% Water: {starterMixTotals.water.toLocaleString()}g</strong></div>
+                    <div><strong>19% Starter: {starterMixTotals.starter.toLocaleString()}g</strong></div>
+                    <div><strong>50% Rye Flour: {starterMixTotals.rye.toLocaleString()}g</strong> ({(starterMixTotals.rye / 1000).toFixed(2)}kg)</div>
+                    <div><strong>50% Caputo Flour: {starterMixTotals.caputo.toLocaleString()}g</strong> ({(starterMixTotals.caputo / 1000).toFixed(2)}kg)</div>
+                  </div>
+                </div>
+              )}
+              
+              <p className='pizzaNumbers'>
+                <strong>Starter Made:</strong>{" "}
+                <input
+                  type="checkbox"
+                  checked={viewingBatch.pizza_numbers_complete || false}
+                  onChange={async (e) => {
+                    const newValue = e.target.checked;
+                    try {
+                      await handleInlineSave("batch", null, "pizza_numbers_complete", newValue);
+                    } catch (error) {
+                      console.error("Error updating checkbox:", error);
+                    }
+                  }}
+                />
+              </p>
+              
+              <h4>Ingredient Batch Codes:</h4>
+              <div className='ingredientBatchcodeBox'>
+                {['Rye Flour', 'Flour (Caputo Red)'].map(ingredientName => {
+                  const batchCode = viewingBatch.ingredientBatchCodes?.[ingredientName] || '';
+                  
+                  return (
+                    <div key={ingredientName} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
+                      <p><strong>{ingredientName}:</strong></p>
+                      {editingField === `starter-ingredient-${ingredientName}` ? (
+                        <div>
+                          <input
+                            type="text"
+                            list={`batch-code-suggestions-${ingredientName}`}
+                            value={editingValue}
+                            autoFocus
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={() => {
+                              handleInlineSave("batch", null, "ingredientBatchCodes", {
+                                ...viewingBatch.ingredientBatchCodes,
+                                [ingredientName]: editingValue
+                              });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleInlineSave("batch", null, "ingredientBatchCodes", {
+                                  ...viewingBatch.ingredientBatchCodes,
+                                  [ingredientName]: editingValue
+                                });
+                              }
+                            }}
+                          />
+                          <datalist id={`batch-code-suggestions-${ingredientName}`}>
+                            {(batchCodeSuggestions[ingredientName] || [])
+                              .filter(code =>
+                                editingValue
+                                  ? code.toLowerCase().includes(editingValue.toLowerCase())
+                                  : true
+                              )
+                              .slice(0, 3)
+                              .map(code => (
+                                <option key={code} value={code} />
+                              ))}
+                          </datalist>
+                        </div>
+                      ) : (
+                        <p onClick={() => {
+                          setEditingField(`starter-ingredient-${ingredientName}`);
+                          setEditingValue(batchCode || "");
+                        }}>
+                          {batchCode ? `# ${batchCode}` : <span style={{ color: 'red' }}>-</span>}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Pizza/Dough Ball Batch Display */
+            <div>
+              <div className='pizzaDisplayTitles'> 
+                <h4 className='pizzaWeightsOuter'>
+                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Balls:' : 'Pizzas:'}
+                </h4>
+                <h6 className='pizzaWeightsOuter pizzaWeights'>
+                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Weights:' : 'Pizzas Weights:'}
+                </h6>
+              </div>
           {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (
   <div key={pizza.id} className='pizzaDetails'>
   <div>
@@ -2165,27 +2421,29 @@ const formatDateDisplay = (dateStr) => {
               )}
             </div>
           )}
-
-          <p className='pizzaNumbers'>
-            <strong>              
-              {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Numbers Complete:' : 
-               viewingBatch.batch_type === 'starter' ? 'Starter Made:' : 'Pizzas Numbers Complete:'}</strong>{" "}
-            <input
-              type="checkbox"
-              checked={viewingBatch.pizza_numbers_complete || false}
-              onChange={async (e) => {
-                const newValue = e.target.checked;
-                try {
-                  await handleInlineSave("batch", null, "pizza_numbers_complete", newValue);
-                } catch (error) {
-                  console.error("Error updating checkbox:", error);
-                }
-              }}
-            />
-          </p>
-          
-          <h4>Batch Codes:</h4>
-          <div className='ingredientBatchcodeBox'>
+            </div>
+          )}\n          {/* Common sections for non-starter batches */}
+          {viewingBatch.batch_type !== 'starter' && (
+            <div>
+              <p className='pizzaNumbers'>
+                <strong>              
+                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Numbers Complete:' : 'Pizzas Numbers Complete:'}</strong>{" "}
+                <input
+                  type="checkbox"
+                  checked={viewingBatch.pizza_numbers_complete || false}
+                  onChange={async (e) => {
+                    const newValue = e.target.checked;
+                    try {
+                      await handleInlineSave("batch", null, "pizza_numbers_complete", newValue);
+                    } catch (error) {
+                      console.error("Error updating checkbox:", error);
+                    }
+                  }}
+                />
+              </p>
+              
+              <h4>Batch Codes:</h4>
+              <div className='ingredientBatchcodeBox'>
           {sortIngredients(
             ingredients.filter(ingredient =>
               viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
@@ -2292,6 +2550,10 @@ const formatDateDisplay = (dateStr) => {
               );
             })()}
             </div>
+            </div>
+          )}
+          
+          {/* Notes section for all batch types */}
           <p className='fullWidth'>
           <strong>Notes:</strong>{" "}
           {editingField === "notes" ? (
@@ -2467,10 +2729,15 @@ const formatDateDisplay = (dateStr) => {
             <>
               <Form.Label column sm={3}><strong>Starter:</strong></Form.Label>
               <Col sm={9}>
-                <MixCalculator onTotalsChange={(totals) => {
-                  // You can use these totals if needed elsewhere
-                  console.log('Mix totals:', totals);
-                }} />
+                <MixCalculator 
+                  onTotalsChange={(totals) => {
+                    // You can use these totals if needed elsewhere
+                    console.log('Mix totals:', totals);
+                  }}
+                  onQuantitiesChange={(quantities) => {
+                    setFormMixQuantities(quantities);
+                  }}
+                />
               </Col>
             </>
           )}
