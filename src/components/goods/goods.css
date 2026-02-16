@@ -1,0 +1,223 @@
+/* All inventory displayed flex */
+  .inventoryContainer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    overflow-y: auto;
+    margin-top: 50px;
+    margin-bottom: 50px;
+    box-sizing: border-box;
+  }
+
+/* sleeve radio */
+  .sleeveFilter {
+  margin-bottom: 16px;
+}
+.sleeveRadio {
+  margin: 1px;
+}
+
+
+/* individual pizza squares */
+  .pizzas {
+    display: flex;
+    flex-direction: column;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    max-width: 500px;
+    margin: 1%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+    
+    box-shadow: 0 2px 4px var(--boxShadow);
+  }
+  .pizzaContent {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 10px;
+    margin: 0;
+    overflow-y: auto;
+    max-height: 100%;
+  }
+  .pizzaContent::-webkit-scrollbar {
+    width: 8px; /* Width of the scrollbar */
+  }
+  
+  .pizzaContent::-webkit-scrollbar-thumb {
+    background-color: var(--darkLight); /* Color of the scrollbar thumb */
+    border-radius: 10px; /* Rounded corners for the scrollbar thumb */
+  }
+  
+  .pizzaContent::-webkit-scrollbar-track {
+    background-color: var(--light); /* Background of the scrollbar track */
+  }
+  .pizzaHeader, .editIngredientsHeader {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: inherit;
+  }
+  .pizzaH4 {
+    color: var(--pale);
+    margin: auto;
+  }
+  .pizzaH4, .editIngredientsHeader {
+    padding: 5%;
+    font-weight:bold;
+  }
+  .ingredientsScroll {
+    max-height: 70% !important;
+    padding: 0 10% !important;
+  }
+  .nameUnit{
+    display: flex;
+    cursor: pointer;
+  }
+  .unitSpacing {
+    padding-left: 4px;
+  }
+
+  .perPizza {
+    padding-right: 14%;
+  }
+  .inputBox {
+    max-width: 70px;
+  }
+
+  #pizzasMEA_A1 {
+    background-image: url(../Frozen-Characters-Website-1-copy.webp);
+  }
+  #pizzasMAR_A1 {
+    background-image: url(../Frozen-Characters-Website-2-copy.webp);
+  }
+  #pizzasHAM_A1 {
+    background-image: url(../Frozen-Characters-Website-3-copy.webp);
+  }
+  #pizzasNAP_A1 {
+    background-image: url(../Frozen-Characters-Website-4-copy.webp);
+  }
+  #pizzasROS_B1 {
+    background-image: url(../Frozen-Characters-Website-5-copy.webp) !important;
+  }
+
+
+
+/* add pizza '+' square */
+  .addPizza {
+    background-color: var(--light);
+    font-size: xx-large;
+    align-items: center;
+    justify-content: center;
+    border: dotted 1px var(--darkLight);
+  }
+  .plus{
+    border-radius: 10px;
+    font-weight: bolder;
+  }
+
+
+
+/* new pizza form */
+  .modal {
+    padding: 20%;
+  }
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+  }
+  .inputBox {
+    font-size: small;
+    margin-bottom: 3px !important;
+    width: 100%;
+  }
+  .addIngredient {
+    margin-bottom: 13px;
+  }
+  .ingredientList {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--darkLight);
+    margin: 0 30px 20px 30px;
+    font-style: italic;
+  }
+  .sleeve {
+    display: flex;
+    justify-content: center;
+  }
+
+
+
+/* inventory display */
+  .inventoryBox {
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--dark);
+    border: dashed 1px var(--dark);
+  }
+
+/* ingredients list */
+.listContainer {
+  display: flex;
+  justify-content: center;
+}
+.list {
+  text-align: start;
+}
+.ingredientDropdown {
+  max-height: 300px; 
+  overflow-y: auto; 
+}
+.ingredientInput {
+  padding: 0;
+  margin: 0;
+  justify-content: space-between;
+}
+.units {
+  width: 80px;
+}
+.hide {
+  display: none;
+}
+
+/* edit ingredients display */
+.editIngredients {
+  background-color: var(--light);
+}
+
+/* plus minus on the available */
+.availableControls {
+  display: flex;
+}
+.available {
+  padding-right: 10px;
+}
+.minusArch, .plusArch {
+  padding: 0 1%;
+  border: solid 1px var(--darkLight);
+  border-radius: 25%;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.minusArch:hover, .plusArch:hover {
+  background-color: var(--berthaLight);
+}
+
+
+
+
+@media (max-width: 530px) {
+  .inventoryBox, .ingredientsScroll, .perPizza  {
+    font-size: 8px;
+  }
+  .archiveModal {
+    font-size: 12px;
+  }
+}
