@@ -7,7 +7,7 @@ import MixCalculator from './MixCalculator';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faPencilAlt } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faPencilAlt, faCube } from '@fortawesome/free-solid-svg-icons';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -1909,7 +1909,7 @@ const formatDateDisplay = (dateStr) => {
                       {/* Display Dough Balls */}
                       {viewingBatch.mixQuantities.fixedQuantities?.['30kg Dough Balls (10%)'] > 0 && (
                         <>
-                        <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                        <div className='em' >
                           <em>Starter 10%:</em>
                         </div>
                         <div style={{ marginBottom: '8px' }}>
@@ -1932,12 +1932,33 @@ const formatDateDisplay = (dateStr) => {
               {(starterMixTotals.water > 0 || starterMixTotals.starter > 0 || starterMixTotals.rye > 0 || starterMixTotals.caputo > 0) && (
                 <div style={{ marginBottom: '20px' }}>
                   <h4>Starter Feed:</h4>
-                  <div style={{ backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '5px' }}>
-                    <div><strong>70% Water: {starterMixTotals.water.toLocaleString()}g</strong></div>
-                    <div><strong>19% Starter: {starterMixTotals.starter.toLocaleString()}g</strong></div>
-                    <div><strong>50% Rye Flour: {starterMixTotals.rye.toLocaleString()}g</strong> ({(starterMixTotals.rye / 1000).toFixed(2)}kg)</div>
-                    <div><strong>50% Caputo Flour: {starterMixTotals.caputo.toLocaleString()}g</strong> ({(starterMixTotals.caputo / 1000).toFixed(2)}kg)</div>
+                  <div className='starterFeed'>
+                  <div>
+                    <div>_</div>
+                    <div><strong>70% Water: </strong></div>
+                    <div><strong>19% Starter: </strong></div>
+                    <div><strong>50% Rye Flour: </strong></div>
+                    <div><strong>50% Caputo Flour: </strong></div>
+                    <em className='em'> <strong>total:</strong></em>
                   </div>
+                  <div>
+                    <em className='em'> 1 tub: <FontAwesomeIcon icon={faCube} /> </em>
+                    <div>{starterMixTotals.water.toLocaleString()}g</div>
+                    <div>{starterMixTotals.starter.toLocaleString()}g</div>
+                    <div>{starterMixTotals.rye.toLocaleString()}g</div>
+                    <div>{starterMixTotals.caputo.toLocaleString()}g</div>
+                    <em className='em'>{(starterMixTotals.water + starterMixTotals.starter + starterMixTotals.rye + starterMixTotals.caputo).toLocaleString()}g</em>
+                  </div>
+                  <div>
+                    <em className='em'> 2 tubs: <FontAwesomeIcon icon={faCube} /><FontAwesomeIcon icon={faCube} /> </em>
+                    <div >{(starterMixTotals.water / 2).toLocaleString()}g</div>
+                    <div>{(starterMixTotals.starter / 2).toLocaleString()}g</div>
+                    <div>{(starterMixTotals.rye / 2).toLocaleString()}g</div>
+                    <div>{(starterMixTotals.caputo / 2).toLocaleString()}g</div>
+                    <em className='em'>{(starterMixTotals.water/2 + starterMixTotals.starter/2 + starterMixTotals.rye/2 + starterMixTotals.caputo/2).toLocaleString()}g each</em>
+                  </div>
+                  </div>
+                  <em className='em'> *if starter total is larger than 5500g, split it over 2 10L tubs</em>
                 </div>
               )}
               
