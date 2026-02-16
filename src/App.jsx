@@ -16,6 +16,7 @@ import BatchCodes from './components/batchCodes/BatchCodes'
 import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
 import UpdateBanner from './components/UpdateBanner/UpdateBanner';
 import useVersionCheck from './hooks/useVersionCheck';
+import Goods from './components/goods/goods';
 
 // Protected Route wrapper component
 const ProtectedRoute = ({ children, requiredRole = null }) => {
@@ -136,6 +137,11 @@ function App() {
               <Route path="summary" element={
                 <ProtectedRoute requiredRole="admin">
                   <Summary/>
+                </ProtectedRoute>
+              } />
+              <Route path="goods" element={
+                <ProtectedRoute requiredRole="admin">
+                  <Goods/>
                 </ProtectedRoute>
               } />
               {/* <Route path="prep" element={
