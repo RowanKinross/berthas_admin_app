@@ -77,7 +77,9 @@ const MixCalculator = ({ onTotalsChange }) => {
 
   // Get quantity for fixed sizes (Top up, 30kg Dough Balls)
   const getFixedQuantity = (sizeName) => {
-    return quantities[sizeName] || 0;
+    // Remove colon from the name to match state keys
+    const stateName = sizeName.replace(':', '');
+    return quantities[stateName] || 0;
   };
   
   // Get quantity for frozen sizes
