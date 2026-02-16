@@ -309,6 +309,7 @@ textarea.input {
     flex-direction: column;
     align-items: start;
   }
+
   .ingredientBatchCode {
     width: 100%;
   }
