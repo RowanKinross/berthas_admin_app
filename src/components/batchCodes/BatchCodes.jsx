@@ -2529,7 +2529,7 @@ const formatDateDisplay = (dateStr) => {
                           return (
                             <div key={batch.id} style={{ marginBottom: '1px' }}>
                               <button
-                                className={`button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
+                                className={`button ${batch.completed ? 'completed' : 'draft batchDivDraft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
                                 onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
                                 onTouchStart={() => handleTouchStart(batch, batchIndex)}
                                 onTouchMove={handleTouchMove}
@@ -2543,15 +2543,14 @@ const formatDateDisplay = (dateStr) => {
                                   display: 'block',
                                   position: 'relative'
                                 }}
-                                title={`${batch.batch_code} - ${batch.num_pizzas} pizzas ${batch.ingredients_ordered ? '(✓)' : '(✘)'}`}
                               >
                                 
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1px' }}>
-                                  <span className='batchType'>{batch.batch_type ? `${batch.batch_type.toUpperCase()}` : 'PIZZAS'}</span>
+                                  <span className='batchType' style={{ fontSize: '9px', textAlign: 'center'}}>{batch.batch_type ? `${batch.batch_type.toUpperCase()}` : 'PIZZAS'}</span>
                                   <span style={{ fontSize: '9px' }}>{batch.batch_code}</span>
                                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
                                     <span>{batch.num_pizzas}</span>
-                                    <span>{batch.ingredients_ordered ? '✓' : '✘'}</span>
+                                    {/* <span>{batch.ingredients_ordered ? '✓' : '✘'}</span> */}
                                   </div>
                                   {userRole === 'admin' && selectionMode && (
                                   <input
@@ -2589,10 +2588,10 @@ const formatDateDisplay = (dateStr) => {
           // List View (existing code)
           <>
             {/* Batch header */}
-            <div className='batchHeader container'>
+            {/* <div className='batchHeader container'>
               <p>Batch Date:</p>
               <p>Ingredients Ordered?</p>
-            </div>
+            </div> */}
             
             {filteredBatches
               .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
@@ -2601,7 +2600,7 @@ const formatDateDisplay = (dateStr) => {
                 const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
                 
                 return (
-                  <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft'}`}>
+                  <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft batchDivDraft'}`}>
                       {userRole === 'admin' && selectionMode && (
                         <input
                           type="checkbox"
@@ -2625,12 +2624,13 @@ const formatDateDisplay = (dateStr) => {
                         onTouchCancel={handleTouchCancel}
                         style={{ display: 'flex', flexDirection: 'column', width: '100%', position: 'relative' }}
                       >
-                      <span className='batchType'>{(batch.batch_type || 'PIZZAS').toUpperCase()}</span>
+                      {/* <span className='batchType'>{(batch.batch_type || 'PIZZAS').toUpperCase()}</span> */}
                       <div className="container" style={{ width: '100%' }}>
-                        <p className='batchTextBoxes'>
+                        <p className='batchTextBoxes batchTextBoxesMobileFont'>
                           {formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
-                        <p className='batchTextBoxCenter'> {batch.num_pizzas}</p>
-                        {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>}
+                        <p className='batchTextBoxes batchTextBoxCenter'> {batch.num_pizzas}</p>
+                        <p className='batchTextBoxes batchTextBoxEnd batchTextBoxesMobileFont'>{(batch.batch_type || 'PIZZAS').toUpperCase()}</p>
+                        {/* {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>} */}
                       </div>
                       {matchingIngredients.length > 0 && (
                         <div style={{ 

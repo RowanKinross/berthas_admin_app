@@ -1,11 +1,10 @@
 .batchDiv {
   background-color: var(--bertha);
   display: flex;
-  justify-content: space-between !important;
-  margin: 2px;
-}
+  justify-content: space-evenly !important;
+  margin: 6px 0px;
+  padding: 0px !important}
 .batchType {
-  color: var(--pale);
   font-weight: 700;
 }
 .batchText {
@@ -14,6 +13,19 @@
   width: 100%;
   border: 0;
 }
+.batchTextBoxes {
+  width: 33%;
+  align-self: center;
+  margin: 3px 0px;
+}
+.batchTextBoxCenter {
+  text-align: center;
+  width: 10%;
+}
+.batchTextBoxEnd {
+  text-align: right;
+}
+
 .batchText.selected {
   background-color: var(--MargLight); 
   color: var(--pale);
@@ -71,12 +83,12 @@ textarea.input {
   width: 50px;
 }
 .draft {
-  background-color: var(--darkGrey);
+  background-color: var(--berthaLighter);
+}
+.batchDivDraft {
+  border: 3px dashed var(--bertha);
 }
 
-.batchTextBoxEnd{
-  text-align: end;
-}
 .total, .pizzaNumbers {
   padding: 10px 0 0 10px;
 }
@@ -265,6 +277,12 @@ textarea.input {
 }
 
 @media (max-width: 530px) {
+  .batchTextBoxes {
+    text-wrap: nowrap;
+  }
+  .batchTextBoxesMobileFont {
+    font-size: 12px;
+  }
   .ingredient {
     flex-direction: column;
     align-items: start;
@@ -274,9 +292,6 @@ textarea.input {
   }
   .batchHeader {
     display: none;
-  }
-  .batchTextBoxEnd{
-    width:fit-content;
   }
   .pizzaWeights {
     flex-direction: column;
