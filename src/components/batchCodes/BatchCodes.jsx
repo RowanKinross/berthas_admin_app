@@ -172,7 +172,11 @@ function BatchCodes() {
       'Pizza Details'
     ];
     
-    const pizzaWeightHeaders = orderedBaseIds.map(baseId => `${baseId} Avg Weight (g)`);
+    const pizzaWeightHeaders = orderedBaseIds.flatMap(baseId => [
+      `${baseId} First Weight (g)`,
+      `${baseId} Middle Weight (g)`,
+      `${baseId} Last Weight (g)`
+    ]);
     
     const headers = [
       ...baseHeaders,
@@ -188,33 +192,45 @@ function BatchCodes() {
                           (batch.topped_pizza_wastage || 0);
       
       const pizzaDetails = batch.pizzas?.map(pizza => 
-        `${pizza.pizza_title}: ${pizza.quantity} (First: ${pizza.firstPizzaWeight || '-'}g, Middle: ${pizza.middlePizzaWeight || '-'}g, Last: ${pizza.lastPizzaWeight || '-'}g)`
+        `${pizza.pizza_title}: ${pizza.quantity}`
       ).join('; ') || '';
       
-      // Calculate average weights for each base pizza type
-      const pizzaWeightData = orderedBaseIds.map(baseId => {
+      // Calculate first, middle, last weights for each base pizza type
+      const pizzaWeightData = orderedBaseIds.flatMap(baseId => {
         const matchingPizzas = batch.pizzas?.filter(pizza => pizza.id.slice(0, -1) === baseId) || [];
         
         if (matchingPizzas.length === 0) {
-          return '';
+          return ['', '', ''];
         }
         
         // Collect all weights from all pizzas of this base type
-        const allWeights = [];
+        const allFirstWeights = [];
+        const allMiddleWeights = [];
+        const allLastWeights = [];
+        
         matchingPizzas.forEach(pizza => {
-          [pizza.firstPizzaWeight, pizza.middlePizzaWeight, pizza.lastPizzaWeight].forEach(weight => {
-            if (weight && !isNaN(weight)) {
-              allWeights.push(Number(weight));
-            }
-          });
+          if (pizza.firstPizzaWeight && !isNaN(pizza.firstPizzaWeight)) {
+            allFirstWeights.push(Number(pizza.firstPizzaWeight));
+          }
+          if (pizza.middlePizzaWeight && !isNaN(pizza.middlePizzaWeight)) {
+            allMiddleWeights.push(Number(pizza.middlePizzaWeight));
+          }
+          if (pizza.lastPizzaWeight && !isNaN(pizza.lastPizzaWeight)) {
+            allLastWeights.push(Number(pizza.lastPizzaWeight));
+          }
         });
         
-        if (allWeights.length === 0) {
-          return '';
-        }
+        const avgFirstWeight = allFirstWeights.length > 0 
+          ? (allFirstWeights.reduce((sum, w) => sum + w, 0) / allFirstWeights.length).toFixed(1) 
+          : '';
+        const avgMiddleWeight = allMiddleWeights.length > 0 
+          ? (allMiddleWeights.reduce((sum, w) => sum + w, 0) / allMiddleWeights.length).toFixed(1) 
+          : '';
+        const avgLastWeight = allLastWeights.length > 0 
+          ? (allLastWeights.reduce((sum, w) => sum + w, 0) / allLastWeights.length).toFixed(1) 
+          : '';
         
-        const avgWeight = (allWeights.reduce((sum, w) => sum + w, 0) / allWeights.length).toFixed(1);
-        return avgWeight;
+        return [avgFirstWeight, avgMiddleWeight, avgLastWeight];
       });
       
       const ingredientCodes = batch.pizzas?.flatMap(pizza => 
