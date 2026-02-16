@@ -22,6 +22,7 @@ function BatchCodes() {
   const [ingredientsOrdered, setIngredientsOrdered] = useState(false);
   const [pizzaNumbersComplete, setPizzaNumbersComplete] = useState(false);
   const [notes, setNotes] = useState("");
+  const [batchBreakdown, setBatchBreakdown] = useState("");
   const [batchType, setbatchType] = useState("pizzas"); // 'dough balls', 'pizzas', 'starter'
   
   // Wastage tracking fields
@@ -893,6 +894,7 @@ const formatDateDisplay = (dateStr) => {
           photo: pizza.photo || null,
         })),
         notes: notes,
+        batch_breakdown: batchBreakdown,
       });
       setShowForm(false);
       setBatchDate("");
@@ -901,6 +903,7 @@ const formatDateDisplay = (dateStr) => {
       setCompleted(false);
       setIngredientsOrdered(false);
       setNotes("")
+      setBatchBreakdown("");
       setDoughBallWastage(0);
       setTomatoBaseWastageOven(0);
       setTomatoBaseWastageTopping(0);
@@ -958,6 +961,9 @@ const formatDateDisplay = (dateStr) => {
       break;
       case "notes":
         setNotes(value);  // Update state for notes
+        break;
+      case "batch_breakdown":
+        setBatchBreakdown(value);  // Update state for batch breakdown
         break;
       default:
         break;
