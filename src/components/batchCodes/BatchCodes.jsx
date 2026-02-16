@@ -1137,9 +1137,85 @@ const formatDateDisplay = (dateStr) => {
           });
         } else if (field === "ingredientBatchCodes") {
           // Handle starter batch ingredient codes
-          await updateDoc(batchRef, {
+          let updateData = {
             ingredientBatchCodes: value
-          });
+          };
+
+          // Check if starter ingredients are being set and add starter_rye/starter_caputo fields
+          const ryeFlourCode = value['Rye Flour'];
+          const caputoCode = value['Flour (Caputo Red)'];
+          
+          if (ryeFlourCode || caputoCode) {
+            // Add starter codes to batch-level ingredientBatchCodes
+            const updatedBatchCodes = { ...value };
+            if (ryeFlourCode) updatedBatchCodes['Starter Rye'] = ryeFlourCode;
+            if (caputoCode) updatedBatchCodes['Starter Caputo'] = caputoCode;
+            
+            updateData.ingredientBatchCodes = updatedBatchCodes;
+
+            // Also update the first pizza's ingredientBatchCodes if pizzas exist
+            if (currentData.pizzas && currentData.pizzas.length > 0) {
+              const updatedPizzas = [...currentData.pizzas];
+              if (updatedPizzas[0]) {
+                updatedPizzas[0] = {
+                  ...updatedPizzas[0],
+                  ingredientBatchCodes: {
+                    ...updatedPizzas[0].ingredientBatchCodes,
+                    ...(ryeFlourCode && { 'Starter Rye': ryeFlourCode }),
+                    ...(caputoCode && { 'Starter Caputo': caputoCode })
+                  }
+                };
+                updateData.pizzas = updatedPizzas;
+              }
+            }
+          }
+
+          await updateDoc(batchRef, updateData);
+        } else if (field === "starter_batch_code") {
+          // When starter batch is selected, also pull the rye and caputo codes
+          let updateData = {
+            [field]: value
+          };
+
+          if (value) {
+            // Find the selected starter batch
+            const selectedStarter = batches.find(batch => 
+              batch.batch_type === 'starter' && batch.batch_code === value
+            );
+
+            if (selectedStarter && selectedStarter.ingredientBatchCodes) {
+              const ryeCode = selectedStarter.ingredientBatchCodes['Rye Flour'];
+              const caputoCode = selectedStarter.ingredientBatchCodes['Flour (Caputo Red)'];
+
+              // Add to batch-level ingredientBatchCodes
+              if (ryeCode || caputoCode) {
+                const currentIngredientCodes = currentData.ingredientBatchCodes || {};
+                updateData.ingredientBatchCodes = {
+                  ...currentIngredientCodes,
+                  ...(ryeCode && { 'Starter Rye': ryeCode }),
+                  ...(caputoCode && { 'Starter Caputo': caputoCode })
+                };
+
+                // Also update first pizza's ingredientBatchCodes if pizzas exist
+                if (currentData.pizzas && currentData.pizzas.length > 0) {
+                  const updatedPizzas = [...currentData.pizzas];
+                  if (updatedPizzas[0]) {
+                    updatedPizzas[0] = {
+                      ...updatedPizzas[0],
+                      ingredientBatchCodes: {
+                        ...updatedPizzas[0].ingredientBatchCodes,
+                        ...(ryeCode && { 'Starter Rye': ryeCode }),
+                        ...(caputoCode && { 'Starter Caputo': caputoCode })
+                      }
+                    };
+                    updateData.pizzas = updatedPizzas;
+                  }
+                }
+              }
+            }
+          }
+
+          await updateDoc(batchRef, updateData);
         } else {
           await updateDoc(batchRef, {
             [field]: field === "ingredients_ordered" ? !!value : value
@@ -1323,7 +1399,7 @@ const formatDateDisplay = (dateStr) => {
 
   // Helper function to find matching ingredient batch code for search display
   const getMatchingIngredientCodes = (batch, searchTerm) => {
-    if (!searchTerm || !batch.pizzas) return [];
+    if (!searchTerm) return [];
     
     const normalizedSearchTerm = normalizeForSearch(searchTerm);
     
@@ -1338,23 +1414,51 @@ const formatDateDisplay = (dateStr) => {
     const matches = [];
     const seenCombos = new Set(); // Prevent duplicates
     
-    for (const pizza of batch.pizzas) {
-      if (pizza.ingredientBatchCodes && pizza.quantity > 0) { // Only pizzas actually made
-        for (const [ingredient, code] of Object.entries(pizza.ingredientBatchCodes)) {
-          if (code && normalizeForSearch(code).includes(normalizedSearchTerm)) {
-            const combo = `${ingredient}:${code}`;
-            if (!seenCombos.has(combo)) {
-              // Find all pizzas in this batch that use this ingredient
-              const pizzasWithIngredient = batch.pizzas
-                .filter(p => p.quantity > 0 && p.ingredients.includes(ingredient))
-                .map(p => p.pizza_title);
+    // Check batch-level ingredient codes (for starters: Starter Rye, Starter Caputo, etc.)
+    if (batch.ingredientBatchCodes) {
+      for (const [ingredient, code] of Object.entries(batch.ingredientBatchCodes)) {
+        if (code && normalizeForSearch(code).includes(normalizedSearchTerm)) {
+          const combo = `${ingredient}:${code}`;
+          if (!seenCombos.has(combo)) {
+            // For Starter Rye and Starter Caputo, show all pizzas in the batch
+            // since these starter ingredients are used for all pizzas
+            const pizzasForStarterIngredient = (ingredient === 'Starter Rye' || ingredient === 'Starter Caputo') 
+              ? batch.pizzas?.filter(p => p.quantity > 0).map(p => p.pizza_title) || []
+              : (batch.batch_type === 'starter' ? ['Starter'] : []);
               
-              matches.push({ 
-                ingredient, 
-                code, 
-                pizzas: pizzasWithIngredient 
-              });
-              seenCombos.add(combo);
+            matches.push({ 
+              ingredient, 
+              code, 
+              pizzas: pizzasForStarterIngredient 
+            });
+            seenCombos.add(combo);
+          }
+        }
+      }
+    }
+    
+    // Check pizza-level ingredient codes
+    if (batch.pizzas) {
+      for (const pizza of batch.pizzas) {
+        if (pizza.ingredientBatchCodes && pizza.quantity > 0) { // Only pizzas actually made
+          for (const [ingredient, code] of Object.entries(pizza.ingredientBatchCodes)) {
+            if (code && normalizeForSearch(code).includes(normalizedSearchTerm)) {
+              const combo = `${ingredient}:${code}`;
+              if (!seenCombos.has(combo)) {
+                // For Starter Rye and Starter Caputo, show all pizzas in the batch
+                const pizzasWithIngredient = (ingredient === 'Starter Rye' || ingredient === 'Starter Caputo')
+                  ? batch.pizzas.filter(p => p.quantity > 0).map(p => p.pizza_title)
+                  : batch.pizzas
+                      .filter(p => p.quantity > 0 && p.ingredients.includes(ingredient))
+                      .map(p => p.pizza_title);
+                
+                matches.push({ 
+                  ingredient, 
+                  code, 
+                  pizzas: pizzasWithIngredient 
+                });
+                seenCombos.add(combo);
+              }
             }
           }
         }
@@ -1415,14 +1519,20 @@ const formatDateDisplay = (dateStr) => {
       normalizeForSearch(batch.batch_code).includes(normalizedSearchTerm) ||
       normalizeForSearch(formatDateDisplay(batch.batch_date)).includes(normalizedSearchTerm);
     
-    // Search in ingredient batch codes
+    // Search in pizza-level ingredient batch codes
     const matchesIngredientCodes = batch.pizzas?.some(pizza => 
       Object.values(pizza.ingredientBatchCodes || {}).some(code => 
         normalizeForSearch(code).includes(normalizedSearchTerm)
       )
     );
     
-    return matchesBatchInfo || matchesIngredientCodes;
+    // Search in batch-level ingredient codes (for starters: starter_rye, starter_caputo, etc.)
+    const matchesBatchIngredientCodes = batch.ingredientBatchCodes && 
+      Object.values(batch.ingredientBatchCodes).some(code => 
+        normalizeForSearch(code).includes(normalizedSearchTerm)
+      );
+    
+    return matchesBatchInfo || matchesIngredientCodes || matchesBatchIngredientCodes;
   });
   
   // Add this helper function near the top of your component
@@ -2527,8 +2637,11 @@ const formatDateDisplay = (dateStr) => {
               
               <h4>Batch Codes:</h4>
               <div className='ingredientBatchcodeBox'>
-              <div className='ingredient container' style={{ color: viewingBatch.starter_batch_code ? 'inherit' : 'red' }}> 
-                <p><strong>Starter: </strong></p>
+              <div className='ingredient container' style={{ 
+                color: viewingBatch.starter_batch_code ? 'inherit' : 'red',
+                marginBottom: !viewingBatch.starter_batch_code ? '14px' : undefined 
+              }}> 
+                <div className='starter'><strong>Starter: </strong></div>
                 {editingField === 'starter-batch' ? (
                   <select
                     value={editingValue}
@@ -2552,14 +2665,35 @@ const formatDateDisplay = (dateStr) => {
                       ))}
                   </select>
                 ) : (
-                  <p onClick={() => {
+                  <div className='starter'   onClick={() => {
                     setEditingField('starter-batch');
                     setEditingValue(viewingBatch.starter_batch_code || "");
                   }}>
                     {viewingBatch.starter_batch_code ? `# ${viewingBatch.starter_batch_code}` : <span style={{ color: 'red' }}>-</span>}
-                  </p>
+                  </div>
                 )}
-              </div>
+                </div>
+                
+                {/* Display rye & caputo batch codes from selected starter */}
+                {viewingBatch.starter_batch_code && (() => {
+                  const selectedStarter = batches.find(batch => 
+                    batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
+                  );
+                  return selectedStarter ? (
+                    <div style={{ marginLeft: '20px', fontSize: '0.9em', marginTop: '5px' }}>
+                      {selectedStarter.ingredientBatchCodes?.['Rye Flour'] && (
+                        <div style={{ color: '#666' }}>
+                          Rye: #{selectedStarter.ingredientBatchCodes['Rye Flour']}
+                        </div>
+                      )}
+                      {selectedStarter.ingredientBatchCodes?.['Flour (Caputo Red)'] && (
+                        <div style={{ color: '#666' }}>
+                          Caputo: #{selectedStarter.ingredientBatchCodes['Flour (Caputo Red)']}
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
           {sortIngredients(
             ingredients.filter(ingredient =>
               viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
