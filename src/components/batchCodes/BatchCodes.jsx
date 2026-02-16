@@ -1810,36 +1810,38 @@ const formatDateDisplay = (dateStr) => {
               <div className='pizzaDisplayTitles'> 
                 <h4 className='pizzaWeightsOuter'>
                   Mixes: 
-                  <button 
-                    onClick={async () => {
-                      if (editingMixQuantities) {
-                        // Save changes and exit edit mode
-                        try {
-                          const batchRef = doc(db, "batches", viewingBatch.id);
-                          await updateDoc(batchRef, { mixQuantities: formMixQuantities });
-                          
-                          setViewingBatch(prev => ({
-                            ...prev,
-                            mixQuantities: formMixQuantities
-                          }));
-                          
-                          setEditingMixQuantities(false);
+                  {userRole !== 'unit' && (
+                    <button 
+                      onClick={async () => {
+                        if (editingMixQuantities) {
+                          // Save changes and exit edit mode
+                          try {
+                            const batchRef = doc(db, "batches", viewingBatch.id);
+                            await updateDoc(batchRef, { mixQuantities: formMixQuantities });
+                            
+                            setViewingBatch(prev => ({
+                              ...prev,
+                              mixQuantities: formMixQuantities
+                            }));
+                            
+                            setEditingMixQuantities(false);
+                            setMixCalculatorInitialized(false);
+                          } catch (error) {
+                            console.error("Error saving mix quantities:", error);
+                            alert("Failed to save mix quantities. Please try again.");
+                          }
+                        } else {
+                          // Enter edit mode
+                          setEditingMixQuantities(true);
                           setMixCalculatorInitialized(false);
-                        } catch (error) {
-                          console.error("Error saving mix quantities:", error);
-                          alert("Failed to save mix quantities. Please try again.");
                         }
-                      } else {
-                        // Enter edit mode
-                        setEditingMixQuantities(true);
-                        setMixCalculatorInitialized(false);
-                      }
-                    }}
-                    style={{ marginLeft: '10px', fontSize: '14px', padding: '4px 8px' }}
-                    className='button'
-                  >
-                    <FontAwesomeIcon icon={faPencilAlt} />
-                  </button>
+                      }}
+                      style={{ marginLeft: '10px', fontSize: '14px', padding: '4px 8px' }}
+                      className='button'
+                    >
+                      <FontAwesomeIcon icon={faPencilAlt} />
+                    </button>
+                  )}
                 </h4>
               </div>
               
@@ -2422,7 +2424,8 @@ const formatDateDisplay = (dateStr) => {
             </div>
           )}
             </div>
-          )}\n          {/* Common sections for non-starter batches */}
+          )}
+                    {/* Common sections for non-starter batches */}
           {viewingBatch.batch_type !== 'starter' && (
             <div>
               <p className='pizzaNumbers'>
