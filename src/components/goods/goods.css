@@ -1,223 +1,210 @@
-/* All inventory displayed flex */
-  .inventoryContainer {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-evenly;
-    overflow-y: auto;
-    margin-top: 50px;
-    margin-bottom: 50px;
-    box-sizing: border-box;
-  }
-
-/* sleeve radio */
-  .sleeveFilter {
-  margin-bottom: 16px;
-}
-.sleeveRadio {
-  margin: 1px;
+/* Goods component styling */
+.goods {
+  padding: 20px;
 }
 
+.goods h2 {
+  color: var(--primaryText, #333);
+  margin-bottom: 20px;
+}
 
-/* individual pizza squares */
-  .pizzas {
-    display: flex;
-    flex-direction: column;
-    aspect-ratio: 1 / 1;
-    width: 100%;
-    max-width: 500px;
-    margin: 1%;
-    background-size: cover;
-    background-repeat: no-repeat;
-    box-sizing: border-box;
-    overflow: hidden;
-    position: relative;
-    
-    box-shadow: 0 2px 4px var(--boxShadow);
-  }
-  .pizzaContent {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    padding: 10px;
-    margin: 0;
-    overflow-y: auto;
-    max-height: 100%;
-  }
-  .pizzaContent::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
-  }
-  
-  .pizzaContent::-webkit-scrollbar-thumb {
-    background-color: var(--darkLight); /* Color of the scrollbar thumb */
-    border-radius: 10px; /* Rounded corners for the scrollbar thumb */
-  }
-  
-  .pizzaContent::-webkit-scrollbar-track {
-    background-color: var(--light); /* Background of the scrollbar track */
-  }
-  .pizzaHeader, .editIngredientsHeader {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: inherit;
-  }
-  .pizzaH4 {
-    color: var(--pale);
-    margin: auto;
-  }
-  .pizzaH4, .editIngredientsHeader {
-    padding: 5%;
-    font-weight:bold;
-  }
-  .ingredientsScroll {
-    max-height: 70% !important;
-    padding: 0 10% !important;
-  }
-  .nameUnit{
-    display: flex;
-    cursor: pointer;
-  }
-  .unitSpacing {
-    padding-left: 4px;
-  }
-
-  .perPizza {
-    padding-right: 14%;
-  }
-  .inputBox {
-    max-width: 70px;
-  }
-
-  #pizzasMEA_A1 {
-    background-image: url(../Frozen-Characters-Website-1-copy.webp);
-  }
-  #pizzasMAR_A1 {
-    background-image: url(../Frozen-Characters-Website-2-copy.webp);
-  }
-  #pizzasHAM_A1 {
-    background-image: url(../Frozen-Characters-Website-3-copy.webp);
-  }
-  #pizzasNAP_A1 {
-    background-image: url(../Frozen-Characters-Website-4-copy.webp);
-  }
-  #pizzasROS_B1 {
-    background-image: url(../Frozen-Characters-Website-5-copy.webp) !important;
-  }
-
-
-
-/* add pizza '+' square */
-  .addPizza {
-    background-color: var(--light);
-    font-size: xx-large;
-    align-items: center;
-    justify-content: center;
-    border: dotted 1px var(--darkLight);
-  }
-  .plus{
-    border-radius: 10px;
-    font-weight: bolder;
-  }
-
-
-
-/* new pizza form */
-  .modal {
-    padding: 20%;
-  }
-  .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: end;
-  }
-  .inputBox {
-    font-size: small;
-    margin-bottom: 3px !important;
-    width: 100%;
-  }
-  .addIngredient {
-    margin-bottom: 13px;
-  }
-  .ingredientList {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--darkLight);
-    margin: 0 30px 20px 30px;
-    font-style: italic;
-  }
-  .sleeve {
-    display: flex;
-    justify-content: center;
-  }
-
-
-
-/* inventory display */
-  .inventoryBox {
-    border-radius: 10px;
-    display: flex;
-    justify-content: space-between;
-    color: var(--dark);
-    border: dashed 1px var(--dark);
-  }
-
-/* ingredients list */
-.listContainer {
+/* Header section */
+.goods-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.add-delivery-btn {
+  background-color: var(--primaryGreen, #28a745);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-delivery-btn:hover {
+  background-color: var(--primaryGreenDark, #218838);
+}
+
+/* Modal styling */
+.goods .modalContent {
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
-.list {
-  text-align: start;
-}
-.ingredientDropdown {
-  max-height: 300px; 
-  overflow-y: auto; 
-}
-.ingredientInput {
-  padding: 0;
-  margin: 0;
-  justify-content: space-between;
-}
-.units {
-  width: 80px;
-}
-.hide {
-  display: none;
+
+.close-btn:hover {
+  background-color: #f8f9fa;
+  border-radius: 3px;
 }
 
-/* edit ingredients display */
-.editIngredients {
-  background-color: var(--light);
+/* Form styling */
+.form-group {
+  margin-bottom: 20px;
 }
 
-/* plus minus on the available */
-.availableControls {
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--primaryText, #333);
+}
+
+.form-group input,
+.goods-select {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #dee2e6;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.goods-select:focus {
+  outline: none;
+  border-color: var(--primaryGreen, #28a745);
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}
+
+.goods-select {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.help-text {
+  color: #6c757d;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Batch codes styling */
+.batch-code-row {
   display: flex;
+  align-items: center;
+  margin-bottom: 10px;
 }
-.available {
-  padding-right: 10px;
+
+.batch-label {
+  width: 150px;
+  margin-bottom: 0 !important;
+  margin-right: 10px;
 }
-.minusArch, .plusArch {
-  padding: 0 1%;
-  border: solid 1px var(--darkLight);
-  border-radius: 25%;
+
+.batch-input {
+  flex: 1;
+}
+
+/* Checkbox styling */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: auto;
+  margin-right: 10px;
+}
+
+.checkbox-group label {
+  margin-bottom: 0;
   cursor: pointer;
-  font-weight: bold;
 }
 
-.minusArch:hover, .plusArch:hover {
-  background-color: var(--berthaLight);
+/* Modal footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #dee2e6;
 }
 
-
-
-
-@media (max-width: 530px) {
-  .inventoryBox, .ingredientsScroll, .perPizza  {
-    font-size: 8px;
-  }
-  .archiveModal {
-    font-size: 12px;
-  }
+.cancel-btn,
+.save-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
 }
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+.save-btn {
+  background-color: var(--primaryGreen, #007bff);
+  color: white;
+}
+
+.save-btn:hover {
+  background-color: var(--primaryGreenDark, #0056b3);
+}
+
+.goods .btn-success {
+  background-color: var(--primaryGreen, #28a745);
+  border-color: var(--primaryGreen, #28a745);
+  font-weight: 500;
+}
+
+.goods .btn-success:hover {
+  background-color: var(--primaryGreenDark, #218838);
+  border-color: var(--primaryGreenDark, #1e7e34);
+}
+
+.goods .modal-title {
+  color: var(--primaryText, #333);
+  font-weight: 600;
+}
+
+.goods .form-label {
+  font-weight: 500;
+  color: var(--primaryText, #333);
+  margin-bottom: 8px;
+}
+
+.goods .form-select[multiple] {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.goods .form-select[multiple]:focus {
+  border-color: var(--primaryGreen, #28a745);
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
