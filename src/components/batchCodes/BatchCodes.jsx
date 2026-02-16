@@ -12,6 +12,7 @@ import { faTrash, faPencilAlt, faCube } from '@fortawesome/free-solid-svg-icons'
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
   const [pizzas, setPizzas] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [editingValue, setEditingValue] = useState("");
@@ -181,6 +182,7 @@ function BatchCodes() {
     const headers = [
       ...baseHeaders,
       ...pizzaWeightHeaders,
+      'Pizza Allocations',
       'Ingredient Batch Codes'
     ];
 
@@ -233,6 +235,18 @@ function BatchCodes() {
         return [avgFirstWeight, avgMiddleWeight, avgLastWeight];
       });
       
+      // Build pizza allocation details
+      const pizzaAllocations = batch.pizza_allocations?.map(allocation => {
+        const order = orders.find(o => o.id === allocation.orderId);
+        if (!order) return null;
+        
+        const customerDisplay = order.sample_customer_name 
+          ? `${order.customer_name} (${order.sample_customer_name})`
+          : order.customer_name;
+          
+        return `${customerDisplay} - ${order.delivery_day} - ${allocation.pizzaId} (${allocation.quantity || 1})`;
+      }).filter(Boolean).join('; ') || '';
+      
       const ingredientCodes = batch.pizzas?.flatMap(pizza => 
         Object.entries(pizza.ingredientBatchCodes || {}).map(([ingredient, code]) => 
           code ? `${ingredient}: ${code}` : null
@@ -254,6 +268,7 @@ function BatchCodes() {
         batch.notes || '',
         pizzaDetails,
         ...pizzaWeightData,
+        pizzaAllocations,
         ingredientCodes
       ];
     });
@@ -685,6 +700,23 @@ const formatDateDisplay = (dateStr) => {
       }
     };
     fetchPizzas();
+  }, []);
+
+  // Fetch orders for pizza allocation display
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "orders"));
+        const ordersData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setOrders(ordersData);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      }
+    };
+    fetchOrders();
   }, []);
 
   
