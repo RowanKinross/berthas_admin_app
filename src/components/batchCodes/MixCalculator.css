@@ -1,0 +1,86 @@
+/* Mix Calculator Styles */
+.mix-calculator-container {
+  padding: 15px;
+  background-color: var(--pale);
+  border: 1px solid var(--grey);
+  border-radius: 5px;
+  margin: 10px 0;
+}
+
+.mix-calculator-title {
+  margin-bottom: 15px;
+  color: var(--dark);
+  font-weight: 600;
+}
+
+.mix-input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.mix-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.mix-input-label {
+  font-size: 0.9em;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--dark);
+}
+
+.mix-input {
+  font-size: 0.9em;
+  border: 1px solid var(--grey);
+  border-radius: 3px;
+  padding: 5px;
+}
+
+.mix-results-section {
+  margin-top: 20px;
+}
+
+.mix-results-title {
+  color: var(--dark);
+  margin-bottom: 10px;
+}
+
+.mix-results-table {
+  background-color: white;
+  margin-top: 10px;
+  border: 1px solid var(--grey);
+}
+
+.mix-results-table thead {
+  background-color: var(--bertha);
+  color: white;
+}
+
+.mix-results-table th,
+.mix-results-table td {
+  padding: 8px 12px;
+  border: 1px solid var(--grey);
+}
+
+.mix-example-text {
+  font-size: 0.85em;
+  font-style: italic;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 3px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .mix-input-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  
+  .mix-calculator-container {
+    padding: 10px;
+  }
+}

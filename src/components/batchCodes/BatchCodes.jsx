@@ -3,6 +3,7 @@ import { db } from '../firebase/firebase';
 import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
+import MixCalculator from './MixCalculator';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -2459,10 +2460,11 @@ const formatDateDisplay = (dateStr) => {
           {batchType === "starter" && (
             <>
               <Form.Label column sm={3}><strong>Starter:</strong></Form.Label>
-              <Col>
-                <div style={{padding: '10px', fontStyle: 'italic'}}>
-                  Mix sizes
-                </div>
+              <Col sm={9}>
+                <MixCalculator onTotalsChange={(totals) => {
+                  // You can use these totals if needed elsewhere
+                  console.log('Mix totals:', totals);
+                }} />
               </Col>
             </>
           )}
