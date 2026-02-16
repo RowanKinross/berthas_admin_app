@@ -2468,6 +2468,39 @@ const formatDateDisplay = (dateStr) => {
               
               <h4>Batch Codes:</h4>
               <div className='ingredientBatchcodeBox'>
+              <div className='ingredient container' style={{ color: viewingBatch.starter_batch_code ? 'inherit' : 'red' }}> 
+                <p><strong>Starter: </strong></p>
+                {editingField === 'starter-batch' ? (
+                  <select
+                    value={editingValue}
+                    autoFocus
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    onBlur={() => handleInlineSave("batch", null, "starter_batch_code", editingValue)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleInlineSave("batch", null, "starter_batch_code", editingValue);
+                      }
+                    }}
+                  >
+                    <option value="">Select starter batch...</option>
+                    {batches
+                      .filter(batch => batch.batch_type === 'starter')
+                      .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+                      .map(batch => (
+                        <option key={batch.id} value={batch.batch_code}>
+                          {batch.batch_code} - {formatDateDisplay(batch.batch_date)}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <p onClick={() => {
+                    setEditingField('starter-batch');
+                    setEditingValue(viewingBatch.starter_batch_code || "");
+                  }}>
+                    {viewingBatch.starter_batch_code ? `# ${viewingBatch.starter_batch_code}` : <span style={{ color: 'red' }}>-</span>}
+                  </p>
+                )}
+              </div>
           {sortIngredients(
             ingredients.filter(ingredient =>
               viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
