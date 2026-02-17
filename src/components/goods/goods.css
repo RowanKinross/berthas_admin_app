@@ -53,6 +53,114 @@
   min-height: 400px;
 }
 
+
+/* ingredients list */
+.listContainer {
+  display: flex;
+  justify-content: center;
+}
+.list {
+  text-align: start;
+}
+.ingredientDropdown {
+  max-height: 300px; 
+  overflow-y: auto; 
+}
+.ingredientInput {
+  padding: 0;
+  margin: 0;
+  justify-content: space-between;
+}
+.units {
+  width: 80px;
+}
+.hide {
+  display: none;
+}
+.nameUnit{
+  display: flex;
+  cursor: pointer;
+}
+.nameUnitIngredient {
+  width: 40%;
+}
+.nameUnitPerPizza {
+  width: 10%;
+}
+.nameUnitSupplier {
+  width: 30%;
+}
+.unitSpacing {
+  padding: 0 5px;
+}
+
+
+
+/* edit ingredients display */
+.editIngredients {
+  background-color: var(--light);
+  max-width: 98%;
+}
+.perPizza {
+  padding: 0 10%;
+}
+
+/* Ingredients Manager Sort Controls */
+.ingredients-manager .sort-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.ingredients-manager .sort-controls label {
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+}
+
+.ingredients-manager .sort-btn {
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  padding: 8px 16px;
+  color: #495057;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.ingredients-manager .sort-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.ingredients-manager .sort-btn.active {
+  background: var(--primaryGreen, #28a745);
+  color: white;
+  border-color: var(--primaryGreen, #28a745);
+}
+
+@media (max-width: 768px) {
+  .ingredients-manager .sort-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ingredients-manager .sort-btn {
+    width: 80%;
+    min-width: 120px;
+  }
+}
+
+
+
 /* Navigation responsive design */
 @media (max-width: 768px) {
   .goods-nav {
@@ -208,6 +316,7 @@
 }
 
 .product-name {
+  text-align: left;
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #dee2e6;
@@ -434,6 +543,7 @@
 
 .item-header {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
@@ -456,7 +566,7 @@
 .quantity {
   font-size: 24px;
   font-weight: bold;
-  color: var(--primaryGreen, #28a745);
+  color: var(--dark);
 }
 
 .unit {
@@ -471,11 +581,10 @@
 }
 
 .batch-item {
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 8px;
-  background: #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  width: 100rem;
+  
 }
 
 .batch-item.expiring {
@@ -566,6 +675,17 @@
 
 .batch-input {
   flex: 1;
+}
+.batch-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 5px;
+  margin: 2px;
+  background: #f8f9fa;
 }
 
 /* Checkbox styling */

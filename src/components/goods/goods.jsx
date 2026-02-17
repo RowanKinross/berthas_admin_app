@@ -4,6 +4,7 @@ import React, {useState} from 'react';
 import AddDelivery from './AddDelivery';
 import DeliveryHistory from './DeliveryHistory';
 import InventoryView from './InventoryView';
+import IngredientsManager from './IngredientsManager';
 
 function Goods() {
   const [currentView, setCurrentView] = useState('inventory'); // 'inventory', 'addDelivery', 'history'
@@ -28,6 +29,8 @@ function Goods() {
         );
       case 'history':
         return <DeliveryHistory />;
+      case 'ingredients':
+        return <IngredientsManager />;
       case 'inventory':
       default:
         return <InventoryView />;
@@ -57,6 +60,12 @@ function Goods() {
             onClick={() => handleViewChange('history')}
           >
             Delivery History
+          </button>
+          <button 
+            className={`button ${currentView === 'ingredients' ? 'active' : ''}`}
+            onClick={() => handleViewChange('ingredients')}
+          >
+            Manage Ingredients
           </button>
         </nav>
       </div>
