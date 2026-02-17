@@ -1274,7 +1274,11 @@ const formatDateDisplay = (dateStr) => {
 
         const totalPizzas = updatedPizzas.reduce(
           (sum, pizza) => {
-            if (pizza.id === "DOU_A1" || pizza.id === "DOU_A0") return sum;
+            // For dough ball batches, include dough balls in total
+            // For pizza batches, exclude dough balls from total
+            if ((pizza.id === "DOU_A1" || pizza.id === "DOU_A0") && currentData.batch_type !== "dough balls") {
+              return sum;
+            }
             return sum + (parseInt(pizza.quantity) || 0);
           },
           0

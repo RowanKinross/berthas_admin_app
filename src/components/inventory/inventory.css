@@ -73,17 +73,7 @@
     max-height: 70% !important;
     padding: 0 10% !important;
   }
-  .nameUnit{
-    display: flex;
-    cursor: pointer;
-  }
-  .unitSpacing {
-    padding-left: 4px;
-  }
 
-  .perPizza {
-    padding-right: 14%;
-  }
   .inputBox {
     max-width: 70px;
   }
@@ -162,34 +152,7 @@
     border: dashed 1px var(--dark);
   }
 
-/* ingredients list */
-.listContainer {
-  display: flex;
-  justify-content: center;
-}
-.list {
-  text-align: start;
-}
-.ingredientDropdown {
-  max-height: 300px; 
-  overflow-y: auto; 
-}
-.ingredientInput {
-  padding: 0;
-  margin: 0;
-  justify-content: space-between;
-}
-.units {
-  width: 80px;
-}
-.hide {
-  display: none;
-}
 
-/* edit ingredients display */
-.editIngredients {
-  background-color: var(--light);
-}
 
 /* plus minus on the available */
 .availableControls {
@@ -214,7 +177,7 @@
 
 
 @media (max-width: 530px) {
-  .inventoryBox, .ingredientsScroll, .perPizza  {
+  .inventoryBox, .ingredientsScroll  {
     font-size: 8px;
   }
   .archiveModal {
