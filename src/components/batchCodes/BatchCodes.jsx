@@ -7,7 +7,7 @@ import MixCalculator from './MixCalculator';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faPencilAlt, faCube } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -2016,9 +2016,15 @@ const formatDateDisplay = (dateStr) => {
                         }
                       }}
                       style={{ marginLeft: '10px', fontSize: '14px', padding: '4px 8px' }}
-                      className='button'
+                      className={`button ${editingMixQuantities ? 'completed' : ''}`}
                     >
-                      <FontAwesomeIcon icon={faPencilAlt} />
+                      {editingMixQuantities ? (
+                        <>
+                          <FontAwesomeIcon icon={faSave}/> Save
+                        </>
+                      ) : (
+                        <FontAwesomeIcon icon={faPencilAlt} />
+                      )}
                     </button>
                   )}
                 </h4>
