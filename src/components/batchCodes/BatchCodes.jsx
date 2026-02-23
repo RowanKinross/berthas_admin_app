@@ -7,7 +7,7 @@ import MixCalculator from './MixCalculator';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faPencilAlt, faCube } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -31,6 +31,9 @@ function BatchCodes() {
   const [tomatoBaseWastageOven, setTomatoBaseWastageOven] = useState(0);
   const [tomatoBaseWastageTopping, setTomatoBaseWastageTopping] = useState(0);
   const [toppedPizzaWastage, setToppedPizzaWastage] = useState(0);
+  
+  // Tub display mode for starter feed (mobile responsive)
+  const [tubDisplayMode, setTubDisplayMode] = useState('single'); // 'single' or 'double'
   const formRef = useRef(null)
   const [totalPizzas, setTotalPizzas] = useState(0);
   const [selectedPizzas, setSelectedPizzas] = useState([]);
@@ -483,7 +486,8 @@ function BatchCodes() {
 
   // Sort ingredients specifically:-
   const INGREDIENT_ORDER = [
-    "Flour (Caputo Red)",
+    "Flour (Caputo Blue)",
+    "Flour (Wholemeal)", 
     "Salt",
     // The rest will be handled alphabetically except for these at the end:
     "Tomato",
@@ -495,7 +499,7 @@ function BatchCodes() {
   const sortIngredients = (ingredients) => {
     // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
     const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella"]);
-    const startSet = new Set(["Flour (Caputo Red)", "Salt", "Rye Flour"]);
+    const startSet = new Set(["Flour (Caputo Blue)", "Flour (Wholemeal)", "Salt", "Rye Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
     const end = [];
@@ -1143,13 +1147,15 @@ const formatDateDisplay = (dateStr) => {
 
           // Check if starter ingredients are being set and add starter_rye/starter_caputo fields
           const ryeFlourCode = value['Rye Flour'];
-          const caputoCode = value['Flour (Caputo Red)'];
+          const caputoBlueCode = value['Flour (Caputo Blue)'];
+          const wholemealCode = value['Flour (Wholemeal)'];
           
-          if (ryeFlourCode || caputoCode) {
+          if (ryeFlourCode || caputoBlueCode || wholemealCode) {
             // Add starter codes to batch-level ingredientBatchCodes
             const updatedBatchCodes = { ...value };
             if (ryeFlourCode) updatedBatchCodes['Starter Rye'] = ryeFlourCode;
-            if (caputoCode) updatedBatchCodes['Starter Caputo'] = caputoCode;
+            if (caputoBlueCode) updatedBatchCodes['Starter Caputo Blue'] = caputoBlueCode;
+            if (wholemealCode) updatedBatchCodes['Starter Wholemeal'] = wholemealCode;
             
             updateData.ingredientBatchCodes = updatedBatchCodes;
 
@@ -1162,7 +1168,8 @@ const formatDateDisplay = (dateStr) => {
                   ingredientBatchCodes: {
                     ...updatedPizzas[0].ingredientBatchCodes,
                     ...(ryeFlourCode && { 'Starter Rye': ryeFlourCode }),
-                    ...(caputoCode && { 'Starter Caputo': caputoCode })
+                    ...(caputoBlueCode && { 'Starter Caputo Blue': caputoBlueCode }),
+                    ...(wholemealCode && { 'Starter Wholemeal': wholemealCode })
                   }
                 };
                 updateData.pizzas = updatedPizzas;
@@ -1185,15 +1192,17 @@ const formatDateDisplay = (dateStr) => {
 
             if (selectedStarter && selectedStarter.ingredientBatchCodes) {
               const ryeCode = selectedStarter.ingredientBatchCodes['Rye Flour'];
-              const caputoCode = selectedStarter.ingredientBatchCodes['Flour (Caputo Red)'];
+              const caputoBlueCode = selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)'];
+              const wholemealCode = selectedStarter.ingredientBatchCodes['Flour (Wholemeal)'];
 
               // Add to batch-level ingredientBatchCodes
-              if (ryeCode || caputoCode) {
+              if (ryeCode || caputoBlueCode || wholemealCode) {
                 const currentIngredientCodes = currentData.ingredientBatchCodes || {};
                 updateData.ingredientBatchCodes = {
                   ...currentIngredientCodes,
                   ...(ryeCode && { 'Starter Rye': ryeCode }),
-                  ...(caputoCode && { 'Starter Caputo': caputoCode })
+                  ...(caputoBlueCode && { 'Starter Caputo Blue': caputoBlueCode }),
+                  ...(wholemealCode && { 'Starter Wholemeal': wholemealCode })
                 };
 
                 // Also update first pizza's ingredientBatchCodes if pizzas exist
@@ -1205,7 +1214,8 @@ const formatDateDisplay = (dateStr) => {
                       ingredientBatchCodes: {
                         ...updatedPizzas[0].ingredientBatchCodes,
                         ...(ryeCode && { 'Starter Rye': ryeCode }),
-                        ...(caputoCode && { 'Starter Caputo': caputoCode })
+                        ...(caputoBlueCode && { 'Starter Caputo Blue': caputoBlueCode }),
+                        ...(wholemealCode && { 'Starter Wholemeal': wholemealCode })
                       }
                     };
                     updateData.pizzas = updatedPizzas;
@@ -1331,7 +1341,7 @@ const formatDateDisplay = (dateStr) => {
 
     if (viewingBatch.batch_type === 'starter') {
       // For starter batches, check ingredient batch codes and starter made checkbox
-      const requiredIngredients = ['Rye Flour', 'Flour (Caputo Red)'];
+      const requiredIngredients = ['Rye Flour', 'Flour (Caputo Blue)', 'Flour (Wholemeal)'];
       const allIngredientCodesPresent = requiredIngredients.every(ingredient => 
         viewingBatch.ingredientBatchCodes?.[ingredient]?.trim()
       );
@@ -2010,9 +2020,15 @@ const formatDateDisplay = (dateStr) => {
                         }
                       }}
                       style={{ marginLeft: '10px', fontSize: '14px', padding: '4px 8px' }}
-                      className='button'
+                      className={`button ${editingMixQuantities ? 'completed' : ''}`}
                     >
-                      <FontAwesomeIcon icon={faPencilAlt} />
+                      {editingMixQuantities ? (
+                        <>
+                          <FontAwesomeIcon icon={faSave}/> Save
+                        </>
+                      ) : (
+                        <FontAwesomeIcon icon={faPencilAlt} />
+                      )}
                     </button>
                   )}
                 </h4>
@@ -2104,32 +2120,56 @@ const formatDateDisplay = (dateStr) => {
               
               {(starterMixTotals.water > 0 || starterMixTotals.starter > 0 || starterMixTotals.rye > 0 || starterMixTotals.caputo > 0) && (
                 <div style={{ marginBottom: '20px' }}>
-                  <h4>Starter Feed:</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                    <h4 style={{ margin: 0 }}>Starter Feed:</h4>
+
+                  </div>
                   <div className='starterFeed'>
+                    
                   <div>
-                    <div>_</div>
-                    <div><strong>70% Water: </strong></div>
+                    <div ></div>
+                    <div style={{marginTop: '32px'}}><strong>70% Water: </strong></div>
                     <div><strong>19% Starter: </strong></div>
-                    <div><strong>50% Rye Flour: </strong></div>
                     <div><strong>50% Caputo Flour: </strong></div>
+                    <div><strong>50% Wholemeal Flour: </strong></div>
                     <em className='em'> <strong>total:</strong></em>
                   </div>
-                  <div>
-                    <em className='em'> 1 tub: <FontAwesomeIcon icon={faCube} /> </em>
-                    <div>{starterMixTotals.water.toLocaleString()}g</div>
-                    <div>{starterMixTotals.starter.toLocaleString()}g</div>
-                    <div>{starterMixTotals.rye.toLocaleString()}g</div>
-                    <div>{starterMixTotals.caputo.toLocaleString()}g</div>
-                    <em className='em'>{(starterMixTotals.water + starterMixTotals.starter + starterMixTotals.rye + starterMixTotals.caputo).toLocaleString()}g</em>
-                  </div>
-                  <div>
-                    <em className='em'> 2 tubs: <FontAwesomeIcon icon={faCube} /><FontAwesomeIcon icon={faCube} /> </em>
-                    <div >{(starterMixTotals.water / 2).toLocaleString()}g</div>
-                    <div>{(starterMixTotals.starter / 2).toLocaleString()}g</div>
-                    <div>{(starterMixTotals.rye / 2).toLocaleString()}g</div>
-                    <div>{(starterMixTotals.caputo / 2).toLocaleString()}g</div>
-                    <em className='em'>{(starterMixTotals.water/2 + starterMixTotals.starter/2 + starterMixTotals.rye/2 + starterMixTotals.caputo/2).toLocaleString()}g each</em>
-                  </div>
+                  
+                  {/* Single tub column - always show unless on mobile and double mode selected */}
+                  {(!isMobileOrTablet() || tubDisplayMode === 'single') && (
+                    <div>
+                      <button
+                        className='button'
+                        onClick={() => setTubDisplayMode(tubDisplayMode === 'single' ? 'double' : 'single')}
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                      >
+                        <span>1 tub: <FontAwesomeIcon icon={faCube} /></span>
+                      </button>
+                      <div>{starterMixTotals.water.toLocaleString()}g</div>
+                      <div>{starterMixTotals.starter.toLocaleString()}g</div>
+                      <div>{starterMixTotals.rye.toLocaleString()}g</div>
+                      <div>{starterMixTotals.caputo.toLocaleString()}g</div>
+                      <em className='em'>{(starterMixTotals.water + starterMixTotals.starter + starterMixTotals.rye + starterMixTotals.caputo).toLocaleString()}g</em>
+                    </div>
+                  )}
+                  
+                  {/* Double tub column - hide on mobile unless double mode selected */}
+                  {(!isMobileOrTablet() || tubDisplayMode === 'double') && (
+                    <div>
+                      <button
+                        className='button'
+                        onClick={() => setTubDisplayMode(tubDisplayMode === 'single' ? 'double' : 'single')}
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                      >
+                        <span>2 tubs: <FontAwesomeIcon icon={faCube} /><FontAwesomeIcon icon={faCube} /></span>
+                      </button>
+                      <div >{(starterMixTotals.water / 2).toLocaleString()}g</div>
+                      <div>{(starterMixTotals.starter / 2).toLocaleString()}g</div>
+                      <div>{(starterMixTotals.rye / 2).toLocaleString()}g</div>
+                      <div>{(starterMixTotals.caputo / 2).toLocaleString()}g</div>
+                      <em className='em'>{(starterMixTotals.water/2 + starterMixTotals.starter/2 + starterMixTotals.rye/2 + starterMixTotals.caputo/2).toLocaleString()}g each</em>
+                    </div>
+                  )}
                   </div>
                   <em className='em'> *if starter total is larger than 5500g, split it over 2 10L tubs</em>
                 </div>
@@ -2153,7 +2193,7 @@ const formatDateDisplay = (dateStr) => {
               
               <h4>Ingredient Batch Codes:</h4>
               <div className='ingredientBatchcodeBox'>
-                {['Rye Flour', 'Flour (Caputo Red)'].map(ingredientName => {
+                {['Flour (Wholemeal)', 'Flour (Caputo Blue)'].map(ingredientName => {
                   const batchCode = viewingBatch.ingredientBatchCodes?.[ingredientName] || '';
                   
                   return (
@@ -2690,9 +2730,14 @@ const formatDateDisplay = (dateStr) => {
                           Rye: #{selectedStarter.ingredientBatchCodes['Rye Flour']}
                         </div>
                       )}
-                      {selectedStarter.ingredientBatchCodes?.['Flour (Caputo Red)'] && (
+                      {selectedStarter.ingredientBatchCodes?.['Flour (Caputo Blue)'] && (
                         <div style={{ color: '#666' }}>
-                          Caputo: #{selectedStarter.ingredientBatchCodes['Flour (Caputo Red)']}
+                          Caputo Blue: #{selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}
+                        </div>
+                      )}
+                      {selectedStarter.ingredientBatchCodes?.['Flour (Wholemeal)'] && (
+                        <div style={{ color: '#666' }}>
+                          Wholemeal: #{selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']}
                         </div>
                       )}
                     </div>
@@ -2713,7 +2758,7 @@ const formatDateDisplay = (dateStr) => {
                 <div key={ingredient.id} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
                   <p>
                     <strong>{ingredient.name}:</strong>
-                    {ingredient.name !== "Flour (Caputo Red)" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" && 
+                    {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Flour (Wholemeal)" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" && 
                       ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
                     }
                   </p>
