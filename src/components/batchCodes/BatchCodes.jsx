@@ -1341,7 +1341,7 @@ const formatDateDisplay = (dateStr) => {
 
     if (viewingBatch.batch_type === 'starter') {
       // For starter batches, check ingredient batch codes and starter made checkbox
-      const requiredIngredients = ['Rye Flour', 'Flour (Caputo Blue)', 'Flour (Wholemeal)'];
+      const requiredIngredients = ['Flour (Caputo Blue)', 'Flour (Wholemeal)'];
       const allIngredientCodesPresent = requiredIngredients.every(ingredient => 
         viewingBatch.ingredientBatchCodes?.[ingredient]?.trim()
       );
