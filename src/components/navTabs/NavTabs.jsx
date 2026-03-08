@@ -102,18 +102,18 @@ function NavTabs() {
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">ARCHIVE</h3>
           </NavLink>  
-          <NavLink to="/goods" className={({ isActive }) =>
+          {/* <NavLink to="/goods" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">GOODS IN</h3>
-          </NavLink>        
+          </NavLink>         */}
           <NavLink to="/batchCodes" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCHES</h3>
           </NavLink>
-          <NavLink to="/batchesNew" className={({ isActive }) =>
+          {/* <NavLink to="/batchesNew" className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'}>
             <h3 className="navTab">BATCHES (NEW)</h3>
-          </NavLink>
+          </NavLink> */}
         </>
       );
     } 
