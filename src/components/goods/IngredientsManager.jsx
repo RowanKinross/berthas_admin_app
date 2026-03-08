@@ -77,6 +77,9 @@ function IngredientsManager() {
           const [qtyPerPizza] = ingredient.ratio.split(':');
           updateData.ratio = `${qtyPerPizza}:${editValue}`;
           break;
+        case 'preOrderAmount':
+          updateData.preOrderAmount = parseFloat(editValue) || 0;
+          break;
         default:
           break;
       }
@@ -150,6 +153,7 @@ function IngredientsManager() {
             </div>
           </p>
           <p className='nameUnit nameUnitPerPizza'><strong>Per pizza:</strong></p>
+          <p className='nameUnit nameUnitPreOrder'><strong>Prep/Order amount:</strong></p>
           <p className='nameUnit nameUnitSupplier'>
             <strong>Supplier:</strong>
             <div 
@@ -264,6 +268,29 @@ function IngredientsManager() {
                       </p>
                     )}
                     <p>g</p>
+                  </div>
+
+                  <div className='nameUnit nameUnitPreOrder'>
+                    {/* Pre/order amount */}
+                    {editingField.id === ingredient.id && editingField.field === 'preOrderAmount' ? (
+                      <input
+                        className='inputBox'
+                        type="text"
+                        value={editValue}
+                        onChange={handleEditChange}
+                        onBlur={() => handleBlur(ingredient)}
+                        onKeyDown={(e) => handleKeyPress(e, ingredient)}
+                        placeholder="0"
+                        autoFocus
+                      />
+                    ) : (
+                      <p onClick={() => {
+                        setEditingField({ id: ingredient.id, field: 'preOrderAmount' });
+                        setEditValue(ingredient.preOrderAmount?.toString() || '0');
+                      }}>
+                        {ingredient.preOrderAmount || '0'}g
+                      </p>
+                    )}
                   </div>
 
                   <div className='nameUnit nameUnitSupplier'>
