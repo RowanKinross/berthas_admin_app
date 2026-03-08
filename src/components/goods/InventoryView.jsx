@@ -250,6 +250,13 @@ function InventoryView() {
           ...doc.data() 
         }));
 
+        // Fetch stock consumptions
+        const consumptionsSnapshot = await getDocs(collection(db, 'stock_consumptions'));
+        const consumptionsData = consumptionsSnapshot.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        }));
+
         // Calculate inventory levels - start with all ingredients
         const inventoryMap = {};
         
@@ -295,6 +302,46 @@ function InventoryView() {
               }
             });
           }
+        });
+
+        // Subtract stock consumptions from inventory totals
+        consumptionsData.forEach(consumption => {
+          const ingredientName = consumption.ingredientName;
+          const quantityUsed = consumption.quantityUsed || 0;
+          const batchCodeUsed = consumption.ingredientBatchCode;
+          
+          if (inventoryMap[ingredientName] && quantityUsed > 0) {
+            // First try to subtract from the specific batch that was used
+            const targetBatch = inventoryMap[ingredientName].batches.find(
+              batch => batch.batchCode === batchCodeUsed
+            );
+            
+            if (targetBatch && targetBatch.quantity >= quantityUsed) {
+              targetBatch.quantity -= quantityUsed;
+              inventoryMap[ingredientName].totalQuantity -= quantityUsed;
+            } else {
+              // If specific batch not found or insufficient, subtract from total
+              inventoryMap[ingredientName].totalQuantity = Math.max(0, 
+                inventoryMap[ingredientName].totalQuantity - quantityUsed
+              );
+              
+              // Distribute the subtraction across available batches
+              let remainingToSubtract = quantityUsed;
+              for (const batch of inventoryMap[ingredientName].batches) {
+                if (remainingToSubtract <= 0) break;
+                const subtractFromThisBatch = Math.min(batch.quantity, remainingToSubtract);
+                batch.quantity -= subtractFromThisBatch;
+                remainingToSubtract -= subtractFromThisBatch;
+              }
+            }
+          }
+        });
+
+        // Remove batches with zero quantity and filter out completely consumed ingredients
+        Object.keys(inventoryMap).forEach(ingredientName => {
+          inventoryMap[ingredientName].batches = inventoryMap[ingredientName].batches.filter(
+            batch => batch.quantity > 0
+          );
         });
 
         // Convert to array and sort batches by use-by date

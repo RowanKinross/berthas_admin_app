@@ -108,6 +108,9 @@ textarea.input {
 .ingredientBatchCode {
   width: 250px;
 }
+.ingredient {
+  align-items: start
+}
 
 .pizzaDisplayTitles{
   display: flex;
