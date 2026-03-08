@@ -1,6 +1,6 @@
 /* Goods component styling */
 .goods {
-  padding: 20px;
+  padding: 20px 0;
 }
 
 .goods h2 {
@@ -539,6 +539,9 @@
   padding: 20px;
   background: white;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 .item-header {
@@ -583,7 +586,7 @@
 .batch-item {
   display: flex;
   justify-content: space-between;
-  width: 100rem;
+  width: 100%;
   
 }
 
@@ -656,6 +659,7 @@
   
   .inventory-grid {
     grid-template-columns: 1fr;
+    gap: 15px;
   }
   
   .goods-grid {
@@ -664,6 +668,28 @@
   
   .good-details {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-view {
+    padding: 10px;
+  }
+
+  .inventory-item {
+    padding: 15px;
+    margin: 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .batch-info {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .batch-item {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 
@@ -685,7 +711,9 @@
   border-radius: 6px;
   padding: 5px;
   margin: 2px;
-  background: #f8f9fa;
+  background: #efeff0da;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Checkbox styling */
