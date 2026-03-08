@@ -138,11 +138,10 @@ function IngredientsManager() {
 
   return (
     <div className="ingredients-manager">
-      <div className='editIngredients pizzas'>
-        <h4 className='editIngredientsHeader'>INGREDIENTS:</h4>
+      <div className='editIngredients'>
         
         
-        <div className='container'>
+        <div className='ingredientSupplierHeader'>
           <p className='nameUnit nameUnitIngredient'>
             <strong>Ingredient:</strong> 
             <div 
@@ -152,8 +151,6 @@ function IngredientsManager() {
             <FontAwesomeIcon icon={faSort}/> 
             </div>
           </p>
-          <p className='nameUnit nameUnitPerPizza'><strong>Per pizza:</strong></p>
-          <p className='nameUnit nameUnitPreOrder'><strong>Prep/Order amount:</strong></p>
           <p className='nameUnit nameUnitSupplier'>
             <strong>Supplier:</strong>
             <div 
@@ -162,6 +159,8 @@ function IngredientsManager() {
             <FontAwesomeIcon icon={faSort}/> 
             </div>
           </p>
+          {/* <p className='nameUnit nameUnitPerPizza'><strong>Per pizza:</strong></p>
+          <p className='nameUnit nameUnitPreOrder'><strong>Prep/Order amount:</strong></p> */}
         </div>
         
         {ingredientsArr.length > 0 ? (
@@ -171,157 +170,163 @@ function IngredientsManager() {
               const isSimpleUnit = ingredient.packaging === 'kg' || ingredient.packaging === 'g';
 
               return (
-                <div className='container' key={ingredient.id}>
-                  {/* Name field */}
-                  <div className='nameUnit nameUnitIngredient'>
-                    {editingField.id === ingredient.id && editingField.field === 'name' ? (
-                      <input
-                        className='inputField'
-                        type="text"
-                        value={editValue}
-                        onChange={handleEditChange}
-                        onBlur={() => handleBlur(ingredient)}
-                        onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                        autoFocus
-                      />
-                    ) : (
-                      <p onClick={() => {
-                        setEditingField({ id: ingredient.id, field: 'name' });
-                        setEditValue(ingredient.name);
-                      }}>
-                        <strong className='p-2'>{ingredient.name} </strong>
-                      </p>
-                    )}
-                    
-                    {/* Packaging */}
-                    {!isSimpleUnit && (
-                      <div className='unitBlock nameUnit nameUnitPackaging'>
-                        {/* Edit unit quantity (second part of ratio) */}
-                        {editingField.id === ingredient.id && editingField.field === 'unitQuantity' ? (
-                          <input
-                            className='inputBox'
-                            type="text"
-                            value={editValue}
-                            onChange={handleEditChange}
-                            onBlur={() => handleBlur(ingredient)}
-                            onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                            autoFocus
-                          />
-                        ) : (
-                          <p
-                            onClick={() => {
-                              setEditingField({ id: ingredient.id, field: 'unitQuantity' });
-                              setEditValue(qtyPerUnit);
-                            }}
-                          >
-                            {qtyPerUnit}
-                          </p>
-                        )}
-
-                        {/* Fixed kg label */}
-                        <p>kg</p>
-
-                        {/* Edit packaging */}
-                        {editingField.id === ingredient.id && editingField.field === 'packaging' ? (
-                          <input
-                            className='inputBox'
-                            type="text"
-                            value={editValue}
-                            onChange={handleEditChange}
-                            onBlur={() => handleBlur(ingredient)}
-                            onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                            autoFocus
-                          />
-                        ) : (
-                          <p
-                            onClick={() => {
-                              setEditingField({ id: ingredient.id, field: 'packaging' });
-                              setEditValue(ingredient.packaging);
-                            }}
-                            className='unitSpacing'
-                          >
-                            {ingredient.packaging}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className='nameUnit nameUnitPerPizza'>
-                    {/* Quantity per pizza */}
-                    {editingField.id === ingredient.id && editingField.field === 'ratio' ? (
-                      <input
-                        className='inputBox'
-                        type="text"
-                        value={editValue}
-                        onChange={handleEditChange}
-                        onBlur={() => handleBlur(ingredient)}
-                        onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                        autoFocus
-                      />
-                    ) : (
-                      <p onClick={() => {
-                        setEditingField({ id: ingredient.id, field: 'ratio' });
-                        setEditValue(qtyPerPizza);
-                      }}>
-                        {qtyPerPizza}
-                      </p>
-                    )}
-                    <p>g</p>
-                  </div>
-
-                  <div className='nameUnit nameUnitPreOrder'>
-                    {/* Pre/order amount */}
-                    {editingField.id === ingredient.id && editingField.field === 'preOrderAmount' ? (
-                      <input
-                        className='inputBox'
-                        type="text"
-                        value={editValue}
-                        onChange={handleEditChange}
-                        onBlur={() => handleBlur(ingredient)}
-                        onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                        placeholder="0"
-                        autoFocus
-                      />
-                    ) : (
-                      <p onClick={() => {
-                        setEditingField({ id: ingredient.id, field: 'preOrderAmount' });
-                        setEditValue(ingredient.preOrderAmount?.toString() || '0');
-                      }}>
-                        {ingredient.preOrderAmount || '0'}g
-                      </p>
-                    )}
-                  </div>
-
-                  <div className='nameUnit nameUnitSupplier'>
-                    {/* Supplier */}
-                    {editingField.id === ingredient.id && editingField.field === 'supplier' ? (
-                      <>
+                <div className='ingredientManageContainer' key={ingredient.id}>
+                  <div className='ingredientRow'>
+                    {/* Name field */}
+                    <div className='nameUnit nameUnitIngredient'>
+                      {editingField.id === ingredient.id && editingField.field === 'name' ? (
                         <input
-                          className='dropdownInput'
+                          className='inputField'
                           type="text"
                           value={editValue}
                           onChange={handleEditChange}
                           onBlur={() => handleBlur(ingredient)}
                           onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                          placeholder="Enter supplier name"
-                          list={`suppliers-${ingredient.id}`}
                           autoFocus
                         />
-                        <datalist id={`suppliers-${ingredient.id}`}>
-                          {existingSuppliers.map((supplier, index) => (
-                            <option key={index} value={supplier} />
-                          ))}
-                        </datalist>
-                      </>
-                    ) : (
-                      <p onClick={() => {
-                        setEditingField({ id: ingredient.id, field: 'supplier' });
-                        setEditValue(ingredient.supplier || '');
-                      }}>
-                        {ingredient.supplier || 'Click to add supplier'}
-                      </p>
-                    )}
+                      ) : (
+                        <p onClick={() => {
+                          setEditingField({ id: ingredient.id, field: 'name' });
+                          setEditValue(ingredient.name);
+                        }}>
+                          <strong className='p-2'>{ingredient.name} </strong>
+                        </p>
+                      )}
+                      
+                      {/* Packaging */}
+                      {!isSimpleUnit && (
+                        <div className='unitBlock nameUnit nameUnitPackaging'>
+                          {/* Edit unit quantity (second part of ratio) */}
+                          {editingField.id === ingredient.id && editingField.field === 'unitQuantity' ? (
+                            <input
+                              className='inputBox'
+                              type="text"
+                              value={editValue}
+                              onChange={handleEditChange}
+                              onBlur={() => handleBlur(ingredient)}
+                              onKeyDown={(e) => handleKeyPress(e, ingredient)}
+                              autoFocus
+                            />
+                          ) : (
+                            <p
+                              onClick={() => {
+                                setEditingField({ id: ingredient.id, field: 'unitQuantity' });
+                                setEditValue(qtyPerUnit);
+                              }}
+                            >
+                              {qtyPerUnit}
+                            </p>
+                          )}
+
+                          {/* Fixed kg label */}
+                          <p>kg</p>
+
+                          {/* Edit packaging */}
+                          {editingField.id === ingredient.id && editingField.field === 'packaging' ? (
+                            <input
+                              className='inputBox'
+                              type="text"
+                              value={editValue}
+                              onChange={handleEditChange}
+                              onBlur={() => handleBlur(ingredient)}
+                              onKeyDown={(e) => handleKeyPress(e, ingredient)}
+                              autoFocus
+                            />
+                          ) : (
+                            <p
+                              onClick={() => {
+                                setEditingField({ id: ingredient.id, field: 'packaging' });
+                                setEditValue(ingredient.packaging);
+                              }}
+                              className='unitSpacing'
+                            >
+                              {ingredient.packaging}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className='nameUnit nameUnitSupplier'>
+                      {/* Supplier */}
+                      {editingField.id === ingredient.id && editingField.field === 'supplier' ? (
+                        <>
+                          <input
+                            className='dropdownInput'
+                            type="text"
+                            value={editValue}
+                            onChange={handleEditChange}
+                            onBlur={() => handleBlur(ingredient)}
+                            onKeyDown={(e) => handleKeyPress(e, ingredient)}
+                            placeholder="Enter supplier name"
+                            list={`suppliers-${ingredient.id}`}
+                            autoFocus
+                          />
+                          <datalist id={`suppliers-${ingredient.id}`}>
+                            {existingSuppliers.map((supplier, index) => (
+                              <option key={index} value={supplier} />
+                            ))}
+                          </datalist>
+                        </>
+                      ) : (
+                        <strong onClick={() => {
+                          setEditingField({ id: ingredient.id, field: 'supplier' });
+                          setEditValue(ingredient.supplier || '');
+                        }}>
+                          {ingredient.supplier || 'Click to add supplier'}
+                        </strong>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='perPizzaContainer'>
+                    <div className='nameUnit nameUnitPerPizza'>
+                      {/* Quantity per pizza */}
+                      <p className='perPizzaHeader'>Per Pizza: </p>
+                      {editingField.id === ingredient.id && editingField.field === 'ratio' ? (
+                        <input
+                          className='inputBox'
+                          type="text"
+                          value={editValue}
+                          onChange={handleEditChange}
+                          onBlur={() => handleBlur(ingredient)}
+                          onKeyDown={(e) => handleKeyPress(e, ingredient)}
+                          autoFocus
+                        />
+                      ) : (
+                        <p onClick={() => {
+                          setEditingField({ id: ingredient.id, field: 'ratio' });
+                          setEditValue(qtyPerPizza);
+                        }}>
+                          {qtyPerPizza}
+                        </p>
+                      )}
+                      <p>g</p>
+                    </div>
+
+                    <div className='nameUnit nameUnitPreOrder'>
+                      {/* Pre/order amount */}
+                        <p className='perPizzaHeader'>Prep/Order Amount: </p>
+                      {editingField.id === ingredient.id && editingField.field === 'preOrderAmount' ? (
+                        <input
+                          className='inputBox'
+                          type="text"
+                          value={editValue}
+                          onChange={handleEditChange}
+                          onBlur={() => handleBlur(ingredient)}
+                          onKeyDown={(e) => handleKeyPress(e, ingredient)}
+                          placeholder="0"
+                          autoFocus
+                        />
+                      ) : (
+                        <p onClick={() => {
+                          setEditingField({ id: ingredient.id, field: 'preOrderAmount' });
+                          setEditValue(ingredient.preOrderAmount?.toString() || '0');
+                        }}>
+                          {ingredient.preOrderAmount || '0'}g
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                 </div>

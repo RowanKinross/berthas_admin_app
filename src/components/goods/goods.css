@@ -83,28 +83,58 @@
 }
 .nameUnitIngredient {
   width: 40%;
-}
-.nameUnitPerPizza {
-  width: 10%;
+  text-align: left;
 }
 .nameUnitSupplier {
-  width: 30%;
+  text-align: right;
 }
 .unitSpacing {
-  padding: 0 5px;
+  padding: 0 3px;
 }
 
+.ingredientSupplierHeader {
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 10px;
+}
+.ingredientManageContainer {
+  background-color: var(--paleGrey);
+  margin: 5px;
+  padding: 5px;
+  display: flex;
+  justify-content: space-between;
+}
+.perPizzaContainer, .ingredientRow {
+  display: flex;
+  width: 45%;
+}
+.ingredientRow {
+  justify-content: space-between;
+  padding: 5px;
+}
+.perPizzaContainer {
+   justify-content: space-between;
+}
 
 
 /* edit ingredients display */
 .editIngredients {
   background-color: var(--light);
-  max-width: 98%;
+  padding: 5px;
 }
 .perPizza {
   padding: 0 10%;
 }
+.perPizzaHeader {
+  font-size: 13px;
+  padding: 0 10px;
+  color: var(--darkGrey);
+}
 
+
+.ingredients-manager {
+  padding: 5px;
+}
 /* Ingredients Manager Sort Controls */
 .ingredients-manager .sort-controls {
   display: flex;
@@ -147,32 +177,7 @@
   border-color: var(--primaryGreen, #28a745);
 }
 
-@media (max-width: 768px) {
-  .ingredients-manager .sort-controls {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .ingredients-manager .sort-btn {
-    width: 80%;
-    min-width: 120px;
-  }
-}
 
-
-
-/* Navigation responsive design */
-@media (max-width: 768px) {
-  .goods-nav {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .nav-btn {
-    width: 80%;
-    max-width: 250px;
-  }
-}
 
 .add-delivery-btn:hover {
   background-color: var(--marg);
@@ -333,19 +338,7 @@
   gap: 15px;
 }
 
-@media (max-width: 1024px) {
-  .product-inputs {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-}
 
-@media (max-width: 768px) {
-  .product-inputs {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-}
 
 .input-group {
   display: flex;
@@ -802,3 +795,50 @@
   box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
 
+
+
+@media (max-width: 1024px) {
+  .product-inputs {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .ingredientSupplierHeader {
+    justify-content: space-between;
+  }
+  .ingredientManageContainer {
+    flex-direction: column ;
+  }
+  .perPizzaContainer, .ingredientRow {
+    width: 100%;
+  }
+  .perPizzaContainer {
+    justify-content: space-evenly;
+  }
+  .nameUnitIngredient {
+    width: 80%;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-inputs {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .goods-nav {
+    flex-direction: column;
+    align-items: center;
+  }
+  .nav-btn {
+    width: 80%;
+    max-width: 250px;
+  }
+  .ingredients-manager .sort-controls {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ingredients-manager .sort-btn {
+    width: 80%;
+    min-width: 120px;
+  }
+}
