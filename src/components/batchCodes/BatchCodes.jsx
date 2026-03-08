@@ -382,14 +382,44 @@ function BatchCodes() {
     // Calculate total ingredient quantities using existing function logic
     const ingredientQuantities = calculateIngredientQuantities(allPizzas);
     
+    // Calculate order quantities based on preOrderAmount
+    const orderQuantities = {};
+    
+    allPizzas.forEach(pizza => {
+      pizza.ingredients.forEach(ingredientName => {
+        const ingredientData = ingredients.find(ing => ing.name === ingredientName);
+        
+        if (ingredientData && ingredientData.preOrderAmount) {
+          if (!orderQuantities[ingredientData.name]) {
+            orderQuantities[ingredientData.name] = {
+              quantity: 0,
+              unit: ingredientData.packaging,
+              unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1
+            };
+          }
+          // Calculate total order quantity required in grams
+          orderQuantities[ingredientData.name].quantity += (ingredientData.preOrderAmount * pizza.quantity);
+        }
+      });
+    });
+    
+    // Convert order quantities to kilograms
+    Object.keys(orderQuantities).forEach(ingredient => {
+      orderQuantities[ingredient].quantity /= 1000; // Convert grams to kilograms
+    });
+    
     // Format results for display
     const results = sortIngredients(
-      Object.entries(ingredientQuantities).map(([name, data]) => ({
-        name,
-        quantity: data.quantity,
-        unit: data.unit,
-        unitWeight: data.unitWeight
-      }))
+      Object.entries(ingredientQuantities).map(([name, data]) => {
+        const orderData = orderQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
+        return {
+          name,
+          quantity: data.quantity,
+          orderQuantity: orderData.quantity,
+          unit: data.unit,
+          unitWeight: data.unitWeight
+        };
+      })
     );
     
     const totalPizzas = allPizzas.reduce((sum, pizza) => {
@@ -433,9 +463,12 @@ function BatchCodes() {
             h1 { color: #333; margin-bottom: 20px; }
             h2 { color: #666; margin-top: 30px; margin-bottom: 15px; }
             .ingredient-list { margin-bottom: 30px; width: 100%; }
-            .ingredient-item { margin: 8px 0; padding: 5px; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; align-items: center; width: 100%; }
-            .ingredient-name { font-weight: bold; word-break: break-word; flex: 1; }
-            .ingredient-quantity { margin-left: 10px; flex-shrink: 0; }
+            .ingredient-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .ingredient-table th, .ingredient-table td { padding: 8px 12px; text-align: left; border-bottom: 1px dotted #ccc; }
+            .ingredient-table th { background-color: #f5f5f5; font-weight: bold; border-bottom: 2px solid #333; }
+            .ingredient-table td:nth-child(2), .ingredient-table td:nth-child(3) { text-align: right; }
+            .ingredient-table th:nth-child(2), .ingredient-table th:nth-child(3) { text-align: right; }
+            .ingredient-table .ingredient-order { color: #000000; }
             .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; word-wrap: break-word; width: 100%; }
             .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; word-wrap: break-word; width: 100%; }
             @media print { body { margin: 0; } }
@@ -447,17 +480,28 @@ function BatchCodes() {
             <strong>Selected Batches:</strong> ${selectedBatchCodes}
             </div>
             <strong>Total Batches:</strong> ${selectedBatches.size}<br><br>
-          <div class="ingredient-list">
-            ${results.map(ingredient => {
-              const numberOfUnits = ingredient.quantity / ingredient.unitWeight;
-              return `
-                <div class="ingredient-item">
-                  <span class="ingredient-name">${ingredient.name}</span>
-                  <span class="ingredient-quantity">${formatQuantity(numberOfUnits)} ${ingredient.unit}</span>
-                </div>
-              `;
-            }).join('')}
-          </div>
+          <table class="ingredient-table">
+            <thead>
+              <tr>
+                <th>Ingredient</th>
+                <th>Prep Quantity</th>
+                <th>Order Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${results.map(ingredient => {
+                const prepUnits = ingredient.quantity / ingredient.unitWeight;
+                const orderUnits = ingredient.orderQuantity / ingredient.unitWeight;
+                return `
+                  <tr>
+                    <td>${ingredient.name}</td>
+                    <td>${formatQuantity(prepUnits)} ${ingredient.unit}</td>
+                    <td class="ingredient-order">${formatQuantity(orderUnits)} ${ingredient.unit}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
           <div class="summary">
             ${sortedPizzaTotals.map(([title, count]) => 
               `${title}: ${count}<br>`
