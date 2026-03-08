@@ -4,6 +4,89 @@ import { db } from '../firebase/firebase';
 import {faSort} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
+// Component to render visual packaging indicators
+const PackagingIcon = ({ packaging, ingredientName, size = 'normal' }) => {
+  const getIconType = (packaging) => {
+    const pack = packaging.toLowerCase();
+    if (pack.includes('tin') || pack.includes('can')) return 'tin';
+    if (pack.includes('box') || pack.includes('packet')) return 'box';
+    if (pack.includes('bag')) return 'bag';
+    if (pack.includes('sack')) return 'sack';
+    if (pack.includes('pack')) return 'pack';
+    if (pack.includes('kg')) return 'kg';
+    if (pack.includes('bottle')) return 'bottle';
+    if (pack.includes('jar')) return 'jar';
+    if (pack.includes('bucket')) return 'bucket';
+    if (pack.includes('tray')) return 'tray';
+    return 'box'; // default
+  };
+
+  const getSVGPath = (type, ingredientName) => {
+    switch (type) {
+      case 'tin':
+        return '/Tin.svg';
+      case 'box':
+        const name = ingredientName.toLowerCase();
+        if (name.includes('basil')) return '/box_basil.svg';
+        return '/box.svg';
+      case 'bag':
+        return '/Bag.svg';
+      case 'bottle':
+        return '/Bottle.svg';
+      case 'jar':
+        return '/Jar.svg';
+      case 'bucket':
+        return '/Bucket.svg';
+      case 'tray':
+        return '/Tray.svg';
+      case 'sack': {
+        const name = ingredientName.toLowerCase();
+        if (name.includes('rye')) return '/Sack_rye.svg';
+        if (name.includes('caputo') && name.includes('blue')) return '/Sack_blue.svg';
+        if (name.includes('caputo') && name.includes('red')) return '/Sack_red.svg';
+        return '/Sack_plain.svg'; // default sack
+      }
+      case 'pack': {
+        return '/box.svg'; // fallback to box for other packs
+      }
+      case 'kg': {
+        const name = ingredientName.toLowerCase();      
+        if (name.includes('onion')) return '/box_onion.svg';
+        if (name.includes('pepperoni') || name.includes('pepp')) return '/Pack_pepp.svg';
+        if (name.includes('gran duro') || name.includes('gduro') || name.includes('grana duro') || name.includes('duro')) return '/Pack_GDuro.svg';
+        if (name.includes('ham')) return '/Pack_ham.svg';
+        if (name.includes('chillies')) return '/Sack_chilli.svg';
+        return '/box.svg'; // fallback to box for other kg items
+      }
+      default:
+        return '/box.svg';
+    }
+  };
+
+  const iconType = getIconType(packaging);
+  const svgPath = getSVGPath(iconType, ingredientName);
+  const isSmall = size === 'small';
+  const iconWidth = isSmall ? '20px' : '40px';
+  const iconHeight = isSmall ? '25px' : '50px';
+  
+  return (
+    <div style={{ 
+      display: 'inline-block', 
+      marginRight: '8px',
+      verticalAlign: 'middle',
+      width: iconWidth,
+      height: iconHeight
+    }}>
+      <img 
+        src={svgPath} 
+        alt={iconType} 
+        style={{ width: iconWidth, height: iconHeight }} 
+        title={packaging}
+      />
+    </div>
+  );
+};
+
 function IngredientsManager() {
   const [ingredientsArr, setIngredientsArr] = useState([]);
   const [editingField, setEditingField] = useState({ id: null, field: null });
@@ -185,11 +268,17 @@ function IngredientsManager() {
                           autoFocus
                         />
                       ) : (
-                        <p onClick={() => {
+                        <p
+                         onClick={() => {
                           setEditingField({ id: ingredient.id, field: 'name' });
                           setEditValue(ingredient.name);
                         }}>
-                          <strong className='p-2'>{ingredient.name} </strong>
+                          <PackagingIcon 
+                            packaging={ingredient.packaging || 'box'} 
+                            ingredientName={ingredient.name || ''} 
+                            size="normal" 
+                          />
+                          <strong className="iconName">{ingredient.name} </strong>
                         </p>
                       )}
                       

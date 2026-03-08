@@ -79,6 +79,7 @@
 }
 .nameUnit{
   display: flex;
+  flex-wrap: wrap;
   cursor: pointer;
 }
 .nameUnitIngredient {
@@ -112,8 +113,17 @@
   justify-content: space-between;
   padding: 5px;
 }
+.nameUnitSupplier {
+  width: max-content;
+}
+.nameUnitIngredient{
+  width: max-content ;
+}
 .perPizzaContainer {
    justify-content: space-between;
+}
+.iconName {
+  padding: 0 5px;
 }
 
 
@@ -568,6 +578,9 @@
 .unit {
   font-size: 14px;
   color: #6c757d;
+}
+.unitBlock {
+  padding: 10px 0;
 }
 
 .batches-section h5 {
