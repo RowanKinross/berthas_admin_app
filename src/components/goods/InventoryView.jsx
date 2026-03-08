@@ -3,7 +3,7 @@ import { collection, getDocs } from '@firebase/firestore';
 import { db } from '../firebase/firebase';
 
 // Component to render visual quantity indicators
-const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
+const QuantityVisual = ({ quantity, packaging, ingredientName, size = 'normal' }) => {
   const getIconType = (packaging) => {
     const pack = packaging.toLowerCase();
     if (pack.includes('tin') || pack.includes('can')) return 'tin';
@@ -63,14 +63,18 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
 
   const renderIcon = (type, fillPercentage = 100, ingredientName = '') => {
     const svgPath = getSVGPath(type, ingredientName);
+    const isSmall = size === 'small';
+    const iconWidth = isSmall ? '20px' : '40px';
+    const iconHeight = isSmall ? '25px' : '50px';
+    const margin = isSmall ? '-2px' : '-4px';
     
     return (
       <div style={{ 
         position: 'relative', 
         display: 'inline-block', 
-        margin: '-4px',
-        width: '48px',
-        height: '60px'
+        margin: margin,
+        width: iconWidth,
+        height: iconHeight
       }}>
         {fillPercentage === 0 ? (
           // Gray version for empty
@@ -78,8 +82,8 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
             src={svgPath} 
             alt={type} 
             style={{ 
-              width: '48px', 
-              height: '60px',
+              width: iconWidth, 
+              height: iconHeight,
               filter: 'grayscale(100%) brightness(0.8)'
             }} 
           />
@@ -88,7 +92,7 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
           <img 
             src={svgPath} 
             alt={type} 
-            style={{ width: '48px', height: '60px' }} 
+            style={{ width: iconWidth, height: iconHeight }} 
           />
         ) : (
           // Partial fill version
@@ -97,8 +101,8 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
               src={svgPath} 
               alt={type} 
               style={{ 
-                width: '48px', 
-                height: '60px',
+                width: iconWidth, 
+                height: iconHeight,
                 filter: 'grayscale(100%) brightness(0.8)'
               }} 
             />
@@ -109,8 +113,8 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                width: '48px', 
-                height: '60px',
+                width: iconWidth, 
+                height: iconHeight,
                 clipPath: `inset(0 ${100 - fillPercentage}% 0 0)`
               }} 
             />
@@ -126,11 +130,15 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
   
   // If we have more than 50 units, show "50+" instead
   if (totalQuantity > 50) {
-    const firstRowIcons = Array.from({ length: 10 }, (_, i) => renderIcon(iconType, 100, ingredientName));
-    const secondRowIcons = Array.from({ length: 10 }, (_, i) => renderIcon(iconType, 100, ingredientName));
-    const thirdRowIcons = Array.from({ length: 10 }, (_, i) => renderIcon(iconType, 100, ingredientName));
-    const fourthRowIcons = Array.from({ length: 10 }, (_, i) => renderIcon(iconType, 100, ingredientName));
-    const fifthRowIcons = Array.from({ length: 10 }, (_, i) => renderIcon(iconType, 100, ingredientName));
+    const firstRowIcons = Array.from({ length: 8 }, (_, i) => renderIcon(iconType, 100, ingredientName));
+    const secondRowIcons = Array.from({ length: 8 }, (_, i) => renderIcon(iconType, 100, ingredientName));
+    const thirdRowIcons = Array.from({ length: 8 }, (_, i) => renderIcon(iconType, 100, ingredientName));
+    const fourthRowIcons = Array.from({ length: 8 }, (_, i) => renderIcon(iconType, 100, ingredientName));
+    const fifthRowIcons = Array.from({ length: 8 }, (_, i) => renderIcon(iconType, 100, ingredientName));
+    
+    const isSmall = size === 'small';
+    const rowOverlap = isSmall ? '-15px' : '-30px';
+    const horizontalOffset = isSmall ? '8px' : '16px';
     
     return (
       <div style={{ position: 'relative', marginTop: '8px' }}>
@@ -139,19 +147,19 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
           {firstRowIcons}
         </div>
         {/* Second row overlapping */}
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: '-30px', marginLeft: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: rowOverlap, marginLeft: horizontalOffset }}>
           {secondRowIcons}
         </div>
         {/* Third row overlapping */}
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: '-30px', marginLeft: '48px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: rowOverlap, marginLeft: '0px' }}>
           {thirdRowIcons}
         </div>
         {/* Fourth row overlapping */}
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: '-30px', marginLeft: '72px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: rowOverlap, marginLeft: horizontalOffset }}>
           {fourthRowIcons}
         </div>
         {/* Fifth row overlapping */}
-        <div style={{ display: 'flex', alignItems: 'center', marginTop: '-30px', marginLeft: '96px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: rowOverlap, marginLeft: '0px' }}>
           {fifthRowIcons}
           <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#666', marginLeft: '5px' }}>+</span>
         </div>
@@ -172,13 +180,17 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
     icons.push(renderIcon(iconType, fillPercentage, ingredientName));
   }
   
-  // Create overlapping rows after 10 icons
+  // Create overlapping rows after 8 icons
   const totalIcons = icons.length;
-  if (totalIcons > 10) {
+  if (totalIcons > 8) {
     const rows = [];
-    for (let i = 0; i < totalIcons; i += 10) {
-      rows.push(icons.slice(i, i + 10));
+    for (let i = 0; i < totalIcons; i += 8) {
+      rows.push(icons.slice(i, i + 8));
     }
+    
+    const isSmall = size === 'small';
+    const rowOverlap = isSmall ? '-15px' : '-30px';
+    const horizontalOffset = isSmall ? 8 : 16;
     
     return (
       <div style={{ position: 'relative', marginTop: '8px' }}>
@@ -188,12 +200,12 @@ const QuantityVisual = ({ quantity, packaging, ingredientName }) => {
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              marginTop: rowIndex > 0 ? '-30px' : '0',
-              marginLeft: `${rowIndex * 24}px`
+              marginTop: rowIndex > 0 ? rowOverlap : '0',
+              marginLeft: `${rowIndex % 2 === 0 ? 0 : horizontalOffset}px`
             }}
           >
             {rowIcons.map((icon, index) => (
-              <React.Fragment key={index + (rowIndex * 10)}>{icon}</React.Fragment>
+              <React.Fragment key={index + (rowIndex * 8)}>{icon}</React.Fragment>
             ))}
           </div>
         ))}
@@ -425,7 +437,7 @@ function InventoryView() {
                             </div>
                           
                         </div>
-                        <QuantityVisual quantity={batch.quantity} packaging={item.packaging} ingredientName={item.name} />
+                        <QuantityVisual quantity={batch.quantity} packaging={item.packaging} ingredientName={item.name} size="small" />
                         </div>
                       );
                     })}
