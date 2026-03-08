@@ -59,6 +59,7 @@ function BatchCodes() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [editingMixQuantities, setEditingMixQuantities] = useState(false);
   const [mixCalculatorInitialized, setMixCalculatorInitialized] = useState(false);
+  const [completionChecklist, setCompletionChecklist] = useState({});
 
   // Photo cropping and editing states
   const [showImageCrop, setShowImageCrop] = useState(false);
@@ -1411,6 +1412,7 @@ const formatDateDisplay = (dateStr) => {
     }
 
     let shouldBeCompleted = false;
+    let newCompletionChecklist = {};
 
     if (viewingBatch.batch_type === 'starter') {
       // For starter batches, check ingredient batch codes and starter made checkbox
@@ -1419,9 +1421,16 @@ const formatDateDisplay = (dateStr) => {
         viewingBatch.ingredientBatchCodes?.[ingredient]?.trim()
       );
       
+      newCompletionChecklist = {
+        ingredientCodes: allIngredientCodesPresent,
+        pizzaNumbersComplete: !!viewingBatch.pizza_numbers_complete,
+        sleevePhotos: true, // N/A for starter batches
+        pizzaWeights: true  // N/A for starter batches
+      };
+      
       shouldBeCompleted = allIngredientCodesPresent && !!viewingBatch.pizza_numbers_complete;
     } else {
-      // For pizza/dough ball batches, use existing logic
+      // For pizza/dough ball batches, use existing logic plus new checks
       const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
       const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
       const requiredIngredients = Object.keys(ingredientQuantities);
@@ -1435,16 +1444,47 @@ const formatDateDisplay = (dateStr) => {
         });
       });
     
-      const allFilled =
+      const allIngredientCodesFilled =
         requiredIngredients.length > 0 &&
         requiredIngredients.every(
           ingredient =>
             mergedIngredientCodes[ingredient] &&
             mergedIngredientCodes[ingredient].trim() !== ""
         );
+
+      // Check sleeve photos - pizzas with sleeve:true need photos
+      const sleevePhotosComplete = selectedPizzas.every(pizza => {
+        if (pizza.sleeve) {
+          return pizza.photo && pizza.photo.trim() !== "";
+        }
+        return true; // Non-sleeve pizzas don't need photos
+      });
+
+      // Check pizza weights - all pizzas need first, middle, and last weights
+      const pizzaWeightsComplete = selectedPizzas.every(pizza => {
+        return pizza.firstPizzaWeight && 
+               pizza.middlePizzaWeight && 
+               pizza.lastPizzaWeight &&
+               !isNaN(pizza.firstPizzaWeight) &&
+               !isNaN(pizza.middlePizzaWeight) &&
+               !isNaN(pizza.lastPizzaWeight);
+      });
+
+      newCompletionChecklist = {
+        ingredientCodes: allIngredientCodesFilled,
+        pizzaNumbersComplete: !!viewingBatch.pizza_numbers_complete,
+        sleevePhotos: sleevePhotosComplete,
+        pizzaWeights: pizzaWeightsComplete
+      };
     
-      shouldBeCompleted = allFilled && !!viewingBatch.pizza_numbers_complete;
+      shouldBeCompleted = allIngredientCodesFilled && 
+                         !!viewingBatch.pizza_numbers_complete &&
+                         sleevePhotosComplete &&
+                         pizzaWeightsComplete;
     }
+
+    // Update completion checklist state
+    setCompletionChecklist(newCompletionChecklist);
 
     if (viewingBatch.completed !== shouldBeCompleted) {
       const batchRef = doc(db, "batches", viewingBatch.id);
@@ -1465,6 +1505,92 @@ const formatDateDisplay = (dateStr) => {
   
 
   
+  // Completion Checklist Component
+  const CompletionChecklist = ({ checklist, batchType }) => {
+    if (!checklist) return null;
+
+    const checkItems = [
+      {
+        key: 'ingredientCodes',
+        label: 'Ingredient Batch Codes',
+        isComplete: checklist.ingredientCodes,
+        applicable: true
+      },
+      {
+        key: 'pizzaNumbersComplete',
+        label: batchType === 'starter' ? 'Starter Made' : 'Numbers Complete',
+        isComplete: checklist.pizzaNumbersComplete,
+        applicable: true
+      },
+      {
+        key: 'sleevePhotos',
+        label: 'Sleeve Photos Uploaded',
+        isComplete: checklist.sleevePhotos,
+        applicable: batchType !== 'starter'
+      },
+      {
+        key: 'pizzaWeights',
+        label: batchType === 'dough balls' ? 'Weights Recorded' : 'Pizza Weights Recorded',
+        isComplete: checklist.pizzaWeights,
+        applicable: batchType !== 'starter'
+      }
+    ];
+
+    const applicableItems = checkItems.filter(item => item.applicable);
+    const completedCount = applicableItems.filter(item => item.isComplete).length;
+    const totalCount = applicableItems.length;
+
+    return (
+      <div style={{
+        backgroundColor: '#f8f9fa',
+        border: '1px solid #e9ecef',
+        borderRadius: '8px',
+        padding: '15px',
+        margin: '15px auto',
+        maxWidth: '400px'
+      }}>
+        <div style={{
+          fontSize: '16px',
+          fontWeight: 'bold',
+          marginBottom: '12px',
+          color: '#333'
+        }}>
+          Batch Completion ({completedCount}/{totalCount})
+        </div>
+        {applicableItems.map(item => (
+          <div key={item.key} style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginBottom: '8px',
+            fontSize: '14px'
+          }}>
+            <span style={{
+              display: 'inline-block',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              backgroundColor: item.isComplete ? '#28a745' : '#dc3545',
+              color: 'white',
+              textAlign: 'center',
+              lineHeight: '20px',
+              marginRight: '10px',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}>
+              {item.isComplete ? '✓' : '✗'}
+            </span>
+            <span style={{
+              color: item.isComplete ? '#28a745' : '#dc3545',
+              textDecoration: item.isComplete ? 'none' : 'none'
+            }}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Get userRole from localStorage
   const [userRole, setUserRole] = useState(() => localStorage.getItem('userRole') || '');
 
@@ -1583,7 +1709,7 @@ const formatDateDisplay = (dateStr) => {
   }
 
   // Combine userRole/week filter and search filter
-  const filteredBatches = batches
+  const filteredBatches = (batches || [])
   .filter(batch => {
     if (userRole === 'admin') return true;
     if (userRole === 'unit') {
@@ -2058,6 +2184,11 @@ const formatDateDisplay = (dateStr) => {
             </div>
 
           </div>
+          
+          {/* Completion Checklist */}
+          {viewingBatch && (
+            <CompletionChecklist checklist={completionChecklist} batchType={viewingBatch.batch_type} />
+          )}
           
           {/* Conditional content based on batch type */}
           {viewingBatch.batch_type === 'starter' ? (
