@@ -409,18 +409,23 @@ function BatchCodes() {
     });
     
     // Format results for display
-    const results = sortIngredients(
-      Object.entries(ingredientQuantities).map(([name, data]) => {
-        const orderData = orderQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
-        return {
-          name,
-          quantity: data.quantity,
-          orderQuantity: orderData.quantity,
-          unit: data.unit,
-          unitWeight: data.unitWeight
-        };
-      })
-    );
+    const results = Object.entries(ingredientQuantities).map(([name, data]) => {
+      const ingredientData = ingredients.find(ing => ing.name === name);
+      const orderData = orderQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
+      return {
+        name,
+        quantity: data.quantity,
+        orderQuantity: orderData.quantity,
+        unit: data.unit,
+        unitWeight: data.unitWeight,
+        supplier: ingredientData?.supplier || ''
+      };
+    }).sort((a, b) => {
+      // Sort by supplier first, then by ingredient name
+      const supplierComparison = a.supplier.localeCompare(b.supplier);
+      if (supplierComparison !== 0) return supplierComparison;
+      return a.name.localeCompare(b.name);
+    });
     
     const totalPizzas = allPizzas.reduce((sum, pizza) => {
       if (pizza.id === "DOU_A1" || pizza.id === "DOU_A0") return sum;
@@ -468,6 +473,7 @@ function BatchCodes() {
             .ingredient-table th { background-color: #f5f5f5; font-weight: bold; border-bottom: 2px solid #333; }
             .ingredient-table td:nth-child(2), .ingredient-table td:nth-child(3) { text-align: right; }
             .ingredient-table th:nth-child(2), .ingredient-table th:nth-child(3) { text-align: right; }
+            .ingredient-table td:nth-child(2) { color: #888888; }
             .ingredient-table .ingredient-order { color: #000000; }
             .summary { background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; word-wrap: break-word; width: 100%; }
             .batch-codes { font-size: 0.9em; color: #666; margin-bottom: 20px; word-wrap: break-word; width: 100%; }
@@ -489,17 +495,40 @@ function BatchCodes() {
               </tr>
             </thead>
             <tbody>
-              ${results.map(ingredient => {
-                const prepUnits = ingredient.quantity / ingredient.unitWeight;
-                const orderUnits = ingredient.orderQuantity / ingredient.unitWeight;
-                return `
-                  <tr>
-                    <td>${ingredient.name}</td>
-                    <td>${formatQuantity(prepUnits)} ${ingredient.unit}</td>
-                    <td class="ingredient-order">${formatQuantity(orderUnits)} ${ingredient.unit}</td>
-                  </tr>
-                `;
-              }).join('')}
+              ${(() => {
+                // Group ingredients by supplier
+                const groupedBySupplier = {};
+                results.forEach(ingredient => {
+                  const supplier = ingredient.supplier || 'No Supplier';
+                  if (!groupedBySupplier[supplier]) {
+                    groupedBySupplier[supplier] = [];
+                  }
+                  groupedBySupplier[supplier].push(ingredient);
+                });
+                
+                // Generate HTML with supplier headers
+                return Object.entries(groupedBySupplier).map(([supplier, ingredients]) => {
+                  const supplierHeader = `
+                    <tr style="background-color: #e8e8e8;">
+                      <td colspan="3" style="font-weight: bold; padding: 12px 8px; text-align: center; color: #333;">
+                        ${supplier}
+                      </td>
+                    </tr>`;
+                  
+                  const ingredientRows = ingredients.map(ingredient => {
+                    const prepUnits = ingredient.quantity / ingredient.unitWeight;
+                    const orderUnits = ingredient.orderQuantity / ingredient.unitWeight;
+                    return `
+                      <tr>
+                        <td>${ingredient.name}</td>
+                        <td>${formatQuantity(prepUnits)} ${ingredient.unit}</td>
+                        <td class="ingredient-order">${formatQuantity(orderUnits)} ${ingredient.unit}</td>
+                      </tr>`;
+                  }).join('');
+                  
+                  return supplierHeader + ingredientRows;
+                }).join('');
+              })()}
             </tbody>
           </table>
           <div class="summary">
