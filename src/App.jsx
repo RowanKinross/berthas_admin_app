@@ -13,7 +13,6 @@ import Inventory from './components/inventory/Inventory'
 import Archive from './components/archive/Archive'
 import Summary from './components/summary/Summary'
 import BatchCodes from './components/batchCodes/BatchCodes'
-import BatchesNew from './components/batchesNew/batchesNew';
 import NewOrderAdmin from './components/newOrderAdmin/NewOrderAdmin';
 import UpdateBanner from './components/UpdateBanner/UpdateBanner';
 import useVersionCheck from './hooks/useVersionCheck';
@@ -150,11 +149,6 @@ function App() {
               <Route path="batchCodes" element={
                 <ProtectedRoute>
                   <BatchCodes/>
-                </ProtectedRoute>
-              } />
-              <Route path="batchesNew" element={
-                <ProtectedRoute>
-                  <BatchesNew/>
                 </ProtectedRoute>
               } />
             </Routes>
