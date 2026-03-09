@@ -343,31 +343,31 @@ function BatchCodes() {
     setLastSelectedIndex(null);
   };
 
-  const markSelectedBatchesIngredientsOrdered = async () => {
-    if (selectedBatches.size === 0) {
-      alert("Please select at least one batch to mark ingredients as ordered.");
-      return;
-    }
+  // const markSelectedBatchesIngredientsOrdered = async () => {
+  //   if (selectedBatches.size === 0) {
+  //     alert("Please select at least one batch to mark ingredients as ordered.");
+  //     return;
+  //   }
 
-    try {
-      const updatePromises = Array.from(selectedBatches).map(async (batchId) => {
-        const batchRef = doc(db, "batches", batchId);
-        await updateDoc(batchRef, {
-          ingredients_ordered: true
-        });
-      });
+  //   try {
+  //     const updatePromises = Array.from(selectedBatches).map(async (batchId) => {
+  //       const batchRef = doc(db, "batches", batchId);
+  //       await updateDoc(batchRef, {
+  //         ingredients_ordered: true
+  //       });
+  //     });
 
-      await Promise.all(updatePromises);
-      alert(`Marked ingredients as ordered for ${selectedBatches.size} batch(es).`);
+  //     await Promise.all(updatePromises);
+  //     alert(`Marked ingredients as ordered for ${selectedBatches.size} batch(es).`);
       
-      // Clear selection after successful update
-      setSelectionMode(false);
-      setSelectedBatches(new Set());
-    } catch (error) {
-      console.error("Error updating batches:", error);
-      alert("Error marking ingredients as ordered. Please try again.");
-    }
-  };
+  //     // Clear selection after successful update
+  //     setSelectionMode(false);
+  //     setSelectedBatches(new Set());
+  //   } catch (error) {
+  //     console.error("Error updating batches:", error);
+  //     alert("Error marking ingredients as ordered. Please try again.");
+  //   }
+  // };
 
   const calculateSelectedBatchesIngredients = () => {
     if (selectedBatches.size === 0) {
@@ -2093,14 +2093,14 @@ const formatDateDisplay = (dateStr) => {
               >
                 Calculate Ingredients ({selectedBatches.size})
               </button>
-              <button 
+              {/* <button 
                 className='button completed'
                 onClick={markSelectedBatchesIngredientsOrdered}
                 disabled={selectedBatches.size === 0}
                 style={{ fontSize: '12px', padding: '5px 10px' }}
               >
                 Ingredients Ordered ✓
-              </button>
+              </button> */}
               <button 
                 className='button draft'
                 onClick={() => {
@@ -2178,7 +2178,7 @@ const formatDateDisplay = (dateStr) => {
                 </div>
               </div>
             )}
-              <strong>Ingredients Ordered:</strong>{" "}
+              {/* <strong>Ingredients Ordered:</strong>{" "}
               <input
                 type="checkbox"
                 checked={ingredientsOrdered || false}
@@ -2192,7 +2192,7 @@ const formatDateDisplay = (dateStr) => {
                     console.error("Error updating checkbox:", error);
                   }
                 }}
-              />
+              /> */}
             </div>
 
           </div>
@@ -3140,7 +3140,7 @@ const formatDateDisplay = (dateStr) => {
               required
             />
           </Col>
-          <Form.Label column sm={3}>
+          {/* <Form.Label column sm={3}>
             <strong>Ingredients Ordered?</strong>
             <input
               className='m-2'
@@ -3149,7 +3149,7 @@ const formatDateDisplay = (dateStr) => {
               checked={ingredientsOrdered}
               onChange={handleInputChange}
             />
-          </Form.Label>
+          </Form.Label> */}
           </div>
           
           <Form.Label column sm={3}><strong>Batch Type:</strong></Form.Label>
