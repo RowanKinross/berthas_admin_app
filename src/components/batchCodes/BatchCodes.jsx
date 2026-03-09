@@ -5,7 +5,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
 import MixCalculator from './MixCalculator';
 import ImageCropModal from './ImageCropModal';
-import ViewingBatchModal from './viewingBatchModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
