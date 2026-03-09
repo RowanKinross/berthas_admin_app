@@ -1186,7 +1186,7 @@ const formatDateDisplay = (dateStr) => {
         return sum + (ingredientData.preOrderAmount * pizza.quantity);
       }, 0);
       
-      const quantityInKg = totalQuantityInGrams / 1000; // Convert to kg
+      const quantityInKg = Math.round((totalQuantityInGrams / 1000) * 100) / 100; // Convert to kg and round to 2 decimal places
       
       if (quantityInKg <= 0) {
         return; // No consumption to track

@@ -250,12 +250,22 @@ function InventoryView() {
           ...doc.data() 
         }));
 
-        // Fetch stock consumptions
-        const consumptionsSnapshot = await getDocs(collection(db, 'stock_consumptions'));
-        const consumptionsData = consumptionsSnapshot.docs.map(doc => ({ 
-          id: doc.id, 
-          ...doc.data() 
-        }));
+        // Extract allocations from deliveries
+        const allocationsData = [];
+        deliveriesData.forEach(delivery => {
+          if (delivery.allocations && Array.isArray(delivery.allocations)) {
+            delivery.allocations.forEach(allocation => {
+              allocationsData.push({
+                ingredientName: allocation.ingredientName,
+                quantityUsed: allocation.quantityAllocated || 0,
+                ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+                allocatedToBatchId: allocation.allocatedToBatchId,
+                allocatedToBatchCode: allocation.allocatedToBatchCode,
+                allocationDate: allocation.allocationDate
+              });
+            });
+          }
+        });
 
         // Calculate inventory levels - start with all ingredients
         const inventoryMap = {};
@@ -304,11 +314,11 @@ function InventoryView() {
           }
         });
 
-        // Subtract stock consumptions from inventory totals
-        consumptionsData.forEach(consumption => {
-          const ingredientName = consumption.ingredientName;
-          const quantityUsed = consumption.quantityUsed || 0;
-          const batchCodeUsed = consumption.ingredientBatchCode;
+        // Subtract allocations from inventory totals
+        allocationsData.forEach(allocation => {
+          const ingredientName = allocation.ingredientName;
+          const quantityUsed = allocation.quantityUsed || 0;
+          const batchCodeUsed = allocation.ingredientBatchCode;
           
           if (inventoryMap[ingredientName] && quantityUsed > 0) {
             // First try to subtract from the specific batch that was used
