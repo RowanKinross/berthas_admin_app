@@ -1225,6 +1225,15 @@ const formatDateDisplay = (dateStr) => {
           const updatedAllocations = [...currentAllocations, allocation];
           await updateDoc(deliveryRef, { allocations: updatedAllocations });
           
+          // Update local deliveries state
+          setDeliveries(prevDeliveries => 
+            prevDeliveries.map(del => 
+              del.id === delivery.id 
+                ? { ...del, allocations: updatedAllocations }
+                : del
+            )
+          );
+          
           console.log(`Tracked allocation: ${quantityInKg}kg of ${ingredientName} (batch ${batchCode}) allocated to batch ${viewingBatch.batch_code} using preOrderAmount`);
         }
       } else {
@@ -1255,6 +1264,15 @@ const formatDateDisplay = (dateStr) => {
 
         const deliveryRef = doc(db, "deliveries", delivery.id);
         await updateDoc(deliveryRef, { allocations: updatedAllocations });
+        
+        // Update local deliveries state
+        setDeliveries(prevDeliveries => 
+          prevDeliveries.map(del => 
+            del.id === delivery.id 
+              ? { ...del, allocations: updatedAllocations }
+              : del
+          )
+        );
         
         console.log(`Removed allocation for ${ingredientName} from batch ${viewingBatch.batch_code}`);
       }
