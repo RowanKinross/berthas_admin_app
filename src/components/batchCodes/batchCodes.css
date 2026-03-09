@@ -54,6 +54,10 @@
   justify-content: space-between;
   padding: 5px 0;
 }
+.pkCases {
+  font-style: italic;
+  color: var(--darkLight);
+}
 .editForm .pizzaDetails {
   display: flex;
   justify-content: space-between;

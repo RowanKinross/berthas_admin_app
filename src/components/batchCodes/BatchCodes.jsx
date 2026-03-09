@@ -2505,6 +2505,47 @@ const formatDateDisplay = (dateStr) => {
         {pizza.quantity}
       </span>
     )}
+    
+    {/* 6pk Cases field - only for sleeved pizzas, and only show in unit mode if value isn't 0 */}
+    {pizza.sleeve && (userRole !== 'unit' || (pizza.sixpack_cases && pizza.sixpack_cases > 0)) && (
+      <div style={{ margin: '4px 0 0 18px' }}>
+        <span className='pkCases'>6-pack cases x</span>{" "}
+        {editingField === `pizza-${pizza.id}-sixpack-cases` && userRole !== 'unit' ? (
+          <input
+            type="number"
+            className='inputNumber pkCases'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() =>
+              handleInlineSave("pizza", pizza.id, "sixpack_cases", editingValue)
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleInlineSave("pizza", pizza.id, "sixpack_cases", editingValue);
+              }
+            }}
+          />
+        ) : (
+          <span
+            className='pkCases'
+            onClick={() => {
+              if (userRole !== 'unit') {
+                setEditingField(`pizza-${pizza.id}-sixpack-cases`);
+                setEditingValue(pizza.sixpack_cases || "");
+              }
+            }}
+            style={{ 
+              cursor: userRole !== 'unit' ? 'pointer' : 'default',
+              textDecoration: userRole !== 'unit' ? 'underline' : 'none',
+            }}
+          >
+            {pizza.sixpack_cases || "0"}
+          </span>
+        )}
+      </div>
+    )}
+    
     {/* Photo Upload Section */}
           <div className='pizzaPhotoSection'>
             <div className='pizzaPhotoContainer'>
