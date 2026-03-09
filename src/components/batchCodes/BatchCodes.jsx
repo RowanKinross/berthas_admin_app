@@ -1552,15 +1552,13 @@ const formatDateDisplay = (dateStr) => {
         backgroundColor: '#f8f9fa',
         border: '1px solid #e9ecef',
         borderRadius: '8px',
-        padding: '15px',
-        margin: '15px auto',
+        padding: '0 10px',
         maxWidth: '400px'
       }}>
         <div style={{
           fontSize: '16px',
           fontWeight: 'bold',
           marginBottom: '12px',
-          color: '#333'
         }}>
           Batch Completion ({completedCount}/{totalCount})
         </div>
@@ -2128,7 +2126,9 @@ const formatDateDisplay = (dateStr) => {
                 ×
               </button>
             </div>
-          <div >
+          <div className='batchDetailsChecklistFlex'>
+          <div className='batchDetilsChecklistFlexBox'>
+          <div>
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
           <div >
@@ -2178,6 +2178,7 @@ const formatDateDisplay = (dateStr) => {
                 </div>
               </div>
             )}
+            </div>
               {/* <strong>Ingredients Ordered:</strong>{" "}
               <input
                 type="checkbox"
@@ -2196,11 +2197,13 @@ const formatDateDisplay = (dateStr) => {
             </div>
 
           </div>
-          
+          <div className='batchDetilsChecklistFlexBox batchChecklistFlex'>
           {/* Completion Checklist */}
           {viewingBatch && (
             <CompletionChecklist checklist={completionChecklist} batchType={viewingBatch.batch_type} />
           )}
+          </div>
+          </div>
           
           {/* Conditional content based on batch type */}
           {viewingBatch.batch_type === 'starter' ? (
