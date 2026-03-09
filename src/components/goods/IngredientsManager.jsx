@@ -226,7 +226,7 @@ function IngredientsManager() {
         
         <div className='ingredientSupplierHeader'>
           <p className='nameUnit nameUnitIngredient'>
-            <strong>Ingredient:</strong> 
+            <strong>Ingredient Name: </strong> 
             <div 
               className={`${sortBy === 'name' ? 'active' : ''}`}
               onClick={() => setSortBy('name')}
@@ -235,7 +235,7 @@ function IngredientsManager() {
             </div>
           </p>
           <p className='nameUnit nameUnitSupplier'>
-            <strong>Supplier:</strong>
+            <strong>Supplier: </strong>
             <div 
             className={`${sortBy === 'supplier' ? 'active' : ''}`}
             onClick={() => setSortBy('supplier')}>

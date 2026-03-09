@@ -95,8 +95,9 @@
 
 .ingredientSupplierHeader {
   display: flex;
-  justify-content: flex-start;
-  padding: 0 10px;
+  width: 48%;
+  justify-content: space-between;
+  padding: 0 20px;
 }
 .ingredientManageContainer {
   background-color: var(--paleGrey);
@@ -816,7 +817,7 @@
     gap: 12px;
   }
   .ingredientSupplierHeader {
-    justify-content: space-between;
+    width: 100%;
   }
   .ingredientManageContainer {
     flex-direction: column ;
