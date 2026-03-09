@@ -5,7 +5,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
 import MixCalculator from './MixCalculator';
 import ImageCropModal from './ImageCropModal';
-import ViewingBatchModal from './viewingBatchModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
@@ -397,40 +396,42 @@ function BatchCodes() {
     // Calculate total ingredient quantities using existing function logic
     const ingredientQuantities = calculateIngredientQuantities(allPizzas);
     
-    // Calculate order quantities based on preOrderAmount
-    const orderQuantities = {};
+    // Calculate prep quantities based on ratio
+    const prepQuantities = {};
     
     allPizzas.forEach(pizza => {
       pizza.ingredients.forEach(ingredientName => {
         const ingredientData = ingredients.find(ing => ing.name === ingredientName);
         
-        if (ingredientData && ingredientData.preOrderAmount) {
-          if (!orderQuantities[ingredientData.name]) {
-            orderQuantities[ingredientData.name] = {
+        if (ingredientData) {
+          const { gramsPerPizza, unitWeight } = parseIngredientRatio(ingredientData.ratio);
+          
+          if (!prepQuantities[ingredientData.name]) {
+            prepQuantities[ingredientData.name] = {
               quantity: 0,
               unit: ingredientData.packaging,
-              unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1
+              unitWeight: unitWeight
             };
           }
-          // Calculate total order quantity required in grams
-          orderQuantities[ingredientData.name].quantity += (ingredientData.preOrderAmount * pizza.quantity);
+          // Calculate total prep quantity required in grams
+          prepQuantities[ingredientData.name].quantity += (gramsPerPizza * pizza.quantity);
         }
       });
     });
     
-    // Convert order quantities to kilograms
-    Object.keys(orderQuantities).forEach(ingredient => {
-      orderQuantities[ingredient].quantity /= 1000; // Convert grams to kilograms
+    // Convert prep quantities to kilograms
+    Object.keys(prepQuantities).forEach(ingredient => {
+      prepQuantities[ingredient].quantity /= 1000; // Convert grams to kilograms
     });
     
     // Format results for display
     const results = Object.entries(ingredientQuantities).map(([name, data]) => {
       const ingredientData = ingredients.find(ing => ing.name === name);
-      const orderData = orderQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
+      const prepData = prepQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
       return {
         name,
-        quantity: data.quantity,
-        orderQuantity: orderData.quantity,
+        quantity: prepData.quantity,
+        orderQuantity: data.quantity,
         unit: data.unit,
         unitWeight: data.unitWeight,
         supplier: ingredientData?.supplier || ''
@@ -505,7 +506,7 @@ function BatchCodes() {
             <thead>
               <tr>
                 <th>Ingredient</th>
-                <th>Prep Quantity</th>
+                <th>Post-Prep Quantity</th>
                 <th>Order Quantity</th>
               </tr>
             </thead>
@@ -948,7 +949,18 @@ const formatDateDisplay = (dateStr) => {
     const ingredientData = ingredients.find(ing => ing.name === ingredientName);
   
         if (ingredientData) {
-          const { gramsPerPizza, unitWeight } = parseIngredientRatio(ingredientData.ratio);
+          let gramsPerPizza;
+          let unitWeight;
+
+          // Use preOrderAmount if available, otherwise fall back to ratio calculation
+          if (ingredientData.preOrderAmount) {
+            gramsPerPizza = ingredientData.preOrderAmount;
+            unitWeight = ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1;
+          } else {
+            const ratioData = parseIngredientRatio(ingredientData.ratio);
+            gramsPerPizza = ratioData.gramsPerPizza;
+            unitWeight = ratioData.unitWeight;
+          }
   
           if (!ingredientQuantities[ingredientData.name]) {
             ingredientQuantities[ingredientData.name] = {
@@ -1157,35 +1169,97 @@ const formatDateDisplay = (dateStr) => {
     }
   };
 
-  // Track stock consumption when ingredient batch codes are selected
+  // Track stock consumption by adding allocations to deliveries
   const trackStockConsumption = async (ingredientName, batchCode, usedInBatchId) => {
     try {
-      // Calculate how much of this ingredient is needed for the current batch
-      const ingredientQuantities = calculateIngredientQuantities(viewingBatch.pizzas.filter(p => p.quantity > 0));
-      const quantityNeeded = ingredientQuantities[ingredientName];
+      // Calculate how much of this ingredient is needed using preOrderAmount (prep/order weight)
+      const ingredientData = ingredients.find(ing => ing.name === ingredientName);
       
-      if (!quantityNeeded || quantityNeeded.quantity <= 0) {
+      if (!ingredientData || !ingredientData.preOrderAmount) {
+        console.log(`No preOrderAmount found for ${ingredientName}, skipping allocation tracking`);
+        return; // Only track ingredients with preOrderAmount to maintain accurate inventory
+      }
+
+      // Calculate total quantity needed using preOrderAmount
+      const selectedPizzas = viewingBatch.pizzas.filter(p => p.quantity > 0 && p.ingredients.includes(ingredientName));
+      const totalQuantityInGrams = selectedPizzas.reduce((sum, pizza) => {
+        return sum + (ingredientData.preOrderAmount * pizza.quantity);
+      }, 0);
+      
+      const quantityInKg = totalQuantityInGrams / 1000; // Convert to kg
+      
+      if (quantityInKg <= 0) {
         return; // No consumption to track
       }
 
-      // Create consumption record
-      const consumptionData = {
-        ingredientName: ingredientName,
-        ingredientBatchCode: batchCode,
-        quantityUsed: quantityNeeded.quantity, // in kg
-        unit: quantityNeeded.unit,
-        unitWeight: quantityNeeded.unitWeight,
-        usedInBatchId: usedInBatchId,
-        usedInBatchCode: viewingBatch.batch_code,
-        consumptionDate: new Date().toISOString(),
-        batchType: viewingBatch.batch_type
-      };
+      // Find the delivery that contains this batch code for this ingredient
+      const delivery = deliveries.find(del => 
+        del.batchCodes && 
+        del.batchCodes[ingredientName] === batchCode
+      );
 
-      await addDoc(collection(db, "stock_consumptions"), consumptionData);
-      
-      console.log(`Tracked consumption: ${quantityNeeded.quantity}kg of ${ingredientName} (batch ${batchCode}) for batch ${viewingBatch.batch_code}`);
+      if (delivery) {
+        // Create allocation record to add to the delivery
+        const allocation = {
+          ingredientName: ingredientName,
+          quantityAllocated: quantityInKg, // in kg, using preOrderAmount for accurate inventory tracking
+          unit: ingredientData.packaging,
+          unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1,
+          allocatedToBatchId: usedInBatchId,
+          allocatedToBatchCode: viewingBatch.batch_code,
+          allocationDate: new Date().toISOString(),
+          batchType: viewingBatch.batch_type
+        };
+
+        // Update the delivery document with the new allocation
+        const deliveryRef = doc(db, "deliveries", delivery.id);
+        const currentAllocations = delivery.allocations || [];
+        
+        // Check if this allocation already exists to avoid duplicates
+        const existingAllocation = currentAllocations.find(alloc => 
+          alloc.allocatedToBatchId === usedInBatchId && 
+          alloc.ingredientName === ingredientName
+        );
+
+        if (!existingAllocation) {
+          const updatedAllocations = [...currentAllocations, allocation];
+          await updateDoc(deliveryRef, { allocations: updatedAllocations });
+          
+          console.log(`Tracked allocation: ${quantityInKg}kg of ${ingredientName} (batch ${batchCode}) allocated to batch ${viewingBatch.batch_code} using preOrderAmount`);
+        }
+      } else {
+        console.log(`No delivery found with batch code ${batchCode} for ingredient ${ingredientName}`);
+      }
     } catch (error) {
-      console.error("Error tracking stock consumption:", error);
+      console.error("Error tracking stock allocation:", error);
+    }
+  };
+
+  // Remove allocation from delivery when batch code is cleared
+  const removeStockAllocation = async (ingredientName, usedInBatchId) => {
+    try {
+      // Find all deliveries that might contain allocations for this ingredient and batch
+      const relevantDeliveries = deliveries.filter(del => 
+        del.allocations && 
+        del.allocations.some(alloc => 
+          alloc.ingredientName === ingredientName && 
+          alloc.allocatedToBatchId === usedInBatchId
+        )
+      );
+
+      // Remove allocations from each relevant delivery
+      for (const delivery of relevantDeliveries) {
+        const updatedAllocations = delivery.allocations.filter(alloc => 
+          !(alloc.ingredientName === ingredientName && alloc.allocatedToBatchId === usedInBatchId)
+        );
+
+        const deliveryRef = doc(db, "deliveries", delivery.id);
+        await updateDoc(deliveryRef, { allocations: updatedAllocations });
+        
+        console.log(`Removed allocation for ${ingredientName} from batch ${viewingBatch.batch_code}`);
+      }
+    } catch (error) {
+      console.error("Error removing stock allocation:", error);
     }
   };
 
@@ -1550,9 +1624,9 @@ const formatDateDisplay = (dateStr) => {
       };
     
       shouldBeCompleted = allIngredientCodesFilled && 
-                         !!viewingBatch.pizza_numbers_complete &&
-                         sleevePhotosComplete &&
-                         pizzaWeightsComplete;
+        !!viewingBatch.pizza_numbers_complete &&
+        sleevePhotosComplete &&
+        pizzaWeightsComplete;
     }
 
     // Update completion checklist state
@@ -2518,8 +2592,10 @@ const formatDateDisplay = (dateStr) => {
                               }
                               <div
                                 className="batchButton"
-                                onClick={() => {
+                                onClick={async () => {
                                   setEditingValue('');
+                                  // Remove allocation from delivery
+                                  await removeStockAllocation(ingredientName, viewingBatch.id);
                                   handleInlineSave("batch", null, "ingredientBatchCodes", {
                                     ...viewingBatch.ingredientBatchCodes,
                                     [ingredientName]: ''
@@ -3170,8 +3246,10 @@ const formatDateDisplay = (dateStr) => {
                           }
                           <div
                             className="batchButton"
-                            onClick={() => {
+                            onClick={async () => {
                               setEditingValue('');
+                              // Remove allocation from delivery
+                              await removeStockAllocation(ingredient.name, viewingBatch.id);
                               handleInlineSave("ingredient", ingredient.name, null, '');
                             }}
                             style={{ color: '#999', fontStyle: 'italic' }}
@@ -3264,8 +3342,10 @@ const formatDateDisplay = (dateStr) => {
                           }
                           <div
                             className="batchButton"
-                            onClick={() => {
+                            onClick={async () => {
                               setEditingValue('');
+                              // Remove allocation from delivery
+                              await removeStockAllocation("Vacuum Bags", viewingBatch.id);
                               handleInlineSave("ingredient", "Vacuum Bags", null, '');
                             }}
                             style={{ color: '#999', fontStyle: 'italic' }}
