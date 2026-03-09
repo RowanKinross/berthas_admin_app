@@ -54,6 +54,11 @@
   justify-content: space-between;
   padding: 5px 0;
 }
+.pkCases {
+  font-size: small;
+  font-style: italic;
+  color: var(--darkLight);
+}
 .editForm .pizzaDetails {
   display: flex;
   justify-content: space-between;
@@ -122,6 +127,15 @@ textarea.input {
   justify-content: space-between;
 }
 
+
+.batchDetailsChecklistFlex{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.batchDetilsChecklistFlexBox {
+  padding: 10px 0;
+}
 .dateLabelContainer {
   display:flex;
 }
@@ -299,6 +313,10 @@ textarea.input {
 }
 
 @media (max-width: 530px) {
+    .batchChecklistFlex{
+    width: 100%;
+    text-align: center;
+  }
   .batchTextBoxes {
     text-wrap: nowrap;
   }

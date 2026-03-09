@@ -4,8 +4,8 @@ import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnaps
 import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
 import MixCalculator from './MixCalculator';
-import ReactCrop from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import ImageCropModal from './ImageCropModal';
+import ViewingBatchModal from './viewingBatchModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
@@ -64,12 +64,19 @@ function BatchCodes() {
   // Photo cropping and editing states
   const [showImageCrop, setShowImageCrop] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState("");
-  const [crop, setCrop] = useState({ aspect: 3 });
+  const [crop, setCrop] = useState({
+    unit: 'px',
+    width: 150,
+    height: 50,
+    x: 0,
+    y: 0
+  });
   const [completedCrop, setCompletedCrop] = useState(null);
   const [rotation, setRotation] = useState(0);
   const [currentPizzaId, setCurrentPizzaId] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(null); // Track which pizza is uploading
-  const imageRef = useRef(null);
+
+
 
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -336,31 +343,31 @@ function BatchCodes() {
     setLastSelectedIndex(null);
   };
 
-  const markSelectedBatchesIngredientsOrdered = async () => {
-    if (selectedBatches.size === 0) {
-      alert("Please select at least one batch to mark ingredients as ordered.");
-      return;
-    }
+  // const markSelectedBatchesIngredientsOrdered = async () => {
+  //   if (selectedBatches.size === 0) {
+  //     alert("Please select at least one batch to mark ingredients as ordered.");
+  //     return;
+  //   }
 
-    try {
-      const updatePromises = Array.from(selectedBatches).map(async (batchId) => {
-        const batchRef = doc(db, "batches", batchId);
-        await updateDoc(batchRef, {
-          ingredients_ordered: true
-        });
-      });
+  //   try {
+  //     const updatePromises = Array.from(selectedBatches).map(async (batchId) => {
+  //       const batchRef = doc(db, "batches", batchId);
+  //       await updateDoc(batchRef, {
+  //         ingredients_ordered: true
+  //       });
+  //     });
 
-      await Promise.all(updatePromises);
-      alert(`Marked ingredients as ordered for ${selectedBatches.size} batch(es).`);
+  //     await Promise.all(updatePromises);
+  //     alert(`Marked ingredients as ordered for ${selectedBatches.size} batch(es).`);
       
-      // Clear selection after successful update
-      setSelectionMode(false);
-      setSelectedBatches(new Set());
-    } catch (error) {
-      console.error("Error updating batches:", error);
-      alert("Error marking ingredients as ordered. Please try again.");
-    }
-  };
+  //     // Clear selection after successful update
+  //     setSelectionMode(false);
+  //     setSelectedBatches(new Set());
+  //   } catch (error) {
+  //     console.error("Error updating batches:", error);
+  //     alert("Error marking ingredients as ordered. Please try again.");
+  //   }
+  // };
 
   const calculateSelectedBatchesIngredients = () => {
     if (selectedBatches.size === 0) {
@@ -1545,15 +1552,13 @@ const formatDateDisplay = (dateStr) => {
         backgroundColor: '#f8f9fa',
         border: '1px solid #e9ecef',
         borderRadius: '8px',
-        padding: '15px',
-        margin: '15px auto',
+        padding: '0 10px',
         maxWidth: '400px'
       }}>
         <div style={{
           fontSize: '16px',
           fontWeight: 'bold',
           marginBottom: '12px',
-          color: '#333'
         }}>
           Batch Completion ({completedCount}/{totalCount})
         </div>
@@ -1877,7 +1882,13 @@ const formatDateDisplay = (dateStr) => {
     reader.onload = () => {
       setCropImageSrc(reader.result);
       setCurrentPizzaId(pizzaId);
-      setCrop({ aspect: 3, width: 150, height: 50 });
+      setCrop({
+        unit: 'px',
+        width: 150,
+        height: 50,
+        x: 0,
+        y: 0
+      });
       setCompletedCrop(null);
       setRotation(0);
       setShowImageCrop(true);
@@ -1886,19 +1897,18 @@ const formatDateDisplay = (dateStr) => {
   };
 
   // Handle final photo upload after cropping
-  const handlePhotoUpload = async () => {
-    if (!completedCrop || !imageRef.current || !currentPizzaId) return;
+  const handlePhotoUpload = async (imageElement) => {
+    if (!completedCrop || !imageElement || !currentPizzaId) return;
 
     try {
       setUploadingPhoto(currentPizzaId);
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const image = imageRef.current;
 
       // Calculate crop dimensions
-      const scaleX = image.naturalWidth / image.width;
-      const scaleY = image.naturalHeight / image.height;
+      const scaleX = imageElement.naturalWidth / imageElement.width;
+      const scaleY = imageElement.naturalHeight / imageElement.height;
 
       canvas.width = completedCrop.width * scaleX;
       canvas.height = completedCrop.height * scaleY;
@@ -1913,7 +1923,7 @@ const formatDateDisplay = (dateStr) => {
       }
 
       ctx.drawImage(
-        image,
+        imageElement,
         completedCrop.x * scaleX,
         completedCrop.y * scaleY,
         completedCrop.width * scaleX,
@@ -2081,14 +2091,14 @@ const formatDateDisplay = (dateStr) => {
               >
                 Calculate Ingredients ({selectedBatches.size})
               </button>
-              <button 
+              {/* <button 
                 className='button completed'
                 onClick={markSelectedBatchesIngredientsOrdered}
                 disabled={selectedBatches.size === 0}
                 style={{ fontSize: '12px', padding: '5px 10px' }}
               >
                 Ingredients Ordered ✓
-              </button>
+              </button> */}
               <button 
                 className='button draft'
                 onClick={() => {
@@ -2116,7 +2126,9 @@ const formatDateDisplay = (dateStr) => {
                 ×
               </button>
             </div>
-          <div >
+          <div className='batchDetailsChecklistFlex'>
+          <div className='batchDetilsChecklistFlexBox'>
+          <div>
             <p><strong>Batch Code:</strong> {viewingBatch.batch_code}</p>
           </div>
           <div >
@@ -2166,7 +2178,8 @@ const formatDateDisplay = (dateStr) => {
                 </div>
               </div>
             )}
-              <strong>Ingredients Ordered:</strong>{" "}
+            </div>
+              {/* <strong>Ingredients Ordered:</strong>{" "}
               <input
                 type="checkbox"
                 checked={ingredientsOrdered || false}
@@ -2180,15 +2193,17 @@ const formatDateDisplay = (dateStr) => {
                     console.error("Error updating checkbox:", error);
                   }
                 }}
-              />
+              /> */}
             </div>
 
           </div>
-          
+          <div className='batchDetilsChecklistFlexBox batchChecklistFlex'>
           {/* Completion Checklist */}
           {viewingBatch && (
             <CompletionChecklist checklist={completionChecklist} batchType={viewingBatch.batch_type} />
           )}
+          </div>
+          </div>
           
           {/* Conditional content based on batch type */}
           {viewingBatch.batch_type === 'starter' ? (
@@ -2493,6 +2508,47 @@ const formatDateDisplay = (dateStr) => {
         {pizza.quantity}
       </span>
     )}
+    
+    {/* 6pk Cases field - only for sleeved pizzas, and only show in unit mode if value isn't 0 */}
+    {pizza.sleeve && (userRole !== 'unit' || (pizza.sixpack_cases && pizza.sixpack_cases > 0)) && (
+      <div style={{ margin: '4px 0 0 18px' }}>
+        <span className='pkCases'>6-pack cases x</span>{" "}
+        {editingField === `pizza-${pizza.id}-sixpack-cases` && userRole !== 'unit' ? (
+          <input
+            type="number"
+            className='inputNumber pkCases'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() =>
+              handleInlineSave("pizza", pizza.id, "sixpack_cases", editingValue)
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleInlineSave("pizza", pizza.id, "sixpack_cases", editingValue);
+              }
+            }}
+          />
+        ) : (
+          <span
+            className='pkCases'
+            onClick={() => {
+              if (userRole !== 'unit') {
+                setEditingField(`pizza-${pizza.id}-sixpack-cases`);
+                setEditingValue(pizza.sixpack_cases || "");
+              }
+            }}
+            style={{ 
+              cursor: userRole !== 'unit' ? 'pointer' : 'default',
+              textDecoration: userRole !== 'unit' ? 'underline' : 'none',
+            }}
+          >
+            {pizza.sixpack_cases || "0"}
+          </span>
+        )}
+      </div>
+    )}
+    
     {/* Photo Upload Section */}
           <div className='pizzaPhotoSection'>
             <div className='pizzaPhotoContainer'>
@@ -3128,7 +3184,7 @@ const formatDateDisplay = (dateStr) => {
               required
             />
           </Col>
-          <Form.Label column sm={3}>
+          {/* <Form.Label column sm={3}>
             <strong>Ingredients Ordered?</strong>
             <input
               className='m-2'
@@ -3137,7 +3193,7 @@ const formatDateDisplay = (dateStr) => {
               checked={ingredientsOrdered}
               onChange={handleInputChange}
             />
-          </Form.Label>
+          </Form.Label> */}
           </div>
           
           <Form.Label column sm={3}><strong>Batch Type:</strong></Form.Label>
@@ -3464,107 +3520,23 @@ const formatDateDisplay = (dateStr) => {
         </div>
       )}
 
-      {/* Image Cropping Modal */}
-      {showImageCrop && (
-        <div className="modal-overlay" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div className="modal-content" style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '20px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{ marginBottom: '15px' }}>
-              <h3>Crop & Rotate Photo</h3>
-              <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <button
-                  className="button"
-                  onClick={() => setRotation(r => r - 90)}
-                  style={{ fontSize: '12px', padding: '5px 10px' }}
-                >
-                  Rotate ↺
-                </button>
-                <button
-                  className="button"
-                  onClick={() => setRotation(r => r + 90)}
-                  style={{ fontSize: '12px', padding: '5px 10px' }}
-                >
-                  Rotate ↻
-                </button>
-                <span style={{ fontSize: '12px', color: '#666' }}>
-                  Rotation: {rotation}°
-                </span>
-              </div>
-            </div>
-
-            <ReactCrop
-              crop={crop}
-              onChange={(newCrop) => setCrop(newCrop)}
-              onComplete={(newCrop) => setCompletedCrop(newCrop)}
-              aspect={3}
-              style={{ maxWidth: '500px', maxHeight: '400px' }}
-            >
-              <img
-                ref={imageRef}
-                src={cropImageSrc}
-                style={{
-                  transform: `rotate(${rotation}deg)`,
-                  maxWidth: '100%',
-                  maxHeight: '400px'
-                }}
-                onLoad={() => {
-                  if (imageRef.current) {
-                    const { width, height } = imageRef.current;
-                    const cropHeight = Math.min(height * 0.4, width / 3);
-                    const cropWidth = cropHeight * 3;
-                    setCrop({
-                      unit: 'px',
-                      width: cropWidth,
-                      height: cropHeight,
-                      x: (width - cropWidth) / 2,
-                      y: (height - cropHeight) / 2,
-                      aspect: 3
-                    });
-                  }
-                }}
-              />
-            </ReactCrop>
-
-            <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                className="button button-secondary"
-                onClick={() => {
-                  setShowImageCrop(false);
-                  setCropImageSrc("");
-                  setCurrentPizzaId(null);
-                }}
-                disabled={uploadingPhoto}
-              >
-                Cancel
-              </button>
-              <button
-                className="button"
-                onClick={handlePhotoUpload}
-                disabled={!completedCrop || uploadingPhoto}
-              >
-                {uploadingPhoto ? "Uploading..." : "Upload Photo"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImageCropModal
+        showImageCrop={showImageCrop}
+        cropImageSrc={cropImageSrc}
+        crop={crop}
+        setCrop={setCrop}
+        completedCrop={completedCrop}
+        setCompletedCrop={setCompletedCrop}
+        rotation={rotation}
+        setRotation={setRotation}
+        uploadingPhoto={uploadingPhoto}
+        onCancel={() => {
+          setShowImageCrop(false);
+          setCropImageSrc("");
+          setCurrentPizzaId(null);
+        }}
+        onUpload={handlePhotoUpload}
+      />
     </div>
   );
   
