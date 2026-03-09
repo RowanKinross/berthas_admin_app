@@ -40,6 +40,7 @@ const QuantityVisual = ({ quantity, packaging, ingredientName, size = 'normal' }
           case 'sack': {
             const name = ingredientName.toLowerCase();
             if (name.includes('rye')) return '/Sack_rye.svg';
+            if (name.includes('wholemeal')) return '/Sack_rye.svg';
             if (name.includes('caputo') && name.includes('blue')) return '/Sack_blue.svg';
             if (name.includes('caputo') && name.includes('red')) return '/Sack_red.svg';
             return '/Sack_plain.svg'; // default sack
