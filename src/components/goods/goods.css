@@ -608,21 +608,16 @@
 }
 
 .cancel-btn {
-  background-color: #6c757d;
+  background-color: var(--darkGrey);
   color: white;
 }
 
 .cancel-btn:hover {
-  background-color: #5a6268;
+  background-color: grey;
 }
 
-.save-btn {
-  background-color: var(--primaryGreen, #007bff);
-  color: white;
-}
-
-.save-btn:hover {
-  background-color: var(--primaryGreenDark, #0056b3);
+.goods .save-btn:hover {
+  background-color: var(--Marg);
 }
 
 .goods .btn-success {
@@ -709,9 +704,9 @@
 .newDeliveryForm {
   display: flex;
   flex-direction: column;
-  background-color: var(--paleGrey);
-  max-width: 620px;
+  width: 700px;
   padding: 10px;
+  background-color: var(--paleGrey);
 }
 .newDeliveryFormContainer {
   display: flex;
@@ -808,5 +803,8 @@
   .batch-item {
     flex-direction: column;
     gap: 8px;
+  }
+  .newDeliveryForm {
+    width: 100%;
   }
 }

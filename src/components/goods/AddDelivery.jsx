@@ -299,16 +299,29 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
             onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryChecksComplete: e.target.checked }))}
           />
         </div>
-      </form>
       
-      <div className="modal-footer">
-        <button type="button" className="cancel-btn" onClick={onCancel}>
-          Cancel
+      <div className="newDeliveryFormFooter">
+        <button type="button" className="cancel-btn" onClick={() => {
+          setDeliveryData({
+            deliveryDate: '',
+            poNumber: '',
+            supplier: '',
+            selectedGoods: [],
+            deliveryChecksComplete: false
+          });
+          setBatchCodes({});
+          setTemperatures({});
+          setUseByDates({});
+          setQuantities({});
+        }}>
+          Clear Fields
         </button>
-        <button type="button" className="save-btn" onClick={handleSaveDelivery}>
+        <button type="button" className="save-btn button" onClick={handleSaveDelivery}>
           Save Delivery
         </button>
       </div>
+      </form>
+      
     </div>
     </div>
   );
