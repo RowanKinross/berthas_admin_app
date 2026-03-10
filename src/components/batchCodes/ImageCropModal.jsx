@@ -69,7 +69,7 @@ const ImageCropModal = ({
               onChange={(newCrop) => setCrop(newCrop)}
               onComplete={(newCrop) => setCompletedCrop(newCrop)}
               aspect={3}
-              style={{ maxWidth: '500px', maxHeight: '400px' }}
+              style={{ maxWidth: '500px', maxHeight: '250px' }}
             >
               <img
                 ref={imageRef}
@@ -77,7 +77,7 @@ const ImageCropModal = ({
                 style={{
                   transform: `rotate(${rotation}deg)`,
                   maxWidth: '100%',
-                  maxHeight: '400px'
+                  maxHeight: '250px'
                 }}
                 onLoad={() => {
                   if (imageRef.current) {

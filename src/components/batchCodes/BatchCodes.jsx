@@ -2719,8 +2719,8 @@ const formatDateDisplay = (dateStr) => {
       </span>
     )}
     
-    {/* 6pk Cases field - only for sleeved pizzas, and only show in unit mode if value isn't 0 */}
-    {pizza.sleeve && (userRole !== 'unit' || (pizza.sixpack_cases && pizza.sixpack_cases > 0)) && (
+    {/* 6pk Cases field - only for sleeved pizzas, only show in unit mode if value isn't 0, and only for pizza batches */}
+    {pizza.sleeve && (userRole !== 'unit' || (pizza.sixpack_cases && pizza.sixpack_cases > 0)) && viewingBatch.batch_type === 'pizzas' && (
       <div style={{ margin: '4px 0 0 18px' }}>
         <span className='pkCases'>6-pack cases x</span>{" "}
         {editingField === `pizza-${pizza.id}-sixpack-cases` && userRole !== 'unit' ? (

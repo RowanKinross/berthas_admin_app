@@ -71,3 +71,9 @@
   margin-top: 5px;
   font-size: 12px;
 }
+
+@media (max-width: 768px) {
+  .newOrderForm {
+    width: 100%;
+  }
+}
