@@ -809,6 +809,42 @@
   box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
 
+/* Add delivery styling */
+.supplierButtons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+    margin-left: 30px;
+}
+.supplierButton {
+    padding: 8px 16px;
+    border: 2px solid var(--paleGrey);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: normal;
+    transition: all 0.2s ease;
+}
+.selectedSupplier {
+    background-color: var(--dark);
+    color: var(--pale);
+    border: 1px solid var(--dark);
+}
+.notSelectedSupplier {
+    display: none;
+}
+.clearSupplierButton {
+    background-color: transparent;
+    border: none;
+    color: var(--dark);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: normal;
+    padding: 0 10px;
+}
+
 
 
 @media (max-width: 1024px) {

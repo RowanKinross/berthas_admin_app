@@ -4,6 +4,7 @@ import { db } from '../firebase/firebase';
 
 function AddDelivery({ onDeliveryAdded, onCancel }) {
   const [ingredients, setIngredients] = useState([]);
+  const [availableSuppliers, setAvailableSuppliers] = useState([]);
   const [deliveryData, setDeliveryData] = useState({
     deliveryDate: '',
     poNumber: '',
@@ -29,6 +30,16 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     };
     fetchIngredients();
   }, []);
+
+  // Extract unique suppliers from ingredients data
+  useEffect(() => {
+    const suppliers = [...new Set(
+      ingredients
+        .map(ingredient => ingredient.supplier)
+        .filter(supplier => supplier && supplier.trim() !== '')
+    )].sort();
+    setAvailableSuppliers(suppliers);
+  }, [ingredients]);
 
   const handleGoodsChange = (ingredientName, isChecked) => {
     let updatedSelectedGoods;
@@ -166,12 +177,31 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
         {/* Supplier */}
         <div className="form-group">
           <label>Supplier:</label>
-          <input
-            type="text"
-            value={deliveryData.supplier}
-            onChange={(e) => setDeliveryData(prev => ({ ...prev, supplier: e.target.value }))}
-            placeholder="Enter supplier name"
-          />
+          <div className="supplierButtons" >
+            {availableSuppliers.map(supplier => (
+              <button
+                key={supplier}
+                type="button"
+                onClick={() => setDeliveryData(prev => ({ ...prev, supplier }))}
+                className={`supplierButton ${
+                  deliveryData.supplier === supplier ? 'selectedSupplier' : 
+                  deliveryData.supplier ? 'notSelectedSupplier' : ''
+                }`}
+              >
+                {supplier}
+              </button>
+            ))}
+            {deliveryData.supplier && (
+              <button
+                type="button"
+                onClick={() => setDeliveryData(prev => ({ ...prev, supplier: '' }))}
+                className="clearSupplierButton"
+                title="Clear selected supplier"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Goods Selection */}
