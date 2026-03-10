@@ -146,28 +146,30 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   };
 
   return (
-    <div className="add-delivery-form">
+    <div className="addDeliveryView">
       <div className="modal-header">
         <h3>Add New Delivery</h3>
-        <button className="close-btn" onClick={onCancel}>×</button>
       </div>
+    <div className="newDeliveryFormContainer">
       
-      <form>
+      <form className="newDeliveryForm">
         {/* Delivery Date */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>Delivery Date:</label>
           <input
             type="date"
+            className="form-input"
             value={deliveryData.deliveryDate}
             onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryDate: e.target.value }))}
           />
         </div>
 
         {/* PO Number */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>PO Number:</label>
           <input
             type="text"
+            className="form-input"
             value={deliveryData.poNumber}
             onChange={(e) => setDeliveryData(prev => ({ ...prev, poNumber: e.target.value }))}
             placeholder="Enter PO number"
@@ -175,7 +177,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
         </div>
 
         {/* Supplier */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>Supplier:</label>
           <div className="supplierButtons" >
             {availableSuppliers.map(supplier => (
@@ -205,10 +207,12 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
         </div>
 
         {/* Goods Selection */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>Goods:</label>
           <div className="goods-checkbox-container">
-            {ingredients.map(ingredient => (
+            {ingredients
+              .filter(ingredient => deliveryData.supplier && ingredient.supplier === deliveryData.supplier)
+              .map(ingredient => (
               <div key={ingredient.id} className="goods-checkbox-item">
                 <input
                   type="checkbox"
@@ -220,9 +224,6 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
               </div>
             ))}
           </div>
-          <small className="help-text">
-            Select multiple ingredients by checking the boxes
-          </small>
         </div>
 
         {/* Product Details for Selected Goods */}
@@ -308,6 +309,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
           Save Delivery
         </button>
       </div>
+    </div>
     </div>
   );
 }
