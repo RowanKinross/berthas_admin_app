@@ -10,7 +10,8 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     poNumber: '',
     supplier: '',
     selectedGoods: [],
-    deliveryChecksComplete: false
+    deliveryChecksComplete: false,
+    staffInitials: ''
   });
   const [batchCodes, setBatchCodes] = useState({});
   const [temperatures, setTemperatures] = useState({});
@@ -196,7 +197,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
             {deliveryData.supplier && (
               <button
                 type="button"
-                onClick={() => setDeliveryData(prev => ({ ...prev, supplier: '' }))}
+                onClick={() => setDeliveryData(prev => ({ ...prev, supplier: '', selectedGoods: [] }))}
                 className="clearSupplierButton"
                 title="Clear selected supplier"
               >
@@ -206,97 +207,102 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
           </div>
         </div>
 
-        {/* Goods Selection */}
-        <div className="form-group newDeliveryFormGroup">
-          <label>Goods:</label>
-          <div className="goods-checkbox-container">
-            {ingredients
-              .filter(ingredient => deliveryData.supplier && ingredient.supplier === deliveryData.supplier)
-              .map(ingredient => (
-              <div key={ingredient.id} className="goods-checkbox-item">
-                <input
-                  type="checkbox"
-                  id={`goods-${ingredient.id}`}
-                  checked={deliveryData.selectedGoods.includes(ingredient.name)}
-                  onChange={(e) => handleGoodsChange(ingredient.name, e.target.checked)}
-                />
-                <label htmlFor={`goods-${ingredient.id}`}>{ingredient.name}</label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Product Details for Selected Goods */}
-        {deliveryData.selectedGoods.length > 0 && (
+        {/* Product Details for All Filtered Goods */}
+        {deliveryData.supplier && (
           <div className="form-group">
             <h4>Product Details:</h4>
-            {deliveryData.selectedGoods.map(good => {
-              const ingredient = getIngredientByName(good);
-              const packaging = ingredient?.packaging || 'units';
-              
-              return (
-              <div key={good} className="product-details-row">
-                <div className="product-name">
-                  <strong>{good}</strong>
+            {ingredients
+              .filter(ingredient => ingredient.supplier === deliveryData.supplier)
+              .map(ingredient => {
+                const packaging = ingredient?.packaging || 'units';
+                
+                return (
+                <div key={ingredient.id} className="product-details-row">
+                  <div className="product-name" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="checkbox"
+                      id={`goods-${ingredient.id}`}
+                      checked={deliveryData.selectedGoods.includes(ingredient.name)}
+                      onChange={(e) => handleGoodsChange(ingredient.name, e.target.checked)}
+                    />
+                    <strong>{ingredient.name}</strong>
+                  </div>
+                  {deliveryData.selectedGoods.includes(ingredient.name) && (
+                    <div className="product-inputs">
+                      <div className="input-group">
+                        <label>Quantity ({packaging}):</label>
+                        <input
+                          type="number"
+                          value={quantities[ingredient.name] || ''}
+                          onChange={(e) => handleQuantityChange(ingredient.name, e.target.value)}
+                          placeholder="Enter quantity"
+                          className="product-input"
+                          min="0"
+                          step="1"
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label>Batch Code:</label>
+                        <input
+                          type="text"
+                          value={batchCodes[ingredient.name] || ''}
+                          onChange={(e) => handleBatchCodeChange(ingredient.name, e.target.value)}
+                          placeholder="Enter batch code"
+                          className="product-input"
+                        />
+                      </div>
+                      {ingredient.temp_check && (
+                        <div className="input-group">
+                          <label>Temperature:</label>
+                          <input
+                            type="text"
+                            value={temperatures[ingredient.name] || ''}
+                            onChange={(e) => handleTemperatureChange(ingredient.name, e.target.value)}
+                            placeholder="e.g., 4°C"
+                            className="product-input"
+                          />
+                        </div>
+                      )}
+                      <div className="input-group">
+                        <label>Use-by/Best Before:</label>
+                        <input
+                          type="date"
+                          value={useByDates[ingredient.name] || ''}
+                          onChange={(e) => handleUseByDateChange(ingredient.name, e.target.value)}
+                          className="product-input"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="product-inputs">
-                  <div className="input-group">
-                    <label>Quantity ({packaging}):</label>
-                    <input
-                      type="number"
-                      value={quantities[good] || ''}
-                      onChange={(e) => handleQuantityChange(good, e.target.value)}
-                      placeholder="Enter quantity"
-                      className="product-input"
-                      min="0"
-                      step="1"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Batch Code:</label>
-                    <input
-                      type="text"
-                      value={batchCodes[good] || ''}
-                      onChange={(e) => handleBatchCodeChange(good, e.target.value)}
-                      placeholder="Enter batch code"
-                      className="product-input"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Temperature:</label>
-                    <input
-                      type="text"
-                      value={temperatures[good] || ''}
-                      onChange={(e) => handleTemperatureChange(good, e.target.value)}
-                      placeholder="e.g., 4°C"
-                      className="product-input"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Use-by/Best Before:</label>
-                    <input
-                      type="date"
-                      value={useByDates[good] || ''}
-                      onChange={(e) => handleUseByDateChange(good, e.target.value)}
-                      className="product-input"
-                    />
-                  </div>
-                </div>
-              </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
 
         {/* Delivery Checks Complete */}
         <div className="form-group checkbox-group">
-          <label htmlFor="delivery-checks">Quality Checked? </label>
+          <label htmlFor="delivery-checks">Quality Checks </label>
           <input
             type="checkbox"
             className='qualityCheck'
             id="delivery-checks"
             checked={deliveryData.deliveryChecksComplete}
             onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryChecksComplete: e.target.checked }))}
+          />
+        </div>
+
+        {/* Staff Initials */}
+        <div className="form-group newDeliveryFormGroup">
+          <label htmlFor="staff-initials">Checked By:</label>
+          <input
+            type="text"
+            className='form-input'
+            id="staff-initials"
+            value={deliveryData.staffInitials}
+            onChange={(e) => setDeliveryData(prev => ({ ...prev, staffInitials: e.target.value.toUpperCase() }))}
+            placeholder="Enter initials"
+            maxLength="4"
           />
         </div>
       
@@ -307,7 +313,8 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
             poNumber: '',
             supplier: '',
             selectedGoods: [],
-            deliveryChecksComplete: false
+            deliveryChecksComplete: false,
+            staffInitials: ''
           });
           setBatchCodes({});
           setTemperatures({});

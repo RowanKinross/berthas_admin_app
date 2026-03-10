@@ -131,6 +131,14 @@ function DeliveryHistory() {
                     </span>
                   </div>
                 </div>
+                <div className="delivery-info">
+                  {delivery.staffInitials && (
+                    <div className="info-row">
+                      <strong>Checked by:</strong> 
+                      <span className="staffInitials">{delivery.staffInitials}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
