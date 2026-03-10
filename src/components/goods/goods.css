@@ -220,48 +220,64 @@
 
 /* Product details styling */
 .product-details-row {
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-  background-color: #f8f9fa;
+  border: 1px solid var(--darkGrey);
+  padding: 10px;
+  margin-bottom: 5px;
+  background-color: var(--pale);
 }
 .product-name {
   text-align: left;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #dee2e6;
 }
 .product-name strong {
   color: var(--primaryText, #333);
   font-size: 16px;
 }
 .product-inputs {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 15px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--darkGrey);
+  border-radius: 0%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between ;
 }
 .input-group {
   display: flex;
   flex-direction: column;
+  margin: 2px 5px;
+  max-width: min-content;
 }
 .input-group label {
   font-size: 12px;
   font-weight: 600;
+  text-align: left;
   color: #495057;
   margin-bottom: 5px;
+  min-width: max-content;
 }
 .product-input {
   padding: 8px 12px;
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 14px;
+  max-width: 140px;
   background-color: white;
+}
+.product-input-number {
+  max-width: 100px;
 }
 .product-input:focus {
   outline: none;
   border-color: var(--primaryGreen, #28a745);
   box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.15);
+}
+.selectedGood {
+  font-weight: bold;
+}
+.notSelectedGood {
+  font-size: smaller;
+  color: var(--darkGrey);
+  font-style: italic;
 }
 
 /* Delivery History Styles */
@@ -293,6 +309,7 @@
 .delivery-summary h4 {
   margin: 0 0 8px 0;
   color: #333;
+  text-align: left;
 }
 
 .delivery-meta {
@@ -300,6 +317,7 @@
   gap: 15px;
   color: #6c757d;
   font-size: 14px;
+
 }
 
 .expand-icon {
@@ -707,9 +725,13 @@
 .newDeliveryForm {
   display: flex;
   flex-direction: column;
+  text-align: left;
   width: 700px;
   padding: 10px;
   background-color: var(--paleGrey);
+}
+.newDeliveryFormFooter {
+  text-align: center;
 }
 .newDeliveryFormContainer {
   display: flex;
@@ -729,10 +751,6 @@
 
 
 @media (max-width: 1024px) {
-  .product-inputs {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
   .ingredientSupplierHeader {
     width: 100%;
   }
@@ -751,11 +769,7 @@
 }
 
 @media (max-width: 768px) {
-  .product-inputs {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  .goods-nav {
+    .goods-nav {
     flex-direction: column;
     align-items: center;
   }
@@ -772,7 +786,7 @@
     width: 80%;
     min-width: 120px;
   }
-   .inventory-header {
+  .inventory-header {
     flex-direction: column;
     align-items: stretch;
   }
@@ -787,7 +801,10 @@
     grid-template-columns: 1fr;
   }
   .good-details {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
+  }
+  .detail-item {
+    margin: 0 5px;
   }
   .inventory-view {
     padding: 10px;
