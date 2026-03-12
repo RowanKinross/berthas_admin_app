@@ -1472,6 +1472,15 @@ const formatDateDisplay = (dateStr) => {
             mergedIngredientCodes[ingredient].trim() !== ""
         );
 
+      // Check vacuum bags for non-starter batches and include in ingredient check
+      const vacuumBagsBatchCode = selectedPizzas
+        .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
+        .find(code => code) || '';
+      const vacuumBagsComplete = vacuumBagsBatchCode && vacuumBagsBatchCode.trim() !== "";
+      
+      // Include vacuum bags in overall ingredient completion
+      const allIngredientsIncludingVacuumBags = allIngredientCodesFilled && vacuumBagsComplete;
+
       // Check sleeve photos - pizzas with sleeve:true need photos
       const sleevePhotosComplete = selectedPizzas.every(pizza => {
         if (pizza.sleeve) {
@@ -1491,13 +1500,13 @@ const formatDateDisplay = (dateStr) => {
       });
 
       newCompletionChecklist = {
-        ingredientCodes: allIngredientCodesFilled,
+        ingredientCodes: allIngredientsIncludingVacuumBags,
         pizzaNumbersComplete: !!viewingBatch.pizza_numbers_complete,
         sleevePhotos: sleevePhotosComplete,
         pizzaWeights: pizzaWeightsComplete
       };
     
-      shouldBeCompleted = allIngredientCodesFilled && 
+      shouldBeCompleted = allIngredientsIncludingVacuumBags && 
                          !!viewingBatch.pizza_numbers_complete &&
                          sleevePhotosComplete &&
                          pizzaWeightsComplete;
@@ -3217,7 +3226,7 @@ const formatDateDisplay = (dateStr) => {
               return (
                 <div key="vacuum-bags" className='ingredient container' style={{ color: vacuumBagsBatchCode ? 'inherit' : 'red' }}>
                   <p>
-                    <strong>Vacuum Bags:</strong>
+                    <strong>{viewingBatch.batch_type === 'dough balls' ? 'Packaging Bags:' : 'Vacuum Bags:'}</strong>
                   </p>
                   {editingField === `ingredient-Vacuum Bags` ? (
                     <div>
