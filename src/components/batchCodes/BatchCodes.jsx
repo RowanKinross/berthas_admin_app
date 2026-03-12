@@ -3594,12 +3594,14 @@ const formatDateDisplay = (dateStr) => {
 
               const paginatedBatches = sortedBatches.slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage);
               
+              // Check if there are any incomplete batches from previous weeks
+              const hasIncompleteBatches = userRole === 'unit' && paginatedBatches.some(batch => !isCurrentWeekBatch(batch));
               let hasShownSeparator = false;
               
               return paginatedBatches.map((batch, index) => {
                 const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
                 const isCurrentWeek = isCurrentWeekBatch(batch);
-                const showSeparator = userRole === 'unit' && !hasShownSeparator && !isCurrentWeek;
+                const showSeparator = hasIncompleteBatches && !hasShownSeparator && !isCurrentWeek;
                 
                 if (showSeparator) {
                   hasShownSeparator = true;
@@ -3609,11 +3611,12 @@ const formatDateDisplay = (dateStr) => {
                   <React.Fragment key={batch.id}>
                     {showSeparator && (
                       <div style={{ 
-                        borderTop: '2px solid #ccc', 
-                        margin: '15px 0', 
+                        borderTop: '1px solid var(--darkGrey)', 
+                        borderRadius: '0',
+                        margin: '15px 7px', 
                         paddingTop: '15px',
                         fontSize: '12px',
-                        color: '#666',
+                        color: 'var(--darkGrey)',
                         fontStyle: 'italic',
                         textAlign: 'center'
                       }}>
