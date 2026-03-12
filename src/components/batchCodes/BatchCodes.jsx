@@ -2658,20 +2658,6 @@ const formatDateDisplay = (dateStr) => {
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      handlePhotoSelect(pizza.id, file);
-                    }
-                    // Reset the input so same file can be selected again
-                    e.target.value = '';
-                  }}
-                  style={{ display: 'none' }}
-                  id={`photo-gallery-${pizza.id}`}
-                />
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   capture="environment"
                   onChange={(e) => {
                     const file = e.target.files[0];
@@ -2682,25 +2668,16 @@ const formatDateDisplay = (dateStr) => {
                     e.target.value = '';
                   }}
                   style={{ display: 'none' }}
-                  id={`photo-camera-${pizza.id}`}
+                  id={`photo-upload-${pizza.id}`}
                 />
                 {!pizza.photo && (
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    <label 
-                      htmlFor={`photo-camera-${pizza.id}`} 
-                      className='button pizzaPhotoButton'
-                      style={{ fontSize: '10px', padding: '2px 4px' }}
-                    >
-                      take photo {uploadingPhoto === pizza.id ? "📷..." : "📷"}
-                    </label>
-                    <label 
-                      htmlFor={`photo-gallery-${pizza.id}`} 
-                      className='button pizzaPhotoButton'
-                      style={{ fontSize: '10px', padding: '2px 4px' }}
-                    >
-                      upload from gallery {uploadingPhoto === pizza.id ? "🖼️..." : "🖼️"}
-                    </label>
-                  </div>
+                  <label 
+                    htmlFor={`photo-upload-${pizza.id}`} 
+                    className='button pizzaPhotoButton'
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                  >
+                    {uploadingPhoto === pizza.id ? "Uploading..." : "Add Photo"}
+                  </label>
                 )}
               </div>
             </div>
