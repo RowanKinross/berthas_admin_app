@@ -2,14 +2,100 @@ import React, {useState, useEffect} from 'react';
 import { collection, addDoc, getDocs } from '@firebase/firestore';
 import { db } from '../firebase/firebase';
 
+// Component to render visual packaging indicators
+const PackagingIcon = ({ packaging, ingredientName, size = 'normal' }) => {
+  const getIconType = (packaging) => {
+    const pack = packaging.toLowerCase();
+    if (pack.includes('tin') || pack.includes('can')) return 'tin';
+    if (pack.includes('box') || pack.includes('packet')) return 'box';
+    if (pack.includes('bag')) return 'bag';
+    if (pack.includes('sack')) return 'sack';
+    if (pack.includes('pack')) return 'pack';
+    if (pack.includes('kg')) return 'kg';
+    if (pack.includes('bottle')) return 'bottle';
+    if (pack.includes('jar')) return 'jar';
+    if (pack.includes('bucket')) return 'bucket';
+    if (pack.includes('tray')) return 'tray';
+    return 'box'; // default
+  };
+
+  const getSVGPath = (type, ingredientName) => {
+    switch (type) {
+      case 'tin':
+        return '/Tin.svg';
+      case 'box':
+        const name = ingredientName.toLowerCase();
+        if (name.includes('basil')) return '/box_basil.svg';
+        return '/box.svg';
+      case 'bag':
+        return '/Bag.svg';
+      case 'bottle':
+        return '/Bottle.svg';
+      case 'jar':
+        return '/Jar.svg';
+      case 'bucket':
+        return '/Bucket.svg';
+      case 'tray':
+        return '/Tray.svg';
+      case 'sack': {
+        const name = ingredientName.toLowerCase();
+        if (name.includes('rye')) return '/Sack_rye.svg';
+        if (name.includes('wholemeal')) return '/Sack_rye.svg';
+        if (name.includes('caputo') && name.includes('blue')) return '/Sack_blue.svg';
+        if (name.includes('caputo') && name.includes('red')) return '/Sack_red.svg';
+        return '/Sack_plain.svg'; // default sack
+      }
+      case 'pack': {
+        return '/box.svg'; // fallback to box for other packs
+      }
+      case 'kg': {
+        const name = ingredientName.toLowerCase();
+        if (name.includes('onion')) return '/box_onion.svg';
+        if (name.includes('pepperoni') || name.includes('pepp')) return '/Pack_pepp.svg';
+        if (name.includes('gran duro') || name.includes('gduro') || name.includes('grana duro') || name.includes('duro')) return '/Pack_GDuro.svg';
+        if (name.includes('ham')) return '/Pack_ham.svg';
+        if (name.includes('chillies')) return '/Sack_chilli.svg';
+        return '/box.svg'; // fallback to box for other kg items
+      }
+      default:
+        return '/box.svg';
+    }
+  };
+
+  const iconType = getIconType(packaging);
+  const svgPath = getSVGPath(iconType, ingredientName);
+  const isSmall = size === 'small';
+  const iconWidth = isSmall ? '20px' : '40px';
+  const iconHeight = isSmall ? '25px' : '50px';
+  
+  return (
+    <div style={{ 
+      display: 'inline-block', 
+      marginRight: '8px',
+      verticalAlign: 'middle',
+      width: iconWidth,
+      height: iconHeight
+    }}>
+      <img 
+        src={svgPath} 
+        alt={iconType} 
+        style={{ width: iconWidth, height: iconHeight }} 
+        title={packaging}
+      />
+    </div>
+  );
+};
+
 function AddDelivery({ onDeliveryAdded, onCancel }) {
   const [ingredients, setIngredients] = useState([]);
+  const [availableSuppliers, setAvailableSuppliers] = useState([]);
   const [deliveryData, setDeliveryData] = useState({
     deliveryDate: '',
     poNumber: '',
     supplier: '',
     selectedGoods: [],
-    deliveryChecksComplete: false
+    deliveryChecksComplete: false,
+    staffInitials: ''
   });
   const [batchCodes, setBatchCodes] = useState({});
   const [temperatures, setTemperatures] = useState({});
@@ -29,6 +115,16 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     };
     fetchIngredients();
   }, []);
+
+  // Extract unique suppliers from ingredients data
+  useEffect(() => {
+    const suppliers = [...new Set(
+      ingredients
+        .map(ingredient => ingredient.supplier)
+        .filter(supplier => supplier && supplier.trim() !== '')
+    )].sort();
+    setAvailableSuppliers(suppliers);
+  }, [ingredients]);
 
   const handleGoodsChange = (ingredientName, isChecked) => {
     let updatedSelectedGoods;
@@ -135,28 +231,30 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   };
 
   return (
-    <div className="add-delivery-form">
+    <div className="addDeliveryView">
       <div className="modal-header">
         <h3>Add New Delivery</h3>
-        <button className="close-btn" onClick={onCancel}>×</button>
       </div>
+    <div className="newDeliveryFormContainer">
       
-      <form>
+      <form className="newDeliveryForm">
         {/* Delivery Date */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>Delivery Date:</label>
           <input
             type="date"
+            className="form-input"
             value={deliveryData.deliveryDate}
             onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryDate: e.target.value }))}
           />
         </div>
 
         {/* PO Number */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>PO Number:</label>
           <input
             type="text"
+            className="form-input"
             value={deliveryData.poNumber}
             onChange={(e) => setDeliveryData(prev => ({ ...prev, poNumber: e.target.value }))}
             placeholder="Enter PO number"
@@ -164,102 +262,127 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
         </div>
 
         {/* Supplier */}
-        <div className="form-group">
+        <div className="form-group newDeliveryFormGroup">
           <label>Supplier:</label>
-          <input
-            type="text"
-            value={deliveryData.supplier}
-            onChange={(e) => setDeliveryData(prev => ({ ...prev, supplier: e.target.value }))}
-            placeholder="Enter supplier name"
-          />
-        </div>
-
-        {/* Goods Selection */}
-        <div className="form-group">
-          <label>Goods:</label>
-          <div className="goods-checkbox-container">
-            {ingredients.map(ingredient => (
-              <div key={ingredient.id} className="goods-checkbox-item">
-                <input
-                  type="checkbox"
-                  id={`goods-${ingredient.id}`}
-                  checked={deliveryData.selectedGoods.includes(ingredient.name)}
-                  onChange={(e) => handleGoodsChange(ingredient.name, e.target.checked)}
-                />
-                <label htmlFor={`goods-${ingredient.id}`}>{ingredient.name}</label>
-              </div>
+          <div className="supplierButtons" >
+            {availableSuppliers.map(supplier => (
+              <button
+                key={supplier}
+                type="button"
+                onClick={() => setDeliveryData(prev => ({ ...prev, supplier }))}
+                className={`supplierButton ${
+                  deliveryData.supplier === supplier ? 'selectedSupplier' : 
+                  deliveryData.supplier ? 'notSelectedSupplier' : ''
+                }`}
+              >
+                {supplier}
+              </button>
             ))}
+            {deliveryData.supplier && (
+              <button
+                type="button"
+                onClick={() => setDeliveryData(prev => ({ ...prev, supplier: '', selectedGoods: [] }))}
+                className="clearSupplierButton"
+                title="Clear selected supplier"
+              >
+                ✕
+              </button>
+            )}
           </div>
-          <small className="help-text">
-            Select multiple ingredients by checking the boxes
-          </small>
         </div>
 
-        {/* Product Details for Selected Goods */}
-        {deliveryData.selectedGoods.length > 0 && (
+        {/* Product Details for All Filtered Goods */}
+        {deliveryData.supplier && (
           <div className="form-group">
             <h4>Product Details:</h4>
-            {deliveryData.selectedGoods.map(good => {
-              const ingredient = getIngredientByName(good);
-              const packaging = ingredient?.packaging || 'units';
-              
-              return (
-              <div key={good} className="product-details-row">
-                <div className="product-name">
-                  <strong>{good}</strong>
+            {ingredients
+              .filter(ingredient => ingredient.supplier === deliveryData.supplier)
+              .map(ingredient => {
+                const packaging = ingredient?.packaging || 'units';
+                
+                return (
+                <div 
+                  key={ingredient.id} 
+                  className="product-details-row"
+                  style={{
+                    backgroundColor: deliveryData.selectedGoods.includes(ingredient.name) ? '' : 'transparent',
+                    borderColor: deliveryData.selectedGoods.includes(ingredient.name) ? '' : 'transparent',
+                  }}
+                >
+                  <div className="product-name" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input
+                      type="checkbox"
+                      id={`goods-${ingredient.id}`}
+                      checked={deliveryData.selectedGoods.includes(ingredient.name)}
+                      onChange={(e) => handleGoodsChange(ingredient.name, e.target.checked)}
+                    />
+                    {deliveryData.selectedGoods.includes(ingredient.name) && ingredient.packaging && (
+                      <PackagingIcon 
+                        packaging={ingredient.packaging} 
+                        ingredientName={ingredient.name} 
+                        size="small" 
+                      />
+                    )}
+                    <div className={deliveryData.selectedGoods.includes(ingredient.name) ? 'selectedGood' : 'notSelectedGood'}>
+                      {ingredient.name}
+                    </div>
+                  </div>
+                  {deliveryData.selectedGoods.includes(ingredient.name) && (
+                    <div className="product-inputs">
+                      <div className="input-group">
+                        <label>Quantity ({packaging}):</label>
+                        <input
+                          type="number"
+                          value={quantities[ingredient.name] || ''}
+                          onChange={(e) => handleQuantityChange(ingredient.name, e.target.value)}
+                          placeholder="Enter qty"
+                          className="product-input product-input-number"
+                          min="0"
+                          step="1"
+                        />
+                      </div>
+                      <div className="input-group">
+                        <label>Batch Code:</label>
+                        <input
+                          type="text"
+                          value={batchCodes[ingredient.name] || ''}
+                          onChange={(e) => handleBatchCodeChange(ingredient.name, e.target.value)}
+                          placeholder="Enter batch code"
+                          className="product-input"
+                        />
+                      </div>
+                      {ingredient.temp_check && (
+                        <div className="input-group">
+                          <label>Temperature (°C): </label>
+                          <input
+                            type="number"
+                            value={temperatures[ingredient.name] || ''}
+                            onChange={(e) => handleTemperatureChange(ingredient.name, e.target.value)}
+                            placeholder="e.g 4°C"
+                            className="product-input product-input-number"
+                          />
+                        </div>
+                      )}
+                      <div className="input-group">
+                        <label>Use-by/Best Before:</label>
+                        <input
+                          type="date"
+                          value={useByDates[ingredient.name] || ''}
+                          onChange={(e) => handleUseByDateChange(ingredient.name, e.target.value)}
+                          className="product-input"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="product-inputs">
-                  <div className="input-group">
-                    <label>Quantity ({packaging}):</label>
-                    <input
-                      type="number"
-                      value={quantities[good] || ''}
-                      onChange={(e) => handleQuantityChange(good, e.target.value)}
-                      placeholder="Enter quantity"
-                      className="product-input"
-                      min="0"
-                      step="1"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Batch Code:</label>
-                    <input
-                      type="text"
-                      value={batchCodes[good] || ''}
-                      onChange={(e) => handleBatchCodeChange(good, e.target.value)}
-                      placeholder="Enter batch code"
-                      className="product-input"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Temperature:</label>
-                    <input
-                      type="text"
-                      value={temperatures[good] || ''}
-                      onChange={(e) => handleTemperatureChange(good, e.target.value)}
-                      placeholder="e.g., 4°C"
-                      className="product-input"
-                    />
-                  </div>
-                  <div className="input-group">
-                    <label>Use-by/Best Before:</label>
-                    <input
-                      type="date"
-                      value={useByDates[good] || ''}
-                      onChange={(e) => handleUseByDateChange(good, e.target.value)}
-                      className="product-input"
-                    />
-                  </div>
-                </div>
-              </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
 
         {/* Delivery Checks Complete */}
         <div className="form-group checkbox-group">
-          <label htmlFor="delivery-checks">Quality Checked? </label>
+          <label htmlFor="delivery-checks">Quality Checks </label>
           <input
             type="checkbox"
             className='qualityCheck'
@@ -268,16 +391,45 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
             onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryChecksComplete: e.target.checked }))}
           />
         </div>
-      </form>
+
+        {/* Staff Initials */}
+        <div className="form-group newDeliveryFormGroup">
+          <label htmlFor="staff-initials">Checked By:</label>
+          <input
+            type="text"
+            className='form-input'
+            id="staff-initials"
+            value={deliveryData.staffInitials}
+            onChange={(e) => setDeliveryData(prev => ({ ...prev, staffInitials: e.target.value.toUpperCase() }))}
+            placeholder="Enter initials"
+            maxLength="4"
+          />
+        </div>
       
-      <div className="modal-footer">
-        <button type="button" className="cancel-btn" onClick={onCancel}>
-          Cancel
+      <div className="newDeliveryFormFooter">
+        <button type="button" className="cancel-btn" onClick={() => {
+          setDeliveryData({
+            deliveryDate: '',
+            poNumber: '',
+            supplier: '',
+            selectedGoods: [],
+            deliveryChecksComplete: false,
+            staffInitials: ''
+          });
+          setBatchCodes({});
+          setTemperatures({});
+          setUseByDates({});
+          setQuantities({});
+        }}>
+          Clear Fields
         </button>
-        <button type="button" className="save-btn" onClick={handleSaveDelivery}>
+        <button type="button" className="save-btn button" onClick={handleSaveDelivery}>
           Save Delivery
         </button>
       </div>
+      </form>
+      
+    </div>
     </div>
   );
 }

@@ -64,7 +64,6 @@ function BatchCodes() {
   const [showImageCrop, setShowImageCrop] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState("");
   const [crop, setCrop] = useState({
-    unit: 'px',
     width: 150,
     height: 50,
     x: 0,
@@ -1384,7 +1383,21 @@ const formatDateDisplay = (dateStr) => {
       setViewingBatch(freshData);
     } catch (error) {
       console.error("Error saving inline field:", error);
-      alert("Couldn't save your change. Please check your connection.");
+      
+      let errorMessage = "Couldn't save your change. Please check your connection.";
+      
+      // Provide more specific error messages
+      if (error.code === 'cancelled' || error.code === 'deadline-exceeded') {
+        errorMessage = "Request timed out. Please try again with a smaller image or check your connection.";
+      } else if (error.code === 'invalid-argument' && field === 'photo') {
+        errorMessage = "Image data is too large. Please try cropping a smaller area or taking a lower resolution photo.";
+      } else if (error.code === 'resource-exhausted' || error.message?.includes('size')) {
+        errorMessage = "Data is too large to save. Please try with a smaller image.";
+      } else if (error.code === 'unavailable' || error.code === 'unauthenticated') {
+        errorMessage = "Connection error. Please check your internet and try again.";
+      }
+      
+      alert(errorMessage);
     }
   };
   
@@ -1877,12 +1890,18 @@ const formatDateDisplay = (dateStr) => {
       return;
     }
 
+    // Check file size (limit to 10MB to prevent memory issues - lower limit)
+    const maxFileSize = 10 * 1024 * 1024; // 10MB (reduced from 20MB)
+    if (file.size > maxFileSize) {
+      alert('Image file is too large. Please choose a smaller image (under 10MB) or reduce the camera quality in your phone settings.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setCropImageSrc(reader.result);
       setCurrentPizzaId(pizzaId);
       setCrop({
-        unit: 'px',
         width: 150,
         height: 50,
         x: 0,
@@ -1892,6 +1911,11 @@ const formatDateDisplay = (dateStr) => {
       setRotation(0);
       setShowImageCrop(true);
     };
+    
+    reader.onerror = () => {
+      alert('Error reading image file. Please try again.');
+    };
+    
     reader.readAsDataURL(file);
   };
 
@@ -1909,8 +1933,26 @@ const formatDateDisplay = (dateStr) => {
       const scaleX = imageElement.naturalWidth / imageElement.width;
       const scaleY = imageElement.naturalHeight / imageElement.height;
 
-      canvas.width = completedCrop.width * scaleX;
-      canvas.height = completedCrop.height * scaleY;
+      let cropWidth = completedCrop.width * scaleX;
+      let cropHeight = completedCrop.height * scaleY;
+
+      // Significantly reduce dimensions for smaller file size (like 72dpi equivalent)
+      const maxDimension = 600; // Much smaller max dimension
+      if (cropWidth > maxDimension || cropHeight > maxDimension) {
+        const scaleFactor = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
+        cropWidth *= scaleFactor;
+        cropHeight *= scaleFactor;
+      }
+
+      // Further reduce if still large (target around 400px max width)
+      if (cropWidth > 400) {
+        const additionalScale = 400 / cropWidth;
+        cropWidth *= additionalScale;
+        cropHeight *= additionalScale;
+      }
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
 
       // Apply rotation
       if (rotation !== 0) {
@@ -1933,11 +1975,60 @@ const formatDateDisplay = (dateStr) => {
         canvas.height
       );
 
-      // Convert to data URL with compression
-      const croppedImageData = canvas.toDataURL('image/jpeg', 0.7);
+      // Convert to data URL with aggressive compression
+      let quality = 0.4; // Start with much lower quality
+      let croppedImageData = canvas.toDataURL('image/jpeg', quality);
+
+      // Check size and reduce quality if needed (aim for under 100KB base64)
+      const maxSize = 100000; // ~100KB for base64 data (much smaller)
+      while (croppedImageData.length > maxSize && quality > 0.1) {
+        quality -= 0.05; // Smaller increments for fine control
+        croppedImageData = canvas.toDataURL('image/jpeg', quality);
+      }
+
+      // If still too large, try WebP format with low quality
+      if (croppedImageData.length > maxSize) {
+        croppedImageData = canvas.toDataURL('image/webp', 0.3);
+      }
+
+      // If WebP still too large, reduce canvas size further
+      if (croppedImageData.length > maxSize) {
+        const reductionFactor = 0.8;
+        const smallerCanvas = document.createElement('canvas');
+        const smallerCtx = smallerCanvas.getContext('2d');
+        
+        smallerCanvas.width = canvas.width * reductionFactor;
+        smallerCanvas.height = canvas.height * reductionFactor;
+        
+        smallerCtx.drawImage(canvas, 0, 0, smallerCanvas.width, smallerCanvas.height);
+        croppedImageData = smallerCanvas.toDataURL('image/jpeg', 0.3);
+      }
+
+      // Final size check
+      if (croppedImageData.length > maxSize) {
+        throw new Error('Image is still too large. Please try cropping a much smaller area or using lower camera quality.');
+      }
       
-      // Update the database
-      await handleInlineSave("pizza", currentPizzaId, "photo", croppedImageData);
+      // Update the database with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          await handleInlineSave("pizza", currentPizzaId, "photo", croppedImageData);
+          break; // Success, exit retry loop
+        } catch (saveError) {
+          retryCount++;
+          console.error(`Photo save attempt ${retryCount} failed:`, saveError);
+          
+          if (retryCount >= maxRetries) {
+            throw new Error(`Failed to upload photo after ${maxRetries} attempts. Please check your connection and try again.`);
+          }
+          
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
+      }
       
       // Close modal
       setShowImageCrop(false);
@@ -1945,7 +2036,17 @@ const formatDateDisplay = (dateStr) => {
       setCurrentPizzaId(null);
     } catch (error) {
       console.error("Error uploading photo:", error);
-      alert("Error uploading photo. Please try again.");
+      let errorMessage = "Error uploading photo. Please try again.";
+      
+      if (error.message.includes('too large') || error.message.includes('still too large')) {
+        errorMessage = "Photo is too large. Please try cropping a much smaller area or using lower camera quality.";
+      } else if (error.message.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error.message.includes('Failed to upload')) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setUploadingPhoto(null);
     }
@@ -2576,8 +2677,7 @@ const formatDateDisplay = (dateStr) => {
               <div className='pizzaPhotoControls'>
                 <input
                   type="file"
-                  accept="image/*"
-                  capture="environment"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
