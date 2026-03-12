@@ -1890,10 +1890,10 @@ const formatDateDisplay = (dateStr) => {
       return;
     }
 
-    // Check file size (limit to 20MB to prevent memory issues)
-    const maxFileSize = 20 * 1024 * 1024; // 20MB
+    // Check file size (limit to 10MB to prevent memory issues - lower limit)
+    const maxFileSize = 10 * 1024 * 1024; // 10MB (reduced from 20MB)
     if (file.size > maxFileSize) {
-      alert('Image file is too large. Please choose a smaller image (under 20MB) or reduce the camera quality in your phone settings.');
+      alert('Image file is too large. Please choose a smaller image (under 10MB) or reduce the camera quality in your phone settings.');
       return;
     }
 
@@ -1936,12 +1936,19 @@ const formatDateDisplay = (dateStr) => {
       let cropWidth = completedCrop.width * scaleX;
       let cropHeight = completedCrop.height * scaleY;
 
-      // Limit maximum dimensions for mobile optimization
-      const maxDimension = 1200; // Maximum width or height
+      // Significantly reduce dimensions for smaller file size (like 72dpi equivalent)
+      const maxDimension = 600; // Much smaller max dimension
       if (cropWidth > maxDimension || cropHeight > maxDimension) {
         const scaleFactor = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
         cropWidth *= scaleFactor;
         cropHeight *= scaleFactor;
+      }
+
+      // Further reduce if still large (target around 400px max width)
+      if (cropWidth > 400) {
+        const additionalScale = 400 / cropWidth;
+        cropWidth *= additionalScale;
+        cropHeight *= additionalScale;
       }
 
       canvas.width = cropWidth;
@@ -1968,25 +1975,38 @@ const formatDateDisplay = (dateStr) => {
         canvas.height
       );
 
-      // Convert to data URL with higher compression for mobile
-      let quality = 0.8;
+      // Convert to data URL with aggressive compression
+      let quality = 0.4; // Start with much lower quality
       let croppedImageData = canvas.toDataURL('image/jpeg', quality);
 
-      // Check size and reduce quality if needed (aim for under 500KB base64)
-      const maxSize = 500000; // ~500KB for base64 data
+      // Check size and reduce quality if needed (aim for under 100KB base64)
+      const maxSize = 100000; // ~100KB for base64 data (much smaller)
       while (croppedImageData.length > maxSize && quality > 0.1) {
-        quality -= 0.1;
+        quality -= 0.05; // Smaller increments for fine control
         croppedImageData = canvas.toDataURL('image/jpeg', quality);
       }
 
-      // If still too large, try WebP format (better compression)
+      // If still too large, try WebP format with low quality
       if (croppedImageData.length > maxSize) {
-        croppedImageData = canvas.toDataURL('image/webp', 0.8);
+        croppedImageData = canvas.toDataURL('image/webp', 0.3);
+      }
+
+      // If WebP still too large, reduce canvas size further
+      if (croppedImageData.length > maxSize) {
+        const reductionFactor = 0.8;
+        const smallerCanvas = document.createElement('canvas');
+        const smallerCtx = smallerCanvas.getContext('2d');
+        
+        smallerCanvas.width = canvas.width * reductionFactor;
+        smallerCanvas.height = canvas.height * reductionFactor;
+        
+        smallerCtx.drawImage(canvas, 0, 0, smallerCanvas.width, smallerCanvas.height);
+        croppedImageData = smallerCanvas.toDataURL('image/jpeg', 0.3);
       }
 
       // Final size check
       if (croppedImageData.length > maxSize) {
-        throw new Error('Image is too large. Please try taking a smaller photo or cropping a smaller area.');
+        throw new Error('Image is still too large. Please try cropping a much smaller area or using lower camera quality.');
       }
       
       // Update the database with retry logic
@@ -2018,8 +2038,8 @@ const formatDateDisplay = (dateStr) => {
       console.error("Error uploading photo:", error);
       let errorMessage = "Error uploading photo. Please try again.";
       
-      if (error.message.includes('too large')) {
-        errorMessage = "Photo is too large. Please try taking a smaller photo or cropping a smaller area.";
+      if (error.message.includes('too large') || error.message.includes('still too large')) {
+        errorMessage = "Photo is too large. Please try cropping a much smaller area or using lower camera quality.";
       } else if (error.message.includes('network')) {
         errorMessage = "Network error. Please check your connection and try again.";
       } else if (error.message.includes('Failed to upload')) {
@@ -2658,7 +2678,6 @@ const formatDateDisplay = (dateStr) => {
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp"
-                  capture="environment"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -2670,14 +2689,40 @@ const formatDateDisplay = (dateStr) => {
                   style={{ display: 'none' }}
                   id={`photo-upload-${pizza.id}`}
                 />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  capture="environment"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      handlePhotoSelect(pizza.id, file);
+                    }
+                    // Reset the input so same file can be selected again
+                    e.target.value = '';
+                  }}
+                  style={{ display: 'none' }}
+                  id={`photo-camera-${pizza.id}`}
+                />
                 {!pizza.photo && (
-                  <label 
-                    htmlFor={`photo-upload-${pizza.id}`} 
-                    className='button pizzaPhotoButton'
-                    style={{ fontSize: '12px', padding: '4px 8px' }}
-                  >
-                    {uploadingPhoto === pizza.id ? "Uploading..." : "Add Photo"}
-                  </label>
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    <label 
+                      htmlFor={`photo-camera-${pizza.id}`} 
+                      className='button pizzaPhotoButton'
+                      style={{ fontSize: '10px', padding: '3px 6px' }}
+                      title="Take photo with camera"
+                    >
+                      {uploadingPhoto === pizza.id ? "📷..." : "📷 Camera"}
+                    </label>
+                    <label 
+                      htmlFor={`photo-upload-${pizza.id}`} 
+                      className='button pizzaPhotoButton'
+                      style={{ fontSize: '10px', padding: '3px 6px' }}
+                      title="Choose from photo library"
+                    >
+                      {uploadingPhoto === pizza.id ? "🖼️..." : "🖼️ Library"}
+                    </label>
+                  </div>
                 )}
               </div>
             </div>
