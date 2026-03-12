@@ -1,4 +1,5 @@
 import './batchCodes.css'
+import React from 'react';
 import { db } from '../firebase/firebase';
 import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
@@ -1725,6 +1726,16 @@ const formatDateDisplay = (dateStr) => {
     };
   }
 
+  // Helper function to check if batch is from current week
+  const isCurrentWeekBatch = (batch) => {
+    if (!batch.batch_date) return false;
+    const today = new Date();
+    const { year: thisYear, week: thisWeek } = getWeekYear(today);
+    const batchDate = new Date(batch.batch_date);
+    const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
+    return batchYear === thisYear && batchWeek === thisWeek;
+  };
+
   // Combine userRole/week filter and search filter
   const filteredBatches = (batches || [])
   .filter(batch => {
@@ -1736,8 +1747,20 @@ const formatDateDisplay = (dateStr) => {
       const batchDate = new Date(batch.batch_date);
       const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
 
-      // Only this current week (Saturday to Friday)
-      return batchYear === thisYear && batchWeek === thisWeek;
+      // Show current week batches OR incomplete older batches from last month
+      const isCurrentWeek = batchYear === thisYear && batchWeek === thisWeek;
+      const isIncomplete = !batch.completed;
+      const isFutureWeek = batchYear > thisYear || (batchYear === thisYear && batchWeek > thisWeek);
+      
+      // Don't show future batches
+      if (isFutureWeek) return false;
+      
+      // Check if batch is within the last month
+      const oneMonthAgo = new Date(today);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const isWithinLastMonth = batchDate >= oneMonthAgo;
+      
+      return isCurrentWeek || (isIncomplete && isWithinLastMonth);
     }
     return true;
   })
@@ -3552,13 +3575,51 @@ const formatDateDisplay = (dateStr) => {
               <p>Ingredients Ordered?</p>
             </div> */}
             
-            {filteredBatches
-              .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-              .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
-              .map((batch, index) => {
+            {(() => {
+              const sortedBatches = filteredBatches.sort((a, b) => {
+                // For unit users, sort current week first, then older incomplete batches
+                if (userRole === 'unit') {
+                  const aIsCurrent = isCurrentWeekBatch(a);
+                  const bIsCurrent = isCurrentWeekBatch(b);
+                  
+                  if (aIsCurrent && !bIsCurrent) return -1;
+                  if (!aIsCurrent && bIsCurrent) return 1;
+                  
+                  // Within same category, sort by date (newest first)
+                  return new Date(b.batch_date) - new Date(a.batch_date);
+                }
+                // For admin users, just sort by date
+                return new Date(b.batch_date) - new Date(a.batch_date);
+              });
+
+              const paginatedBatches = sortedBatches.slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage);
+              
+              let hasShownSeparator = false;
+              
+              return paginatedBatches.map((batch, index) => {
                 const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
+                const isCurrentWeek = isCurrentWeekBatch(batch);
+                const showSeparator = userRole === 'unit' && !hasShownSeparator && !isCurrentWeek;
+                
+                if (showSeparator) {
+                  hasShownSeparator = true;
+                }
                 
                 return (
+                  <React.Fragment key={batch.id}>
+                    {showSeparator && (
+                      <div style={{ 
+                        borderTop: '2px solid #ccc', 
+                        margin: '15px 0', 
+                        paddingTop: '15px',
+                        fontSize: '12px',
+                        color: '#666',
+                        fontStyle: 'italic',
+                        textAlign: 'center'
+                      }}>
+                        Incomplete batches:
+                      </div>
+                    )}
                   <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft batchDivDraft'}`}>
                       {userRole === 'admin' && selectionMode && (
                         <input
@@ -3617,8 +3678,10 @@ const formatDateDisplay = (dateStr) => {
                       )}
                     </button>
                   </div>
+                </React.Fragment>
                 );
-              })}
+              });
+            })()}
           </>
         )
       ) : (
