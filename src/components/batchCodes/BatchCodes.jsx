@@ -3543,7 +3543,7 @@ const formatDateDisplay = (dateStr) => {
                                   <span className='batchType' style={{ fontSize: '9px', textAlign: 'center'}}>{batch.batch_type ? `${batch.batch_type.toUpperCase()}` : 'PIZZAS'}</span>
                                   <span style={{ fontSize: '9px' }}>{batch.batch_code}</span>
                                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
-                                    <span>{batch.num_pizzas}</span>
+                                    <span>{batch.num_pizzas>0? batch.num_pizzas : ""}</span>
                                     {/* <span>{batch.ingredients_ordered ? '✓' : '✘'}</span> */}
                                   </div>
                                   {userRole === 'admin' && selectionMode && (
