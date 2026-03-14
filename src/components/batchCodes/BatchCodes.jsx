@@ -2678,7 +2678,7 @@ const formatDateDisplay = (dateStr) => {
               textDecoration: userRole !== 'unit' ? 'underline' : 'none',
             }}
           >
-            {pizza.sixpack_cases}
+            {userRole == 'admin'? pizza.sixpack_cases || '0' : pizza.sixpack_cases}
           </span>
         )}
       </div>
