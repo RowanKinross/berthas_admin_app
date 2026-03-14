@@ -3523,7 +3523,7 @@ const formatDateDisplay = (dateStr) => {
                           return (
                             <div key={batch.id} style={{ marginBottom: '1px' }}>
                               <button
-                                className={`button ${batch.completed ? 'completed' : 'draft batchDivDraft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
+                                className={`button ${new Date(batch.batch_date) < new Date('2026-01-01') ? 'completed' : (batch.completed ? 'completed' : 'draft batchDivDraft')} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
                                 onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
                                 onTouchStart={() => handleTouchStart(batch, batchIndex)}
                                 onTouchMove={handleTouchMove}
@@ -3635,7 +3635,7 @@ const formatDateDisplay = (dateStr) => {
                         Incomplete batches:
                       </div>
                     )}
-                  <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft batchDivDraft'}`}>
+                  <div key={batch.id} className={`batchDiv ${new Date(batch.batch_date) < new Date('2026-01-01') ? 'completed' : (batch.completed ? 'completed' : 'draft batchDivDraft')}`}>
                       {userRole === 'admin' && selectionMode && (
                         <input
                           type="checkbox"
@@ -3651,7 +3651,7 @@ const formatDateDisplay = (dateStr) => {
                         />
                       )}
                       <button 
-                        className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
+                        className={`batchText button ${new Date(batch.batch_date) < new Date('2026-01-01') ? 'completed' : (batch.completed ? 'completed' : 'draft')} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
                         onClick={(e) => handleBatchClickWithSelection(batch, index, e)}
                         onTouchStart={() => handleTouchStart(batch, index)}
                         onTouchMove={handleTouchMove}
