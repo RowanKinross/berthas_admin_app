@@ -48,6 +48,8 @@ function BatchCodes() {
   const [starterIngredientCodes, setStarterIngredientCodes] = useState({});
   const [formMixQuantities, setFormMixQuantities] = useState(null);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
+  const [selectedBatchInput, setSelectedBatchInput] = useState(null); // Track which batch button is selected for input
+  const [batchQuantityInput, setBatchQuantityInput] = useState(''); // Track the input value for batch quantity
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -3407,36 +3409,66 @@ const formatDateDisplay = (dateStr) => {
                               const batchCode = delivery.batchCodes[ingredient.name];
                               const isSelected = editingValue === batchCode;
                               
+                              const batchInputKey = `${delivery.id}-${ingredient.name}`;
+                              const showInput = selectedBatchInput === batchInputKey;
+                              const isSelectedOrShowingInput = isSelected || showInput;
+                              
                               return (
                                 <div
                                   key={`${delivery.id}-${ingredient.name}`}
-                                  className={`batchButton ${isSelected ? 'selected' : ''}`}
+                                  className={`batchButton ${isSelectedOrShowingInput ? 'selected' : ''}`}
                                   onClick={() => {
-                                    setEditingValue(batchCode);
-                                    handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                    if (showInput) {
+                                      // If already showing input, handle the save
+                                      setEditingValue(batchCode);
+                                      handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                      setSelectedBatchInput(null);
+                                      setBatchQuantityInput('');
+                                    } else {
+                                      // Show input and pre-fill with ingredient quantity
+                                      setSelectedBatchInput(batchInputKey);
+                                      setBatchQuantityInput(numberOfUnits.toFixed(2));
+                                    }
                                   }}
                                 >
                                   <div className="batchLabel">
                                     {batchCode} <br /> delivered: <br/> {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')}
                                   </div>
+                                  {showInput && (
+                                    <div style={{ marginTop: '8px', padding: '5px 0' }}>
+                                      <input
+                                        type="number"
+                                        value={batchQuantityInput}
+                                        onChange={(e) => setBatchQuantityInput(e.target.value)}
+                                        placeholder="Quantity"
+                                        style={{
+                                          maxWidth: '50px',
+                                          padding: '4px 8px',
+                                          borderRadius: '4px',
+                                          border: '1px solid #ccc',
+                                          fontSize: '12px'
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => {
+                                          e.stopPropagation();
+                                          if (e.key === 'Enter') {
+                                            setEditingValue(batchCode);
+                                            handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                            setSelectedBatchInput(null);
+                                            setBatchQuantityInput('');
+                                          }
+                                          if (e.key === 'Escape') {
+                                            setSelectedBatchInput(null);
+                                            setBatchQuantityInput('');
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })
                           }
-                          <div
-                            className="batchButton"
-                            onClick={async () => {
-                              setEditingValue('');
-                              // Remove allocation from delivery
-                              await removeStockAllocation(ingredient.name, viewingBatch.id);
-                              handleInlineSave("ingredient", ingredient.name, null, '');
-                            }}
-                            style={{ color: '#999', fontStyle: 'italic' }}
-                          >
-                            <div className="batchLabel">
-                              Clear selection
-                            </div>
-                          </div>
                         </div>
                       ) : (
                         <>
