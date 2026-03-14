@@ -1,4 +1,5 @@
 import './batchCodes.css'
+import React from 'react';
 import { db } from '../firebase/firebase';
 import { collection, getDoc, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { useState, useEffect, useRef } from 'react';
@@ -65,7 +66,6 @@ function BatchCodes() {
   const [showImageCrop, setShowImageCrop] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState("");
   const [crop, setCrop] = useState({
-    unit: 'px',
     width: 150,
     height: 50,
     x: 0,
@@ -1542,7 +1542,21 @@ const formatDateDisplay = (dateStr) => {
       setViewingBatch(freshData);
     } catch (error) {
       console.error("Error saving inline field:", error);
-      alert("Couldn't save your change. Please check your connection.");
+      
+      let errorMessage = "Couldn't save your change. Please check your connection.";
+      
+      // Provide more specific error messages
+      if (error.code === 'cancelled' || error.code === 'deadline-exceeded') {
+        errorMessage = "Request timed out. Please try again with a smaller image or check your connection.";
+      } else if (error.code === 'invalid-argument' && field === 'photo') {
+        errorMessage = "Image data is too large. Please try cropping a smaller area or taking a lower resolution photo.";
+      } else if (error.code === 'resource-exhausted' || error.message?.includes('size')) {
+        errorMessage = "Data is too large to save. Please try with a smaller image.";
+      } else if (error.code === 'unavailable' || error.code === 'unauthenticated') {
+        errorMessage = "Connection error. Please check your internet and try again.";
+      }
+      
+      alert(errorMessage);
     }
   };
   
@@ -1616,6 +1630,15 @@ const formatDateDisplay = (dateStr) => {
             mergedIngredientCodes[ingredient].trim() !== ""
         );
 
+      // Check vacuum bags for non-starter batches and include in ingredient check
+      const vacuumBagsBatchCode = selectedPizzas
+        .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
+        .find(code => code) || '';
+      const vacuumBagsComplete = vacuumBagsBatchCode && vacuumBagsBatchCode.trim() !== "";
+      
+      // Include vacuum bags in overall ingredient completion
+      const allIngredientsIncludingVacuumBags = allIngredientCodesFilled && vacuumBagsComplete;
+
       // Check sleeve photos - pizzas with sleeve:true need photos
       const sleevePhotosComplete = selectedPizzas.every(pizza => {
         if (pizza.sleeve) {
@@ -1635,16 +1658,16 @@ const formatDateDisplay = (dateStr) => {
       });
 
       newCompletionChecklist = {
-        ingredientCodes: allIngredientCodesFilled,
+        ingredientCodes: allIngredientsIncludingVacuumBags,
         pizzaNumbersComplete: !!viewingBatch.pizza_numbers_complete,
         sleevePhotos: sleevePhotosComplete,
         pizzaWeights: pizzaWeightsComplete
       };
     
-      shouldBeCompleted = allIngredientCodesFilled && 
-        !!viewingBatch.pizza_numbers_complete &&
-        sleevePhotosComplete &&
-        pizzaWeightsComplete;
+      shouldBeCompleted = allIngredientsIncludingVacuumBags && 
+                         !!viewingBatch.pizza_numbers_complete &&
+                         sleevePhotosComplete &&
+                         pizzaWeightsComplete;
     }
 
     // Update completion checklist state
@@ -1870,6 +1893,16 @@ const formatDateDisplay = (dateStr) => {
     };
   }
 
+  // Helper function to check if batch is from current week
+  const isCurrentWeekBatch = (batch) => {
+    if (!batch.batch_date) return false;
+    const today = new Date();
+    const { year: thisYear, week: thisWeek } = getWeekYear(today);
+    const batchDate = new Date(batch.batch_date);
+    const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
+    return batchYear === thisYear && batchWeek === thisWeek;
+  };
+
   // Combine userRole/week filter and search filter
   const filteredBatches = (batches || [])
   .filter(batch => {
@@ -1881,8 +1914,20 @@ const formatDateDisplay = (dateStr) => {
       const batchDate = new Date(batch.batch_date);
       const { year: batchYear, week: batchWeek } = getWeekYear(batchDate);
 
-      // Only this current week (Saturday to Friday)
-      return batchYear === thisYear && batchWeek === thisWeek;
+      // Show current week batches OR incomplete older batches from last month
+      const isCurrentWeek = batchYear === thisYear && batchWeek === thisWeek;
+      const isIncomplete = !batch.completed;
+      const isFutureWeek = batchYear > thisYear || (batchYear === thisYear && batchWeek > thisWeek);
+      
+      // Don't show future batches
+      if (isFutureWeek) return false;
+      
+      // Check if batch is within the last month
+      const oneMonthAgo = new Date(today);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const isWithinLastMonth = batchDate >= oneMonthAgo;
+      
+      return isCurrentWeek || (isIncomplete && isWithinLastMonth);
     }
     return true;
   })
@@ -2035,12 +2080,18 @@ const formatDateDisplay = (dateStr) => {
       return;
     }
 
+    // Check file size (limit to 10MB to prevent memory issues - lower limit)
+    const maxFileSize = 10 * 1024 * 1024; // 10MB (reduced from 20MB)
+    if (file.size > maxFileSize) {
+      alert('Image file is too large. Please choose a smaller image (under 10MB) or reduce the camera quality in your phone settings.');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       setCropImageSrc(reader.result);
       setCurrentPizzaId(pizzaId);
       setCrop({
-        unit: 'px',
         width: 150,
         height: 50,
         x: 0,
@@ -2050,6 +2101,11 @@ const formatDateDisplay = (dateStr) => {
       setRotation(0);
       setShowImageCrop(true);
     };
+    
+    reader.onerror = () => {
+      alert('Error reading image file. Please try again.');
+    };
+    
     reader.readAsDataURL(file);
   };
 
@@ -2067,8 +2123,26 @@ const formatDateDisplay = (dateStr) => {
       const scaleX = imageElement.naturalWidth / imageElement.width;
       const scaleY = imageElement.naturalHeight / imageElement.height;
 
-      canvas.width = completedCrop.width * scaleX;
-      canvas.height = completedCrop.height * scaleY;
+      let cropWidth = completedCrop.width * scaleX;
+      let cropHeight = completedCrop.height * scaleY;
+
+      // Significantly reduce dimensions for smaller file size (like 72dpi equivalent)
+      const maxDimension = 600; // Much smaller max dimension
+      if (cropWidth > maxDimension || cropHeight > maxDimension) {
+        const scaleFactor = Math.min(maxDimension / cropWidth, maxDimension / cropHeight);
+        cropWidth *= scaleFactor;
+        cropHeight *= scaleFactor;
+      }
+
+      // Further reduce if still large (target around 400px max width)
+      if (cropWidth > 400) {
+        const additionalScale = 400 / cropWidth;
+        cropWidth *= additionalScale;
+        cropHeight *= additionalScale;
+      }
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
 
       // Apply rotation
       if (rotation !== 0) {
@@ -2091,11 +2165,60 @@ const formatDateDisplay = (dateStr) => {
         canvas.height
       );
 
-      // Convert to data URL with compression
-      const croppedImageData = canvas.toDataURL('image/jpeg', 0.7);
+      // Convert to data URL with aggressive compression
+      let quality = 0.4; // Start with much lower quality
+      let croppedImageData = canvas.toDataURL('image/jpeg', quality);
+
+      // Check size and reduce quality if needed (aim for under 100KB base64)
+      const maxSize = 100000; // ~100KB for base64 data (much smaller)
+      while (croppedImageData.length > maxSize && quality > 0.1) {
+        quality -= 0.05; // Smaller increments for fine control
+        croppedImageData = canvas.toDataURL('image/jpeg', quality);
+      }
+
+      // If still too large, try WebP format with low quality
+      if (croppedImageData.length > maxSize) {
+        croppedImageData = canvas.toDataURL('image/webp', 0.3);
+      }
+
+      // If WebP still too large, reduce canvas size further
+      if (croppedImageData.length > maxSize) {
+        const reductionFactor = 0.8;
+        const smallerCanvas = document.createElement('canvas');
+        const smallerCtx = smallerCanvas.getContext('2d');
+        
+        smallerCanvas.width = canvas.width * reductionFactor;
+        smallerCanvas.height = canvas.height * reductionFactor;
+        
+        smallerCtx.drawImage(canvas, 0, 0, smallerCanvas.width, smallerCanvas.height);
+        croppedImageData = smallerCanvas.toDataURL('image/jpeg', 0.3);
+      }
+
+      // Final size check
+      if (croppedImageData.length > maxSize) {
+        throw new Error('Image is still too large. Please try cropping a much smaller area or using lower camera quality.');
+      }
       
-      // Update the database
-      await handleInlineSave("pizza", currentPizzaId, "photo", croppedImageData);
+      // Update the database with retry logic
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          await handleInlineSave("pizza", currentPizzaId, "photo", croppedImageData);
+          break; // Success, exit retry loop
+        } catch (saveError) {
+          retryCount++;
+          console.error(`Photo save attempt ${retryCount} failed:`, saveError);
+          
+          if (retryCount >= maxRetries) {
+            throw new Error(`Failed to upload photo after ${maxRetries} attempts. Please check your connection and try again.`);
+          }
+          
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+        }
+      }
       
       // Close modal
       setShowImageCrop(false);
@@ -2103,7 +2226,17 @@ const formatDateDisplay = (dateStr) => {
       setCurrentPizzaId(null);
     } catch (error) {
       console.error("Error uploading photo:", error);
-      alert("Error uploading photo. Please try again.");
+      let errorMessage = "Error uploading photo. Please try again.";
+      
+      if (error.message.includes('too large') || error.message.includes('still too large')) {
+        errorMessage = "Photo is too large. Please try cropping a much smaller area or using lower camera quality.";
+      } else if (error.message.includes('network')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (error.message.includes('Failed to upload')) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage);
     } finally {
       setUploadingPhoto(null);
     }
@@ -2685,7 +2818,7 @@ const formatDateDisplay = (dateStr) => {
                   {viewingBatch.batch_type === 'dough balls' ? 'Dough Balls:' : 'Pizzas:'}
                 </h4>
                 <h6 className='pizzaWeightsOuter pizzaWeights'>
-                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Weights:' : 'Pizzas Weights:'}
+                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Weights:' : 'Pizza Weights:'}
                 </h6>
               </div>
           {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (
@@ -2720,7 +2853,10 @@ const formatDateDisplay = (dateStr) => {
     )}
     
     {/* 6pk Cases field - only for sleeved pizzas, only show in unit mode if value isn't 0, and only for pizza batches */}
-    {pizza.sleeve && (userRole !== 'unit' || (pizza.sixpack_cases && pizza.sixpack_cases > 0)) && viewingBatch.batch_type === 'pizzas' && (
+    {pizza.sleeve && (
+      userRole !== 'unit' || 
+      (pizza.sixpack_cases != null && Number(pizza.sixpack_cases) > 0)
+    ) && viewingBatch.batch_type === 'pizzas' && (
       <div style={{ margin: '4px 0 0 18px' }}>
         <span className='pkCases'>6-pack cases x</span>{" "}
         {editingField === `pizza-${pizza.id}-sixpack-cases` && userRole !== 'unit' ? (
@@ -2753,7 +2889,7 @@ const formatDateDisplay = (dateStr) => {
               textDecoration: userRole !== 'unit' ? 'underline' : 'none',
             }}
           >
-            {pizza.sixpack_cases || "0"}
+            {userRole == 'admin'? pizza.sixpack_cases || '0' : pizza.sixpack_cases}
           </span>
         )}
       </div>
@@ -2787,8 +2923,7 @@ const formatDateDisplay = (dateStr) => {
               <div className='pizzaPhotoControls'>
                 <input
                   type="file"
-                  accept="image/*"
-                  capture="environment"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -2800,14 +2935,40 @@ const formatDateDisplay = (dateStr) => {
                   style={{ display: 'none' }}
                   id={`photo-upload-${pizza.id}`}
                 />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  capture="environment"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      handlePhotoSelect(pizza.id, file);
+                    }
+                    // Reset the input so same file can be selected again
+                    e.target.value = '';
+                  }}
+                  style={{ display: 'none' }}
+                  id={`photo-camera-${pizza.id}`}
+                />
                 {!pizza.photo && (
-                  <label 
-                    htmlFor={`photo-upload-${pizza.id}`} 
-                    className='button pizzaPhotoButton'
-                    style={{ fontSize: '12px', padding: '4px 8px' }}
-                  >
-                    {uploadingPhoto === pizza.id ? "Uploading..." : "Add Photo"}
-                  </label>
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    <label 
+                      htmlFor={`photo-camera-${pizza.id}`} 
+                      className='button pizzaPhotoButton'
+                      style={{ fontSize: '10px', padding: '3px 6px' }}
+                      title="Take photo with camera"
+                    >
+                      {uploadingPhoto === pizza.id ? "📷..." : "📷 Camera"}
+                    </label>
+                    <label 
+                      htmlFor={`photo-upload-${pizza.id}`} 
+                      className='button pizzaPhotoButton'
+                      style={{ fontSize: '10px', padding: '3px 6px' }}
+                      title="Choose from photo library"
+                    >
+                      {uploadingPhoto === pizza.id ? "🖼️..." : "🖼️ Library"}
+                    </label>
+                  </div>
                 )}
               </div>
             </div>
@@ -3326,7 +3487,7 @@ const formatDateDisplay = (dateStr) => {
               return (
                 <div key="vacuum-bags" className='ingredient container' style={{ color: vacuumBagsBatchCode ? 'inherit' : 'red' }}>
                   <p>
-                    <strong>Vacuum Bags:</strong>
+                    <strong>{viewingBatch.batch_type === 'dough balls' ? 'Packaging Bags:' : 'Vacuum Bags:'}</strong>
                   </p>
                   {editingField === `ingredient-Vacuum Bags` ? (
                     <div>
@@ -3667,7 +3828,7 @@ const formatDateDisplay = (dateStr) => {
                           return (
                             <div key={batch.id} style={{ marginBottom: '1px' }}>
                               <button
-                                className={`button ${batch.completed ? 'completed' : 'draft batchDivDraft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
+                                className={`button ${new Date(batch.batch_date) < new Date('2026-01-01') ? 'completed' : (batch.completed ? 'completed' : 'draft batchDivDraft')} ${viewingBatch?.id === batch.id ? 'selected' : ''}`}
                                 onClick={(e) => handleBatchClickWithSelection(batch, batchIndex, e)}
                                 onTouchStart={() => handleTouchStart(batch, batchIndex)}
                                 onTouchMove={handleTouchMove}
@@ -3687,7 +3848,7 @@ const formatDateDisplay = (dateStr) => {
                                   <span className='batchType' style={{ fontSize: '9px', textAlign: 'center'}}>{batch.batch_type ? `${batch.batch_type.toUpperCase()}` : 'PIZZAS'}</span>
                                   <span style={{ fontSize: '9px' }}>{batch.batch_code}</span>
                                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px' }}>
-                                    <span>{batch.num_pizzas}</span>
+                                    <span>{batch.num_pizzas>0? batch.num_pizzas : ""}</span>
                                     {/* <span>{batch.ingredients_ordered ? '✓' : '✘'}</span> */}
                                   </div>
                                   {userRole === 'admin' && selectionMode && (
@@ -3731,14 +3892,55 @@ const formatDateDisplay = (dateStr) => {
               <p>Ingredients Ordered?</p>
             </div> */}
             
-            {filteredBatches
-              .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-              .slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage)
-              .map((batch, index) => {
+            {(() => {
+              const sortedBatches = filteredBatches.sort((a, b) => {
+                // For unit users, sort current week first, then older incomplete batches
+                if (userRole === 'unit') {
+                  const aIsCurrent = isCurrentWeekBatch(a);
+                  const bIsCurrent = isCurrentWeekBatch(b);
+                  
+                  if (aIsCurrent && !bIsCurrent) return -1;
+                  if (!aIsCurrent && bIsCurrent) return 1;
+                  
+                  // Within same category, sort by date (newest first)
+                  return new Date(b.batch_date) - new Date(a.batch_date);
+                }
+                // For admin users, just sort by date
+                return new Date(b.batch_date) - new Date(a.batch_date);
+              });
+
+              const paginatedBatches = sortedBatches.slice((currentPage - 1) * batchesPerPage, currentPage * batchesPerPage);
+              
+              // Check if there are any incomplete batches from previous weeks
+              const hasIncompleteBatches = userRole === 'unit' && paginatedBatches.some(batch => !isCurrentWeekBatch(batch));
+              let hasShownSeparator = false;
+              
+              return paginatedBatches.map((batch, index) => {
                 const matchingIngredients = getMatchingIngredientCodes(batch, searchTerm);
+                const isCurrentWeek = isCurrentWeekBatch(batch);
+                const showSeparator = hasIncompleteBatches && !hasShownSeparator && !isCurrentWeek;
+                
+                if (showSeparator) {
+                  hasShownSeparator = true;
+                }
                 
                 return (
-                  <div key={batch.id} className={`batchDiv ${batch.completed ? 'completed' : 'draft batchDivDraft'}`}>
+                  <React.Fragment key={batch.id}>
+                    {showSeparator && (
+                      <div style={{ 
+                        borderTop: '1px solid var(--darkGrey)', 
+                        borderRadius: '0',
+                        margin: '15px 7px', 
+                        paddingTop: '15px',
+                        fontSize: '12px',
+                        color: 'var(--darkGrey)',
+                        fontStyle: 'italic',
+                        textAlign: 'center'
+                      }}>
+                        Incomplete batches:
+                      </div>
+                    )}
+                  <div key={batch.id} className={`batchDiv ${new Date(batch.batch_date) < new Date('2026-01-01') ? 'completed' : (batch.completed ? 'completed' : 'draft batchDivDraft')}`}>
                       {userRole === 'admin' && selectionMode && (
                         <input
                           type="checkbox"
@@ -3754,7 +3956,7 @@ const formatDateDisplay = (dateStr) => {
                         />
                       )}
                       <button 
-                        className={`batchText button ${batch.completed ? 'completed' : 'draft'} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
+                        className={`batchText button ${new Date(batch.batch_date) < new Date('2026-01-01') ? 'completed' : (batch.completed ? 'completed' : 'draft')} ${viewingBatch?.id === batch.id ? 'selected' : ''}`} 
                         onClick={(e) => handleBatchClickWithSelection(batch, index, e)}
                         onTouchStart={() => handleTouchStart(batch, index)}
                         onTouchMove={handleTouchMove}
@@ -3766,7 +3968,7 @@ const formatDateDisplay = (dateStr) => {
                       <div className="container" style={{ width: '100%' }}>
                         <p className='batchTextBoxes batchTextBoxesMobileFont'>
                           {formatBatchListDate(batch.batch_date, batch.batch_code, userRole, searchTerm.length > 0)}</p>
-                        <p className='batchTextBoxes batchTextBoxCenter'> {batch.num_pizzas}</p>
+                        <p className='batchTextBoxes batchTextBoxCentre'> {batch.num_pizzas>0? batch.num_pizzas : ""}</p>
                         <p className='batchTextBoxes batchTextBoxEnd batchTextBoxesMobileFont'>{(batch.batch_type || 'PIZZAS').toUpperCase()}</p>
                         {/* {batch.ingredients_ordered ? <p className='batchTextBoxEnd'>✓</p> : <p className='batchTextBoxEnd'>✘</p>} */}
                       </div>
@@ -3796,8 +3998,10 @@ const formatDateDisplay = (dateStr) => {
                       )}
                     </button>
                   </div>
+                </React.Fragment>
                 );
-              })}
+              });
+            })()}
           </>
         )
       ) : (

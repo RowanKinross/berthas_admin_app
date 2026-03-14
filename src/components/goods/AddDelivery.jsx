@@ -2,90 +2,6 @@ import React, {useState, useEffect} from 'react';
 import { collection, addDoc, getDocs } from '@firebase/firestore';
 import { db } from '../firebase/firebase';
 
-// Component to render visual packaging indicators
-const PackagingIcon = ({ packaging, ingredientName, size = 'normal' }) => {
-  const getIconType = (packaging) => {
-    const pack = packaging.toLowerCase();
-    if (pack.includes('tin') || pack.includes('can')) return 'tin';
-    if (pack.includes('box') || pack.includes('packet')) return 'box';
-    if (pack.includes('bag')) return 'bag';
-    if (pack.includes('sack')) return 'sack';
-    if (pack.includes('pack')) return 'pack';
-    if (pack.includes('kg')) return 'kg';
-    if (pack.includes('bottle')) return 'bottle';
-    if (pack.includes('jar')) return 'jar';
-    if (pack.includes('bucket')) return 'bucket';
-    if (pack.includes('tray')) return 'tray';
-    return 'box'; // default
-  };
-
-  const getSVGPath = (type, ingredientName) => {
-    switch (type) {
-      case 'tin':
-        return '/Tin.svg';
-      case 'box':
-        const name = ingredientName.toLowerCase();
-        if (name.includes('basil')) return '/box_basil.svg';
-        return '/box.svg';
-      case 'bag':
-        return '/Bag.svg';
-      case 'bottle':
-        return '/Bottle.svg';
-      case 'jar':
-        return '/Jar.svg';
-      case 'bucket':
-        return '/Bucket.svg';
-      case 'tray':
-        return '/Tray.svg';
-      case 'sack': {
-        const name = ingredientName.toLowerCase();
-        if (name.includes('rye')) return '/Sack_rye.svg';
-        if (name.includes('wholemeal')) return '/Sack_rye.svg';
-        if (name.includes('caputo') && name.includes('blue')) return '/Sack_blue.svg';
-        if (name.includes('caputo') && name.includes('red')) return '/Sack_red.svg';
-        return '/Sack_plain.svg'; // default sack
-      }
-      case 'pack': {
-        return '/box.svg'; // fallback to box for other packs
-      }
-      case 'kg': {
-        const name = ingredientName.toLowerCase();
-        if (name.includes('onion')) return '/box_onion.svg';
-        if (name.includes('pepperoni') || name.includes('pepp')) return '/Pack_pepp.svg';
-        if (name.includes('gran duro') || name.includes('gduro') || name.includes('grana duro') || name.includes('duro')) return '/Pack_GDuro.svg';
-        if (name.includes('ham')) return '/Pack_ham.svg';
-        if (name.includes('chillies')) return '/Sack_chilli.svg';
-        return '/box.svg'; // fallback to box for other kg items
-      }
-      default:
-        return '/box.svg';
-    }
-  };
-
-  const iconType = getIconType(packaging);
-  const svgPath = getSVGPath(iconType, ingredientName);
-  const isSmall = size === 'small';
-  const iconWidth = isSmall ? '20px' : '40px';
-  const iconHeight = isSmall ? '25px' : '50px';
-  
-  return (
-    <div style={{ 
-      display: 'inline-block', 
-      marginRight: '8px',
-      verticalAlign: 'middle',
-      width: iconWidth,
-      height: iconHeight
-    }}>
-      <img 
-        src={svgPath} 
-        alt={iconType} 
-        style={{ width: iconWidth, height: iconHeight }} 
-        title={packaging}
-      />
-    </div>
-  );
-};
-
 function AddDelivery({ onDeliveryAdded, onCancel }) {
   const [ingredients, setIngredients] = useState([]);
   const [availableSuppliers, setAvailableSuppliers] = useState([]);
@@ -115,35 +31,6 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     };
     fetchIngredients();
   }, []);
-
-  // Extract unique suppliers from ingredients data
-  useEffect(() => {
-    const suppliers = [...new Set(
-      ingredients
-        .map(ingredient => ingredient.supplier)
-        .filter(supplier => supplier && supplier.trim() !== '')
-    )].sort();
-    setAvailableSuppliers(suppliers);
-  }, [ingredients]);
-
-  // Auto-select ingredient if there's only one for the selected supplier
-  useEffect(() => {
-    if (deliveryData.supplier && ingredients.length > 0) {
-      const supplierIngredients = ingredients.filter(ingredient => 
-        ingredient.supplier === deliveryData.supplier
-      );
-      
-      if (supplierIngredients.length === 1) {
-        const singleIngredient = supplierIngredients[0];
-        if (!deliveryData.selectedGoods.includes(singleIngredient.name)) {
-          setDeliveryData(prev => ({
-            ...prev,
-            selectedGoods: [singleIngredient.name]
-          }));
-        }
-      }
-    }
-  }, [deliveryData.supplier, ingredients]);
 
   const handleGoodsChange = (ingredientName, isChecked) => {
     let updatedSelectedGoods;
@@ -314,89 +201,61 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
         {deliveryData.supplier && (
           <div className="form-group">
             <h4>Product Details:</h4>
-            {ingredients
-              .filter(ingredient => ingredient.supplier === deliveryData.supplier)
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map(ingredient => {
-                const packaging = ingredient?.packaging || 'units';
-                
-                return (
-                <div 
-                  key={ingredient.id} 
-                  className="product-details-row"
-                  style={{
-                    backgroundColor: deliveryData.selectedGoods.includes(ingredient.name) ? '' : 'transparent',
-                    borderColor: deliveryData.selectedGoods.includes(ingredient.name) ? '' : 'transparent',
-                  }}
-                >
-                  <div className="product-name" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="checkbox"
-                      id={`goods-${ingredient.id}`}
-                      checked={deliveryData.selectedGoods.includes(ingredient.name)}
-                      onChange={(e) => handleGoodsChange(ingredient.name, e.target.checked)}
-                    />
-                    {deliveryData.selectedGoods.includes(ingredient.name) && ingredient.packaging && (
-                      <PackagingIcon 
-                        packaging={ingredient.packaging} 
-                        ingredientName={ingredient.name} 
-                        size="small" 
-                      />
-                    )}
-                    <div className={deliveryData.selectedGoods.includes(ingredient.name) ? 'selectedGood' : 'notSelectedGood'}>
-                      {ingredient.name}
-                    </div>
-                  </div>
-                  {deliveryData.selectedGoods.includes(ingredient.name) && (
-                    <div className="product-inputs">
-                      <div className="input-group">
-                        <label>Quantity ({packaging}):</label>
-                        <input
-                          type="number"
-                          value={quantities[ingredient.name] || ''}
-                          onChange={(e) => handleQuantityChange(ingredient.name, e.target.value)}
-                          placeholder="Enter qty"
-                          className="product-input product-input-number"
-                          min="0"
-                          step="1"
-                        />
-                      </div>
-                      <div className="input-group">
-                        <label>Batch Code:</label>
-                        <input
-                          type="text"
-                          value={batchCodes[ingredient.name] || ''}
-                          onChange={(e) => handleBatchCodeChange(ingredient.name, e.target.value)}
-                          placeholder="Enter batch code"
-                          className="product-input"
-                        />
-                      </div>
-                      {ingredient.temp_check && (
-                        <div className="input-group">
-                          <label>Temperature (°C): </label>
-                          <input
-                            type="number"
-                            value={temperatures[ingredient.name] || ''}
-                            onChange={(e) => handleTemperatureChange(ingredient.name, e.target.value)}
-                            placeholder="e.g 4°C"
-                            className="product-input product-input-number"
-                          />
-                        </div>
-                      )}
-                      <div className="input-group">
-                        <label>Use-by/Best Before:</label>
-                        <input
-                          type="date"
-                          value={useByDates[ingredient.name] || ''}
-                          onChange={(e) => handleUseByDateChange(ingredient.name, e.target.value)}
-                          className="product-input"
-                        />
-                      </div>
-                    </div>
-                  )}
+            {deliveryData.selectedGoods.map(good => {
+              const ingredient = getIngredientByName(good);
+              const packaging = ingredient?.packaging || 'units';
+              
+              return (
+              <div key={good} className="product-details-row">
+                <div className="product-name">
+                  <strong>{good}</strong>
                 </div>
-                );
-              })}
+                <div className="product-inputs">
+                  <div className="input-group">
+                    <label>Quantity ({packaging}):</label>
+                    <input
+                      type="number"
+                      value={quantities[good] || ''}
+                      onChange={(e) => handleQuantityChange(good, e.target.value)}
+                      placeholder="Enter quantity"
+                      className="product-input"
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Batch Code:</label>
+                    <input
+                      type="text"
+                      value={batchCodes[good] || ''}
+                      onChange={(e) => handleBatchCodeChange(good, e.target.value)}
+                      placeholder="Enter batch code"
+                      className="product-input"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Temperature:</label>
+                    <input
+                      type="text"
+                      value={temperatures[good] || ''}
+                      onChange={(e) => handleTemperatureChange(good, e.target.value)}
+                      placeholder="e.g., 4°C"
+                      className="product-input"
+                    />
+                  </div>
+                  <div className="input-group">
+                    <label>Use-by/Best Before:</label>
+                    <input
+                      type="date"
+                      value={useByDates[good] || ''}
+                      onChange={(e) => handleUseByDateChange(good, e.target.value)}
+                      className="product-input"
+                    />
+                  </div>
+                </div>
+              </div>
+              );
+            })}
           </div>
         )}
 
