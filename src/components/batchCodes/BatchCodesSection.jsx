@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 
 function BatchCodesSection({
   viewingBatch,
@@ -22,6 +22,45 @@ function BatchCodesSection({
   batchCodeSuggestions,
   removeStockAllocation
 }) {
+  // Refs for click outside detection
+  const batchEditingRef = useRef(null);
+  const quantityInputRef = useRef(null);
+
+  // Click outside handler for batch editing mode
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (batchEditingRef.current && !batchEditingRef.current.contains(event.target)) {
+        // Only exit if we're currently editing an ingredient (not starter)
+        if (editingField && editingField.startsWith('ingredient-')) {
+          setEditingField(null);
+          setSelectedBatchInput(null);
+          setBatchQuantityInput('');
+        }
+      }
+    };
+
+    const handleClickOutsideQuantityInput = (event) => {
+      if (quantityInputRef.current && !quantityInputRef.current.contains(event.target)) {
+        // Exit quantity input mode
+        setSelectedBatchInput(null);
+        setBatchQuantityInput('');
+      }
+    };
+
+    if (editingField && editingField.startsWith('ingredient-')) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    if (selectedBatchInput) {
+      document.addEventListener('mousedown', handleClickOutsideQuantityInput);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutsideQuantityInput);
+    };
+  }, [editingField, selectedBatchInput, setEditingField, setSelectedBatchInput, setBatchQuantityInput]);
+
   return (
     <div>
       <h4>Batch Codes:</h4>
@@ -109,7 +148,7 @@ function BatchCodesSection({
                 }
               </p>
               {editingField === `ingredient-${ingredient.name}` ? (
-                <div>
+                <div ref={batchEditingRef}>
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
                       {deliveries
@@ -252,7 +291,14 @@ function BatchCodesSection({
                                   return `${qtyInStock.toFixed(1)} ${ingredient.packaging || 'units'}`;
                                 })()} </div>
                                 <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
-                                <div className='qtyUsed'>
+                                <div className='qtyUsed' onClick={(e) => {
+                                  // If clicking on the parent div but not on the input itself, close the input
+                                  if (showInput && e.target.className === 'qtyUsed') {
+                                    setSelectedBatchInput(null);
+                                    setBatchQuantityInput('');
+                                    e.stopPropagation();
+                                  }
+                                }}>
                                   <div className='qtyUsedLabel'>Qty Used:</div>
                                   {!showInput && (
                                     <div 
@@ -271,7 +317,7 @@ function BatchCodesSection({
                                     </div>
                                   )}
                                   {showInput && (
-                                    <div>
+                                    <div ref={quantityInputRef}>
                                       <input
                                         type="number"
                                         value={batchQuantityInput}
