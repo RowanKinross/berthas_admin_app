@@ -129,55 +129,70 @@ function BatchCodesSection({
                           return (
                             <div
                               key={`${delivery.id}-${ingredient.name}`}
-                              className={`batchButton ${isSelectedOrShowingInput ? 'selected' : ''}`}
-                              onClick={() => {
-                                if (showInput) {
-                                  // If already showing input, handle the save
-                                  setEditingValue(batchCode);
-                                  handleInlineSave("ingredient", ingredient.name, null, batchCode);
-                                  setSelectedBatchInput(null);
-                                  setBatchQuantityInput('');
-                                } else {
-                                  // Show input and pre-fill with ingredient quantity
-                                  setSelectedBatchInput(batchInputKey);
-                                  setBatchQuantityInput(numberOfUnits.toFixed(2));
-                                }
-                              }}
+                              className={`${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}`}
                             >
                               <div className="batchLabel">
-                                {batchCode} <br /> delivered: <br /> {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')}
-                              </div>
-                              {showInput && (
-                                <div style={{ marginTop: '8px', padding: '5px 0' }}>
-                                  <input
-                                    type="number"
-                                    value={batchQuantityInput}
-                                    onChange={(e) => setBatchQuantityInput(e.target.value)}
-                                    placeholder="Quantity"
-                                    style={{
-                                      maxWidth: '50px',
-                                      padding: '4px 8px',
-                                      borderRadius: '4px',
-                                      border: '1px solid #ccc',
-                                      fontSize: '12px'
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => {
-                                      e.stopPropagation();
-                                      if (e.key === 'Enter') {
-                                        setEditingValue(batchCode);
-                                        handleInlineSave("ingredient", ingredient.name, null, batchCode);
-                                        setSelectedBatchInput(null);
-                                        setBatchQuantityInput('');
-                                      }
-                                      if (e.key === 'Escape') {
-                                        setSelectedBatchInput(null);
-                                        setBatchQuantityInput('');
-                                      }
-                                    }}
-                                  />
+                                <div>Batch Code: {batchCode} </div> 
+                                <div> Qty in Stock: {} </div>
+                                <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
+                                <div className='qtyUsed'>
+                                  <div className='qtyUsedLabel'>Qty Used:</div>
+                                  {!showInput && (
+                                    <div 
+                                      style={{ 
+                                        textDecoration: 'underline', 
+                                        cursor: 'pointer',
+                                        display: 'inline-block'
+                                      }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        // Switch to input mode when clicking on the underlined value
+                                        setSelectedBatchInput(batchInputKey);
+                                        setBatchQuantityInput(isSelected ? numberOfUnits.toFixed(2) : '0');
+                                      }}
+                                    >
+                                      {isSelected ? numberOfUnits.toFixed(2) : '0'}
+                                    </div>
+                                  )}
+                                  {showInput && (
+                                    <div>
+                                      <input
+                                        type="number"
+                                        value={batchQuantityInput}
+                                        onChange={(e) => setBatchQuantityInput(e.target.value)}
+                                        placeholder="Quantity"
+                                        autoFocus
+                                        style={{
+                                          maxWidth: '50px',
+                                          padding: '4px',
+                                          borderRadius: '4px',
+                                          border: '1px solid #ccc',
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onBlur={() => {
+                                          setEditingValue(batchCode);
+                                          handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                          setSelectedBatchInput(null);
+                                          setBatchQuantityInput('');
+                                        }}
+                                        onKeyDown={(e) => {
+                                          e.stopPropagation();
+                                          if (e.key === 'Enter') {
+                                            setEditingValue(batchCode);
+                                            handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                            setSelectedBatchInput(null);
+                                            setBatchQuantityInput('');
+                                          }
+                                          if (e.key === 'Escape') {
+                                            setSelectedBatchInput(null);
+                                            setBatchQuantityInput('');
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
                           );
                         })

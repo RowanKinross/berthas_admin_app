@@ -55,6 +55,7 @@ function BatchCodes() {
   const [deliveries, setDeliveries] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [wastageExpanded, setWastageExpanded] = useState(false);
+  const [carriedIngExpanded, setCarriedIngExpanded] = useState(false);
   const [selectedBatches, setSelectedBatches] = useState(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
@@ -3341,6 +3342,12 @@ const formatDateDisplay = (dateStr) => {
           {/* Common sections for non-starter batches */}
           {viewingBatch.batch_type !== 'starter' && (
             <div>
+              {/* <p className='carriedIngr'>
+                <strong className='carriedIngrLabel'>Prepped Ingredients Carried Forward: </strong>
+                <div 
+                  onClick={() => setCarriedIngExpanded(!carriedIngExpanded)}
+                > {" "}{carriedIngExpanded ? '⌄' : '>'}</div>
+              </p> */}
               <p className='pizzaNumbers'>
                 <strong>              
                   {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Numbers Complete:' : 'Pizzas Numbers Complete:'}</strong>{" "}
