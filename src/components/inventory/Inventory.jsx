@@ -549,9 +549,6 @@ return (
             </div>
           );
         })}
-          
-          {/* Button to add a new pizza */}
-          <button className='addPizza button pizzas' onClick={() => setModalVisible(true)}>+</button>
         </div>
       ) : (
         <p>Loading pizza data...</p>
@@ -642,107 +639,7 @@ return (
         );
       })()}
 
-      {/* Modal content for adding a new pizza */}
-      {modalVisible && (
-        <div className='modal'>
-          <div className='modalContent'>
-            {/* Form to add a new pizza */}
-            <label>
-              Name of Pizza:
-              <input type='text' onChange={(e) => setPizzaTitle(e.target.value.trim().toUpperCase())} />
-            </label>
-            <div className='listContainer'>
-              <div className='ingredients list'>
-                {currentPizzaIngredients.map((ingredient, index) => (
-                  <li key={index}>
-                    {`${ingredient}`}
-                  </li>
-                ))}
-              </div>
-            </div>
-            <div className='container ingredientsContainer'>
-              {/* Dropdown for selecting an existing ingredient */}
-              <Dropdown>
-                <Dropdown.Toggle className='button' variant="outline-warning" id="dropdown-basic">
-                  {currentIngredient?.name || 'Select Ingredient'}
-                </Dropdown.Toggle>
-                <Dropdown.Menu className='ingredientDropdown'>
-                  {ingredientsArr.map((ingredient, index) => (
-                    <Dropdown.Item key={index} onClick={() => { setCurrentIngredient(ingredient); }}>
-                      {ingredient.name}  
-                    </Dropdown.Item>
-                  ))}
-                  <button className='button' onClick={() => { setAddIngredientForm(true) }}>Add new</button>
-                </Dropdown.Menu>
-              </Dropdown>
-              <button onClick={handleAddIngredientToRecipe}>✔</button>
-            </div>
-            <label>
-              Hex Colour Code:
-              <input type='text' placeholder='#eee510' className='inputBox' onChange={(e) => setHexColour(e.target.value)} />
-            </label>
-            <label>
-              With a sleeve?
-              <div className='sleeve'>
-                <label>
-                  Yes
-                  <input
-                    type="radio"
-                    value="yes"
-                    checked={sleeve === true}
-                    onChange={handleRadioChange}
-                  />
-                </label>
-                <label>
-                  No
-                  <input
-                    type="radio"
-                    value="no"
-                    checked={sleeve === false}
-                    onChange={handleRadioChange}
-                  />
-                </label>
-              </div>
-            </label>
-            {/* Buttons to submit or cancel */}
-            <button onClick={handleAddPizza}>Submit</button>
-            <button onClick={handleCancel}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {addIngredientForm && (
-        <div className='modal'>
-          <div className='modalContent'>
-            <Form.Group>
-              <div className='inputBox'>
-                Ingredient Name: <input type='text' placeholder='e.g Kalamata Olives' onChange={(e) => setIngredientName(e.target.value)} />
-              </div>
-              <div className='container ingredientInput'>
-                <div className='container ingredientInput units'>
-                  <div className='inputBox'>
-                    Units: <input type='text' placeholder='e.g Jar' onChange={(e) => setIngredientUnits(e.target.value)} />
-                  </div>
-                  <p></p>
-                </div>
-                <div className='container ingredientInput units'>
-                  <div className='inputBox'>
-                    Unit quantity: <input type='number' placeholder='e.g 1.2' onChange={(e) => setIngredientUnitQuantity(e.target.value)} />
-                  </div>
-                  <p>kg</p>
-                </div>
-                <div className='container ingredientInput units'>
-                  <div className='inputBox'>
-                    Quantity per Pizza: <input type='number' placeholder='e.g 32' onChange={(e) => setCurrentIngredientQuantity(e.target.value)} />
-                  </div>
-                  <p>g</p>
-                </div>
-              </div>
-            </Form.Group>
-            <Button type="submit" className='button' onClick={handleAddIngredient}>Submit</Button>
-          </div>
-        </div>
-      )}
+      
     </div>
   );
 }

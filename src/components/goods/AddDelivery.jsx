@@ -126,6 +126,25 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     setAvailableSuppliers(suppliers);
   }, [ingredients]);
 
+  // Auto-select ingredient if there's only one for the selected supplier
+  useEffect(() => {
+    if (deliveryData.supplier && ingredients.length > 0) {
+      const supplierIngredients = ingredients.filter(ingredient => 
+        ingredient.supplier === deliveryData.supplier
+      );
+      
+      if (supplierIngredients.length === 1) {
+        const singleIngredient = supplierIngredients[0];
+        if (!deliveryData.selectedGoods.includes(singleIngredient.name)) {
+          setDeliveryData(prev => ({
+            ...prev,
+            selectedGoods: [singleIngredient.name]
+          }));
+        }
+      }
+    }
+  }, [deliveryData.supplier, ingredients]);
+
   const handleGoodsChange = (ingredientName, isChecked) => {
     let updatedSelectedGoods;
     
@@ -297,6 +316,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
             <h4>Product Details:</h4>
             {ingredients
               .filter(ingredient => ingredient.supplier === deliveryData.supplier)
+              .sort((a, b) => a.name.localeCompare(b.name))
               .map(ingredient => {
                 const packaging = ingredient?.packaging || 'units';
                 

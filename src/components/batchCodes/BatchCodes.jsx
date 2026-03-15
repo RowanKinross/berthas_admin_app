@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
 import MixCalculator from './MixCalculator';
 import ImageCropModal from './ImageCropModal';
+import BatchCodesSection from './BatchCodesSection';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
@@ -48,9 +49,13 @@ function BatchCodes() {
   const [starterIngredientCodes, setStarterIngredientCodes] = useState({});
   const [formMixQuantities, setFormMixQuantities] = useState(null);
   const [showPizzaPicker, setShowPizzaPicker] = useState(false);
+  const [selectedBatchInput, setSelectedBatchInput] = useState(null); // Track which batch button is selected for input
+  const [batchQuantityInput, setBatchQuantityInput] = useState(''); // Track the input value for batch quantity
   const [batchCodeSuggestions, setBatchCodeSuggestions] = useState([]);
+  const [deliveries, setDeliveries] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [wastageExpanded, setWastageExpanded] = useState(false);
+  const [carriedIngExpanded, setCarriedIngExpanded] = useState(false);
   const [selectedBatches, setSelectedBatches] = useState(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [lastSelectedIndex, setLastSelectedIndex] = useState(null);
@@ -80,6 +85,12 @@ function BatchCodes() {
   //pagination
   const [currentPage, setCurrentPage] = useState(1);
   const batchesPerPage = 20;
+  
+  // Check if batch code is newer than 20260306
+  const shouldUseDeliveryDropdown = (batchCode) => {
+    return batchCode && batchCode > '20260306';
+  };
+  
   function getPagination(currentPage, totalPages) {
   const pages = [];
   if (totalPages <= 7) {
@@ -389,40 +400,42 @@ function BatchCodes() {
     // Calculate total ingredient quantities using existing function logic
     const ingredientQuantities = calculateIngredientQuantities(allPizzas);
     
-    // Calculate order quantities based on preOrderAmount
-    const orderQuantities = {};
+    // Calculate prep quantities based on ratio
+    const prepQuantities = {};
     
     allPizzas.forEach(pizza => {
       pizza.ingredients.forEach(ingredientName => {
         const ingredientData = ingredients.find(ing => ing.name === ingredientName);
         
-        if (ingredientData && ingredientData.preOrderAmount) {
-          if (!orderQuantities[ingredientData.name]) {
-            orderQuantities[ingredientData.name] = {
+        if (ingredientData) {
+          const { gramsPerPizza, unitWeight } = parseIngredientRatio(ingredientData.ratio);
+          
+          if (!prepQuantities[ingredientData.name]) {
+            prepQuantities[ingredientData.name] = {
               quantity: 0,
               unit: ingredientData.packaging,
-              unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1
+              unitWeight: unitWeight
             };
           }
-          // Calculate total order quantity required in grams
-          orderQuantities[ingredientData.name].quantity += (ingredientData.preOrderAmount * pizza.quantity);
+          // Calculate total prep quantity required in grams
+          prepQuantities[ingredientData.name].quantity += (gramsPerPizza * pizza.quantity);
         }
       });
     });
     
-    // Convert order quantities to kilograms
-    Object.keys(orderQuantities).forEach(ingredient => {
-      orderQuantities[ingredient].quantity /= 1000; // Convert grams to kilograms
+    // Convert prep quantities to kilograms
+    Object.keys(prepQuantities).forEach(ingredient => {
+      prepQuantities[ingredient].quantity /= 1000; // Convert grams to kilograms
     });
     
     // Format results for display
     const results = Object.entries(ingredientQuantities).map(([name, data]) => {
       const ingredientData = ingredients.find(ing => ing.name === name);
-      const orderData = orderQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
+      const prepData = prepQuantities[name] || { quantity: 0, unit: data.unit, unitWeight: data.unitWeight };
       return {
         name,
-        quantity: data.quantity,
-        orderQuantity: orderData.quantity,
+        quantity: prepData.quantity,
+        orderQuantity: data.quantity,
         unit: data.unit,
         unitWeight: data.unitWeight,
         supplier: ingredientData?.supplier || ''
@@ -497,7 +510,7 @@ function BatchCodes() {
             <thead>
               <tr>
                 <th>Ingredient</th>
-                <th>Prep Quantity</th>
+                <th>Post-Prep Quantity</th>
                 <th>Order Quantity</th>
               </tr>
             </thead>
@@ -574,11 +587,13 @@ function BatchCodes() {
     "Ham",
     "Rapeseed Oil",
     "Vegan Mozzarella",
-    "Mozzarella"
+    "Mozzarella",
+    "Vacuum Bags",
+    "Dough Ball Pouches"
   ];
   const sortIngredients = (ingredients) => {
     // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
-    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella"]);
+    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella", "Vacuum Bags", "Dough Ball Pouches"]);
     const startSet = new Set(["Flour (Caputo Blue)", "Flour (Wholemeal)", "Salt", "Rye Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
@@ -784,6 +799,20 @@ const formatDateDisplay = (dateStr) => {
       }
     };
     fetchPizzas();
+
+    const fetchDeliveries = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "deliveries"));
+        const deliveriesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setDeliveries(deliveriesData);
+      } catch (error) {
+        console.error("Error fetching deliveries:", error);
+      }
+    };
+    fetchDeliveries();
   }, []);
 
   // Fetch orders for pizza allocation display
@@ -926,7 +955,18 @@ const formatDateDisplay = (dateStr) => {
     const ingredientData = ingredients.find(ing => ing.name === ingredientName);
   
         if (ingredientData) {
-          const { gramsPerPizza, unitWeight } = parseIngredientRatio(ingredientData.ratio);
+          let gramsPerPizza;
+          let unitWeight;
+
+          // Use preOrderAmount if available, otherwise fall back to ratio calculation
+          if (ingredientData.preOrderAmount) {
+            gramsPerPizza = ingredientData.preOrderAmount;
+            unitWeight = ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1;
+          } else {
+            const ratioData = parseIngredientRatio(ingredientData.ratio);
+            gramsPerPizza = ratioData.gramsPerPizza;
+            unitWeight = ratioData.unitWeight;
+          }
   
           if (!ingredientQuantities[ingredientData.name]) {
             ingredientQuantities[ingredientData.name] = {
@@ -1135,6 +1175,164 @@ const formatDateDisplay = (dateStr) => {
     }
   };
 
+  // Track stock consumption by adding allocations to deliveries
+  const trackStockConsumption = async (ingredientName, batchCodeString, usedInBatchId) => {
+    try {
+      // Calculate how much of this ingredient is needed using preOrderAmount (prep/order weight)
+      const ingredientData = ingredients.find(ing => ing.name === ingredientName);
+      
+      if (!ingredientData || !ingredientData.preOrderAmount) {
+        console.log(`No preOrderAmount found for ${ingredientName}, skipping allocation tracking`);
+        return; // Only track ingredients with preOrderAmount to maintain accurate inventory
+      }
+
+      // First, remove any existing allocations for this ingredient/batch combination
+      const updatedDeliveriesFromRemoval = await removeStockAllocation(ingredientName, usedInBatchId);
+
+      // Parse batch codes with quantities (format: "BATCH123:2.5, BATCH456:1.2" or just "BATCH123")
+      const parseBatchData = (batchString) => {
+        if (!batchString || !batchString.trim()) return [];
+        return batchString.split(',').map(item => {
+          const [code, qty] = item.trim().split(':');
+          return { 
+            code: code.trim(), 
+            quantity: qty ? parseFloat(qty) : null 
+          };
+        }).filter(item => item.code);
+      };
+
+      const batchData = parseBatchData(batchCodeString);
+      if (batchData.length === 0) {
+        return; // No valid batch codes to track
+      }
+
+      // Create a map of updated deliveries for quick lookup
+      const updatedDeliveryMap = new Map(updatedDeliveriesFromRemoval.map(del => [del.id, del]));
+
+      // Create allocations for each batch code
+      for (const batch of batchData) {
+        const { code: batchCode, quantity: specifiedQuantity } = batch;
+        
+        // Find the delivery that contains this batch code for this ingredient
+        let delivery = deliveries.find(del => 
+          del.batchCodes && 
+          del.batchCodes[ingredientName] === batchCode
+        );
+        
+        // Use updated version if available
+        if (delivery && updatedDeliveryMap.has(delivery.id)) {
+          delivery = updatedDeliveryMap.get(delivery.id);
+        }
+
+        if (delivery) {
+          // Use the specified quantity from the batch string, or calculate from preOrderAmount if not specified
+          let quantityInKg;
+          
+          if (specifiedQuantity !== null) {
+            // Use the quantity specified in the batch selection
+            quantityInKg = specifiedQuantity;
+          } else {
+            // Fallback to calculating from preOrderAmount
+            const selectedPizzas = viewingBatch.pizzas.filter(p => p.quantity > 0 && p.ingredients.includes(ingredientName));
+            const totalQuantityInGrams = selectedPizzas.reduce((sum, pizza) => {
+              return sum + (ingredientData.preOrderAmount * pizza.quantity);
+            }, 0);
+            quantityInKg = Math.round((totalQuantityInGrams / 1000) * 100) / 100;
+          }
+
+          if (quantityInKg <= 0) {
+            continue; // Skip this batch if no quantity to track
+          }
+
+          // Create allocation record to add to the delivery
+          const allocation = {
+            ingredientName: ingredientName,
+            quantityAllocated: quantityInKg, // in kg
+            batchCode: batchCode, // Store the individual batch code
+            unit: ingredientData.packaging,
+            unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1,
+            allocatedToBatchId: usedInBatchId,
+            allocatedToBatchCode: viewingBatch.batch_code,
+            allocationDate: new Date().toISOString(),
+            batchType: viewingBatch.batch_type
+          };
+
+          // Update the delivery document with the new allocation
+          const deliveryRef = doc(db, "deliveries", delivery.id);
+          const currentAllocations = delivery.allocations || [];
+          
+          // Add the new allocation
+          const updatedAllocations = [...currentAllocations, allocation];
+          await updateDoc(deliveryRef, { allocations: updatedAllocations });
+          
+          // Update local deliveries state
+          setDeliveries(prevDeliveries => 
+            prevDeliveries.map(del => 
+              del.id === delivery.id 
+                ? { ...del, allocations: updatedAllocations }
+                : del
+            )
+          );
+          
+          // Update our working delivery object for next iteration
+          updatedDeliveryMap.set(delivery.id, { ...delivery, allocations: updatedAllocations });
+          
+          console.log(`Tracked allocation: ${quantityInKg}kg of ${ingredientName} (batch ${batchCode}) allocated to batch ${viewingBatch.batch_code}`);
+        } else {
+          console.log(`No delivery found with batch code ${batchCode} for ingredient ${ingredientName}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error tracking stock allocation:", error);
+    }
+  };
+
+  // Remove allocation from delivery when batch code is cleared
+  const removeStockAllocation = async (ingredientName, usedInBatchId) => {
+    try {
+      const updatedDeliveries = [];
+      
+      // Find all deliveries that might contain allocations for this ingredient and batch
+      const relevantDeliveries = deliveries.filter(del => 
+        del.allocations && 
+        del.allocations.some(alloc => 
+          alloc.ingredientName === ingredientName && 
+          alloc.allocatedToBatchId === usedInBatchId
+        )
+      );
+
+      // Remove allocations from each relevant delivery
+      for (const delivery of relevantDeliveries) {
+        const updatedAllocations = delivery.allocations.filter(alloc => 
+          !(alloc.ingredientName === ingredientName && alloc.allocatedToBatchId === usedInBatchId)
+        );
+
+        const deliveryRef = doc(db, "deliveries", delivery.id);
+        await updateDoc(deliveryRef, { allocations: updatedAllocations });
+        
+        const updatedDelivery = { ...delivery, allocations: updatedAllocations };
+        updatedDeliveries.push(updatedDelivery);
+        
+        console.log(`Removed allocation(s) for ${ingredientName} from batch ${viewingBatch.batch_code}`);
+      }
+      
+      // Update local deliveries state
+      if (updatedDeliveries.length > 0) {
+        setDeliveries(prevDeliveries => 
+          prevDeliveries.map(del => {
+            const updated = updatedDeliveries.find(upd => upd.id === del.id);
+            return updated || del;
+          })
+        );
+      }
+      
+      return updatedDeliveries;
+    } catch (error) {
+      console.error("Error removing stock allocation:", error);
+      return [];
+    }
+  };
+
   const handleInlineSave = async (type, id, field, value) => {
     setEditingField(null);
   
@@ -1209,6 +1407,14 @@ const formatDateDisplay = (dateStr) => {
         });
   
         await updateDoc(batchRef, { pizzas: updatedPizzas });
+        
+        // Track stock consumption when ingredient batch code is set
+        if (value && value.trim()) {
+          await trackStockConsumption(id, value, viewingBatch.id);
+        } else {
+          // Remove allocations when batch codes are cleared
+          await removeStockAllocation(id, viewingBatch.id);
+        }
       }
   
       if (type === "batch") {
@@ -1258,6 +1464,13 @@ const formatDateDisplay = (dateStr) => {
           }
 
           await updateDoc(batchRef, updateData);
+          
+          // Track stock consumption for starter ingredients
+          for (const [ingredientName, batchCode] of Object.entries(value)) {
+            if (batchCode && batchCode.trim()) {
+              await trackStockConsumption(ingredientName, batchCode, viewingBatch.id);
+            }
+          }
         } else if (field === "starter_batch_code") {
           // When starter batch is selected, also pull the rye and caputo codes
           let updateData = {
@@ -2552,39 +2765,92 @@ const formatDateDisplay = (dateStr) => {
                       <p><strong>{ingredientName}:</strong></p>
                       {editingField === `starter-ingredient-${ingredientName}` ? (
                         <div>
-                          <input
-                            type="text"
-                            list={`batch-code-suggestions-${ingredientName}`}
-                            value={editingValue}
-                            autoFocus
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => {
-                              handleInlineSave("batch", null, "ingredientBatchCodes", {
-                                ...viewingBatch.ingredientBatchCodes,
-                                [ingredientName]: editingValue
-                              });
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleInlineSave("batch", null, "ingredientBatchCodes", {
-                                  ...viewingBatch.ingredientBatchCodes,
-                                  [ingredientName]: editingValue
-                                });
+                          {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
+                            <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
+                              {deliveries
+                                .filter(delivery => 
+                                  delivery.batchCodes && 
+                                  delivery.batchCodes[ingredientName]
+                                )
+                                .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
+                                .map(delivery => {
+                                  const batchCode = delivery.batchCodes[ingredientName];
+                                  const isSelected = editingValue === batchCode;
+                                  
+                                  return (
+                                    <div
+                                      key={`${delivery.id}-${ingredientName}`}
+                                      className={`batchButton ${isSelected ? 'selected' : ''}`}
+                                      onClick={() => {
+                                        setEditingValue(batchCode);
+                                        handleInlineSave("batch", null, "ingredientBatchCodes", {
+                                          ...viewingBatch.ingredientBatchCodes,
+                                          [ingredientName]: batchCode
+                                        });
+                                      }}
+                                    >
+                                      <div className="batchLabel">
+                                        {batchCode}<br /> ({new Date(delivery.deliveryDate).toLocaleDateString('en-GB')})
+                                     </div>
+                                    </div>
+                                  );
+                                })
                               }
-                            }}
-                          />
-                          <datalist id={`batch-code-suggestions-${ingredientName}`}>
-                            {(batchCodeSuggestions[ingredientName] || [])
-                              .filter(code =>
-                                editingValue
-                                  ? code.toLowerCase().includes(editingValue.toLowerCase())
-                                  : true
-                              )
-                              .slice(0, 3)
-                              .map(code => (
-                                <option key={code} value={code} />
-                              ))}
-                          </datalist>
+                              <div
+                                className="batchButton"
+                                onClick={async () => {
+                                  setEditingValue('');
+                                  // Remove allocation from delivery
+                                  await removeStockAllocation(ingredientName, viewingBatch.id);
+                                  handleInlineSave("batch", null, "ingredientBatchCodes", {
+                                    ...viewingBatch.ingredientBatchCodes,
+                                    [ingredientName]: ''
+                                  });
+                                }}
+                                style={{ color: '#999', fontStyle: 'italic' }}
+                              >
+                                <div className="batchLabel">
+                                  Clear selection
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                list={`batch-code-suggestions-${ingredientName}`}
+                                value={editingValue}
+                                autoFocus
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onBlur={() => {
+                                  handleInlineSave("batch", null, "ingredientBatchCodes", {
+                                    ...viewingBatch.ingredientBatchCodes,
+                                    [ingredientName]: editingValue
+                                  });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleInlineSave("batch", null, "ingredientBatchCodes", {
+                                      ...viewingBatch.ingredientBatchCodes,
+                                      [ingredientName]: editingValue
+                                    });
+                                  }
+                                }}
+                                />
+                              <datalist id={`batch-code-suggestions-${ingredientName}`}>
+                                {(batchCodeSuggestions[ingredientName] || [])
+                                  .filter(code =>
+                                    editingValue
+                                      ? code.toLowerCase().includes(editingValue.toLowerCase())
+                                      : true
+                                  )
+                                  .slice(0, 3)
+                                  .map(code => (
+                                    <option key={code} value={code} />
+                                  ))}
+                              </datalist>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <p onClick={() => {
@@ -2679,6 +2945,49 @@ const formatDateDisplay = (dateStr) => {
             }}
           >
             {userRole == 'admin'? pizza.sixpack_cases || '0' : pizza.sixpack_cases}
+          </span>
+        )}
+      </div>
+    )}
+    
+    {/* 10pk Boxes field - only for dough balls, only show in unit mode if value isn't 0, and only for dough ball batches */}
+    {(
+      userRole !== 'unit' || 
+      (pizza.tenpack_boxes != null && Number(pizza.tenpack_boxes) > 0)
+    ) && viewingBatch.batch_type === 'dough balls' && (
+      <div style={{ margin: '4px 0 0 18px' }}>
+        <span className='pkCases'>10-pack boxes x</span>{" "}
+        {editingField === `pizza-${pizza.id}-tenpack-boxes` && userRole !== 'unit' ? (
+          <input
+            type="number"
+            className='inputNumber pkCases'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() =>
+              handleInlineSave("pizza", pizza.id, "tenpack_boxes", editingValue)
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleInlineSave("pizza", pizza.id, "tenpack_boxes", editingValue);
+              }
+            }}
+          />
+        ) : (
+          <span
+            className='pkCases'
+            onClick={() => {
+              if (userRole !== 'unit') {
+                setEditingField(`pizza-${pizza.id}-tenpack-boxes`);
+                setEditingValue(pizza.tenpack_boxes || "");
+              }
+            }}
+            style={{ 
+              cursor: userRole !== 'unit' ? 'pointer' : 'default',
+              textDecoration: userRole !== 'unit' ? 'underline' : 'none',
+            }}
+          >
+            {userRole == 'admin'? pizza.tenpack_boxes || '0' : pizza.tenpack_boxes}
           </span>
         )}
       </div>
@@ -3079,9 +3388,15 @@ const formatDateDisplay = (dateStr) => {
           )}
             </div>
           )}
-                    {/* Common sections for non-starter batches */}
+          {/* Common sections for non-starter batches */}
           {viewingBatch.batch_type !== 'starter' && (
             <div>
+              {/* <p className='carriedIngr'>
+                <strong className='carriedIngrLabel'>Prepped Ingredients Carried Forward: </strong>
+                <div 
+                  onClick={() => setCarriedIngExpanded(!carriedIngExpanded)}
+                > {" "}{carriedIngExpanded ? '⌄' : '>'}</div>
+              </p> */}
               <p className='pizzaNumbers'>
                 <strong>              
                   {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Numbers Complete:' : 'Pizzas Numbers Complete:'}</strong>{" "}
@@ -3099,176 +3414,29 @@ const formatDateDisplay = (dateStr) => {
                 />
               </p>
               
-              <h4>Batch Codes:</h4>
-              <div className='ingredientBatchcodeBox'>
-              <div className='ingredient container' style={{ 
-                color: viewingBatch.starter_batch_code ? 'inherit' : 'red',
-                marginBottom: !viewingBatch.starter_batch_code ? '14px' : undefined 
-              }}> 
-                <div className='starter'><strong>Starter: </strong></div>
-                {editingField === 'starter-batch' ? (
-                  <select
-                    value={editingValue}
-                    autoFocus
-                    onChange={(e) => setEditingValue(e.target.value)}
-                    onBlur={() => handleInlineSave("batch", null, "starter_batch_code", editingValue)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleInlineSave("batch", null, "starter_batch_code", editingValue);
-                      }
-                    }}
-                  >
-                    <option value="">Select starter batch...</option>
-                    {batches
-                      .filter(batch => batch.batch_type === 'starter')
-                      .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-                      .map(batch => (
-                        <option key={batch.id} value={batch.batch_code}>
-                          {batch.batch_code} - {formatDateDisplay(batch.batch_date)}
-                        </option>
-                      ))}
-                  </select>
-                ) : (
-                  <div className='starter'   onClick={() => {
-                    setEditingField('starter-batch');
-                    setEditingValue(viewingBatch.starter_batch_code || "");
-                  }}>
-                    {viewingBatch.starter_batch_code ? `# ${viewingBatch.starter_batch_code}` : <span style={{ color: 'red' }}>-</span>}
-                  </div>
-                )}
-                </div>
-                
-                {/* Display rye & caputo batch codes from selected starter */}
-                {viewingBatch.starter_batch_code && (() => {
-                  const selectedStarter = batches.find(batch => 
-                    batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
-                  );
-                  return selectedStarter ? (
-                    <div style={{ marginLeft: '20px', fontSize: '0.9em', marginTop: '5px' }}>
-                      {selectedStarter.ingredientBatchCodes?.['Rye Flour'] && (
-                        <div style={{ color: '#666' }}>
-                          Rye: #{selectedStarter.ingredientBatchCodes['Rye Flour']}
-                        </div>
-                      )}
-                      {selectedStarter.ingredientBatchCodes?.['Flour (Caputo Blue)'] && (
-                        <div style={{ color: '#666' }}>
-                          Caputo Blue: #{selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}
-                        </div>
-                      )}
-                      {selectedStarter.ingredientBatchCodes?.['Flour (Wholemeal)'] && (
-                        <div style={{ color: '#666' }}>
-                          Wholemeal: #{selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']}
-                        </div>
-                      )}
-                    </div>
-                  ) : null;
-                })()}
-          {sortIngredients(
-            ingredients.filter(ingredient =>
-              viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
-            )
-          ).map(ingredient => {
-              const batchCode = viewingBatch.pizzas
-                .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
-                .find(code => code);
-              const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
-              const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
-  
-              return (
-                <div key={ingredient.id} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
-                  <p>
-                    <strong>{ingredient.name}:</strong>
-                    {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Flour (Wholemeal)" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" && 
-                      ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
-                    }
-                  </p>
-                  {editingField === `ingredient-${ingredient.name}` ? (
-                    <div>
-                    <input
-                      type="text"
-                      list={`batch-code-suggestions-${ingredient.name}`}
-                      value={editingValue}
-                      autoFocus
-                      onChange={(e) => setEditingValue(e.target.value)}
-                      onBlur={() => handleInlineSave("ingredient", ingredient.name, null, editingValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleInlineSave("ingredient", ingredient.name, null, editingValue);
-                      }}
-                      />
-                  <datalist id={`batch-code-suggestions-${ingredient.name}`}>
-                    {(batchCodeSuggestions[ingredient.name] || [])
-                      .filter(code =>
-                        editingValue
-                          ? code.toLowerCase().includes(editingValue.toLowerCase())
-                          : true
-                      )
-                      .slice(0, 3) // Limit to 3 suggestions
-                      .map(code => (
-                        <option key={code} value={code} />
-                      ))}
-                  </datalist>
-                  </div>
-                  ) : (
-                    <p onClick={() => {
-                      setEditingField(`ingredient-${ingredient.name}`);
-                      setEditingValue(batchCode || "");
-                    }}>
-                      {batchCode ? `# ${batchCode}` : <span style={{ color: 'red' }}>-</span>}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-            
-            {/* Vacuum Bags - shown for all batches except starter */}
-            {viewingBatch.batch_type !== 'starter' && (() => {
-              const vacuumBagsBatchCode = viewingBatch.pizzas
-                .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
-                .find(code => code) || '';
-              
-              return (
-                <div key="vacuum-bags" className='ingredient container' style={{ color: vacuumBagsBatchCode ? 'inherit' : 'red' }}>
-                  <p>
-                    <strong>{viewingBatch.batch_type === 'dough balls' ? 'Packaging Bags:' : 'Vacuum Bags:'}</strong>
-                  </p>
-                  {editingField === `ingredient-Vacuum Bags` ? (
-                    <div>
-                    <input
-                      type="text"
-                      list={`batch-code-suggestions-Vacuum Bags`}
-                      value={editingValue}
-                      autoFocus
-                      onChange={(e) => setEditingValue(e.target.value)}
-                      onBlur={() => handleInlineSave("ingredient", "Vacuum Bags", null, editingValue)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleInlineSave("ingredient", "Vacuum Bags", null, editingValue);
-                      }}
-                      />
-                  <datalist id={`batch-code-suggestions-Vacuum Bags`}>
-                    {(batchCodeSuggestions['Vacuum Bags'] || [])
-                      .filter(code =>
-                        editingValue
-                          ? code.toLowerCase().includes(editingValue.toLowerCase())
-                          : true
-                      )
-                      .slice(0, 3)
-                      .map(code => (
-                        <option key={code} value={code} />
-                      ))}
-                  </datalist>
-                  </div>
-                  ) : (
-                    <p onClick={() => {
-                      setEditingField(`ingredient-Vacuum Bags`);
-                      setEditingValue(vacuumBagsBatchCode || "");
-                    }}>
-                      {vacuumBagsBatchCode ? `# ${vacuumBagsBatchCode}` : <span style={{ color: 'red' }}>-</span>}
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
-            </div>
+              <BatchCodesSection
+                viewingBatch={viewingBatch}
+                editingField={editingField}
+                setEditingField={setEditingField}
+                editingValue={editingValue}
+                setEditingValue={setEditingValue}
+                handleInlineSave={handleInlineSave}
+                batches={batches}
+                formatDateDisplay={formatDateDisplay}
+                sortIngredients={sortIngredients}
+                ingredients={ingredients}
+                calculateIngredientQuantities={calculateIngredientQuantities}
+                formatQuantity={formatQuantity}
+                shouldUseDeliveryDropdown={shouldUseDeliveryDropdown}
+                deliveries={deliveries}
+                selectedBatchInput={selectedBatchInput}
+                setSelectedBatchInput={setSelectedBatchInput}
+                batchQuantityInput={batchQuantityInput}
+                setBatchQuantityInput={setBatchQuantityInput}
+                batchCodeSuggestions={batchCodeSuggestions}
+                removeStockAllocation={removeStockAllocation}
+                userRole={userRole}
+              />
             </div>
           )}
           
@@ -3437,9 +3605,6 @@ const formatDateDisplay = (dateStr) => {
                     </div>
                   </div>
                 ))}
-                <div className='total'>
-                  <h6><strong>Total: </strong>{totalPizzas}</h6>
-                </div>
               </Col>
             </>
           )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs } from '@firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from '@firebase/firestore';
 import { db } from '../firebase/firebase';
 
 // Component to render visual quantity indicators
@@ -40,6 +40,7 @@ const QuantityVisual = ({ quantity, packaging, ingredientName, size = 'normal' }
           case 'sack': {
             const name = ingredientName.toLowerCase();
             if (name.includes('rye')) return '/Sack_rye.svg';
+            if (name.includes('wholemeal')) return '/Sack_rye.svg';
             if (name.includes('caputo') && name.includes('blue')) return '/Sack_blue.svg';
             if (name.includes('caputo') && name.includes('red')) return '/Sack_red.svg';
             return '/Sack_plain.svg'; // default sack
@@ -231,6 +232,8 @@ function InventoryView() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('name'); // name, quantity, expiry
   const [filterExpiring, setFilterExpiring] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [deliveriesData, setDeliveriesData] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -245,10 +248,29 @@ function InventoryView() {
 
         // Fetch deliveries
         const deliveriesSnapshot = await getDocs(collection(db, 'deliveries'));
-        const deliveriesData = deliveriesSnapshot.docs.map(doc => ({ 
+        const deliveriesDataTemp = deliveriesSnapshot.docs.map(doc => ({ 
           id: doc.id, 
           ...doc.data() 
         }));
+        setDeliveriesData(deliveriesDataTemp);
+        const deliveriesData = deliveriesDataTemp;
+
+        // Extract allocations from deliveries
+        const allocationsData = [];
+        deliveriesData.forEach(delivery => {
+          if (delivery.allocations && Array.isArray(delivery.allocations)) {
+            delivery.allocations.forEach(allocation => {
+              allocationsData.push({
+                ingredientName: allocation.ingredientName,
+                quantityUsed: allocation.quantityAllocated || 0,
+                ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+                allocatedToBatchId: allocation.allocatedToBatchId,
+                allocatedToBatchCode: allocation.allocatedToBatchCode,
+                allocationDate: allocation.allocationDate
+              });
+            });
+          }
+        });
 
         // Calculate inventory levels - start with all ingredients
         const inventoryMap = {};
@@ -281,20 +303,70 @@ function InventoryView() {
                 ? parseInt(delivery.quantities[goodName]) || 0 
                 : 0;
               
-              inventoryMap[goodName].totalQuantity += quantity;
+              // Add found stock to the quantity
+              const foundStock = delivery.foundStock && delivery.foundStock[goodName]
+                ? parseFloat(delivery.foundStock[goodName]) || 0
+                : 0;
               
-              if (quantity > 0) {
+              const totalQuantity = quantity + foundStock;
+              
+              inventoryMap[goodName].totalQuantity += totalQuantity;
+              
+              if (totalQuantity > 0) {
                 inventoryMap[goodName].batches.push({
                   batchCode: delivery.batchCodes?.[goodName] || 'N/A',
-                  quantity: quantity,
+                  quantity: totalQuantity,
+                  originalQuantity: quantity,
+                  foundStock: foundStock,
                   useByDate: delivery.useByDates?.[goodName] || null,
                   temperature: delivery.temperatures?.[goodName] || 'N/A',
                   deliveryDate: delivery.deliveryDate,
-                  supplier: delivery.supplier || 'Unknown'
+                  supplier: delivery.supplier || 'Unknown',
+                  deliveryId: delivery.id
                 });
               }
             });
           }
+        });
+
+        // Subtract allocations from inventory totals
+        allocationsData.forEach(allocation => {
+          const ingredientName = allocation.ingredientName;
+          const quantityUsed = allocation.quantityUsed || 0;
+          const batchCodeUsed = allocation.ingredientBatchCode;
+          
+          if (inventoryMap[ingredientName] && quantityUsed > 0) {
+            // First try to subtract from the specific batch that was used
+            const targetBatch = inventoryMap[ingredientName].batches.find(
+              batch => batch.batchCode === batchCodeUsed
+            );
+            
+            if (targetBatch && targetBatch.quantity >= quantityUsed) {
+              targetBatch.quantity -= quantityUsed;
+              inventoryMap[ingredientName].totalQuantity -= quantityUsed;
+            } else {
+              // If specific batch not found or insufficient, subtract from total
+              inventoryMap[ingredientName].totalQuantity = Math.max(0, 
+                inventoryMap[ingredientName].totalQuantity - quantityUsed
+              );
+              
+              // Distribute the subtraction across available batches
+              let remainingToSubtract = quantityUsed;
+              for (const batch of inventoryMap[ingredientName].batches) {
+                if (remainingToSubtract <= 0) break;
+                const subtractFromThisBatch = Math.min(batch.quantity, remainingToSubtract);
+                batch.quantity -= subtractFromThisBatch;
+                remainingToSubtract -= subtractFromThisBatch;
+              }
+            }
+          }
+        });
+
+        // Remove batches with zero quantity and filter out completely consumed ingredients
+        Object.keys(inventoryMap).forEach(ingredientName => {
+          inventoryMap[ingredientName].batches = inventoryMap[ingredientName].batches.filter(
+            batch => batch.quantity > 0
+          );
         });
 
         // Convert to array and sort batches by use-by date
@@ -318,6 +390,524 @@ function InventoryView() {
 
     fetchData();
   }, []);
+
+  // Close adjustment controls when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.batch-info') && !event.target.closest('.stock-adjustment-controls')) {
+        setSelectedBatch(null);
+      }
+    };
+
+    if (selectedBatch) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [selectedBatch]);
+
+  // Helper function to get increment amount for "add found" button
+  const getFoundIncrementAmount = (ingredientName) => {
+    const name = ingredientName.toLowerCase();
+    
+    if (name.includes('chillies')) return 0.25; // 250g
+    if (name.includes('rapeseed oil')) return 0.1; // 0.1 bottles
+    if (name.includes('red onion')) return 0.25; // 0.25 kg
+    if (name.includes('salt')) return 0.1; // 0.1 sacks
+    
+    return 1; // Default: 1 whole unit
+  };
+
+  const addFoundStock = async (ingredientName, batchCode) => {
+    try {
+      const amount = getFoundIncrementAmount(ingredientName);
+      
+      // Find the delivery that contains this batch
+      const targetDelivery = deliveriesData.find(delivery => 
+        delivery.batchCodes && delivery.batchCodes[ingredientName] === batchCode
+      );
+
+      if (!targetDelivery) {
+        alert('Delivery not found for this batch');
+        return;
+      }
+
+      // Update the delivery document with found stock
+      const deliveryRef = doc(db, 'deliveries', targetDelivery.id);
+      const currentFoundStock = targetDelivery.foundStock || {};
+      const newFoundStock = {
+        ...currentFoundStock,
+        [ingredientName]: (currentFoundStock[ingredientName] || 0) + amount
+      };
+
+      await updateDoc(deliveryRef, {
+        foundStock: newFoundStock,
+        stockAdjustments: [
+          ...(targetDelivery.stockAdjustments || []),
+          {
+            ingredientName,
+            batchCode,
+            adjustment: amount,
+            reason: 'Found stock',
+            date: new Date().toISOString(),
+            type: 'found'
+          }
+        ]
+      });
+
+      // Update local state
+      const updatedDeliveries = deliveriesData.map(del => 
+        del.id === targetDelivery.id 
+          ? { 
+              ...del, 
+              foundStock: newFoundStock,
+              stockAdjustments: [
+                ...(del.stockAdjustments || []),
+                {
+                  ingredientName,
+                  batchCode,
+                  adjustment: amount,
+                  reason: 'Found stock',
+                  date: new Date().toISOString(),
+                  type: 'found'
+                }
+              ]
+            }
+          : del
+      );
+      setDeliveriesData(updatedDeliveries);
+      
+      // Update local inventory state directly
+      setInventory(prevInventory => 
+        prevInventory.map(item => {
+          if (item.name === ingredientName) {
+            return {
+              ...item,
+              totalQuantity: item.totalQuantity + amount,
+              batches: item.batches.map(batch => {
+                if (batch.batchCode === batchCode) {
+                  return {
+                    ...batch,
+                    quantity: batch.quantity + amount,
+                    foundStock: (batch.foundStock || 0) + amount
+                  };
+                }
+                return batch;
+              })
+            };
+          }
+          return item;
+        })
+      );
+      
+    } catch (error) {
+      console.error('Error adding found stock:', error);
+      alert('Failed to add found stock. Please try again.');
+    }
+  };
+
+  const wasteOrSendSingleUnit = async (ingredientName, batchCode) => {
+    try {
+      // Find the delivery that contains this batch
+      const targetDelivery = deliveriesData.find(delivery => 
+        delivery.batchCodes && delivery.batchCodes[ingredientName] === batchCode
+      );
+
+      if (!targetDelivery) {
+        alert('Delivery not found for this batch');
+        return;
+      }
+
+      const currentFoundStock = targetDelivery.foundStock?.[ingredientName] || 0;
+      const deliveryRef = doc(db, 'deliveries', targetDelivery.id);
+
+      if (currentFoundStock >= 1) {
+        // Remove from found stock instead of creating allocation
+        const newFoundStock = {
+          ...targetDelivery.foundStock,
+          [ingredientName]: currentFoundStock - 1
+        };
+
+        await updateDoc(deliveryRef, {
+          foundStock: newFoundStock,
+          stockAdjustments: [
+            ...(targetDelivery.stockAdjustments || []),
+            {
+              ingredientName,
+              batchCode,
+              adjustment: -1,
+              reason: 'Wasted/sent from found stock',
+              date: new Date().toISOString(),
+              type: 'waste-found'
+            }
+          ]
+        });
+
+        // Update local deliveries state
+        const updatedDeliveries = deliveriesData.map(del => 
+          del.id === targetDelivery.id 
+            ? { 
+                ...del, 
+                foundStock: newFoundStock,
+                stockAdjustments: [
+                  ...(del.stockAdjustments || []),
+                  {
+                    ingredientName,
+                    batchCode,
+                    adjustment: -1,
+                    reason: 'Wasted/sent from found stock',
+                    date: new Date().toISOString(),
+                    type: 'waste-found'
+                  }
+                ]
+              }
+            : del
+        );
+        setDeliveriesData(updatedDeliveries);
+
+        // Update local inventory - reduce found stock and total quantity
+        setInventory(prevInventory => 
+          prevInventory.map(item => {
+            if (item.name === ingredientName) {
+              return {
+                ...item,
+                totalQuantity: Math.max(0, item.totalQuantity - 1),
+                batches: item.batches.map(batch => {
+                  if (batch.batchCode === batchCode) {
+                    return {
+                      ...batch,
+                      quantity: Math.max(0, batch.quantity - 1),
+                      foundStock: Math.max(0, (batch.foundStock || 0) - 1)
+                    };
+                  }
+                  return batch;
+                }).filter(batch => batch.quantity > 0)
+              };
+            }
+            return item;
+          })
+        );
+
+      } else {
+        // Create allocation like the "waste all" function
+        const allocation = {
+          ingredientName,
+          quantityAllocated: 1,
+          batchCode,
+          allocatedToBatchId: 'waste-restaurant',
+          allocatedToBatchCode: 'Waste/Restaurant Transfer',
+          allocationDate: new Date().toISOString(),
+          reason: 'Wasted or sent to restaurant (single unit)'
+        };
+
+        const updatedAllocations = [...(targetDelivery.allocations || []), allocation];
+
+        await updateDoc(deliveryRef, {
+          allocations: updatedAllocations,
+          stockAdjustments: [
+            ...(targetDelivery.stockAdjustments || []),
+            {
+              ingredientName,
+              batchCode,
+              adjustment: -1,
+              reason: 'Wasted or sent to restaurant (single unit)',
+              date: new Date().toISOString(),
+              type: 'waste-restaurant-single'
+            }
+          ]
+        });
+
+        // Update local deliveries state
+        const updatedDeliveries = deliveriesData.map(del => 
+          del.id === targetDelivery.id 
+            ? { 
+                ...del, 
+                allocations: updatedAllocations,
+                stockAdjustments: [
+                  ...(del.stockAdjustments || []),
+                  {
+                    ingredientName,
+                    batchCode,
+                    adjustment: -1,
+                    reason: 'Wasted or sent to restaurant (single unit)',
+                    date: new Date().toISOString(),
+                    type: 'waste-restaurant-single'
+                  }
+                ]
+              }
+            : del
+        );
+        setDeliveriesData(updatedDeliveries);
+
+        // Update local inventory - reduce total quantity
+        setInventory(prevInventory => 
+          prevInventory.map(item => {
+            if (item.name === ingredientName) {
+              return {
+                ...item,
+                totalQuantity: Math.max(0, item.totalQuantity - 1),
+                batches: item.batches.map(batch => {
+                  if (batch.batchCode === batchCode) {
+                    return {
+                      ...batch,
+                      quantity: Math.max(0, batch.quantity - 1)
+                    };
+                  }
+                  return batch;
+                }).filter(batch => batch.quantity > 0)
+              };
+            }
+            return item;
+          })
+        );
+      }
+      
+    } catch (error) {
+      console.error('Error processing single unit waste/restaurant transfer:', error);
+      alert('Failed to process single unit waste/restaurant transfer. Please try again.');
+    }
+  };
+
+  const wasteOrSendStock = async (ingredientName, batchCode, remainingQuantity) => {
+    try {
+      if (remainingQuantity <= 0) return;
+      
+      // Find the delivery that contains this batch
+      const targetDelivery = deliveriesData.find(delivery => 
+        delivery.batchCodes && delivery.batchCodes[ingredientName] === batchCode
+      );
+
+      if (!targetDelivery) {
+        alert('Delivery not found for this batch');
+        return;
+      }
+
+      // Create allocation for waste/restaurant transfer
+      const allocation = {
+        ingredientName,
+        quantityAllocated: remainingQuantity,
+        batchCode,
+        allocatedToBatchId: 'waste-restaurant',
+        allocatedToBatchCode: 'Waste/Restaurant Transfer',
+        allocationDate: new Date().toISOString(),
+        reason: 'Wasted or sent to restaurant'
+      };
+
+      const deliveryRef = doc(db, 'deliveries', targetDelivery.id);
+      const updatedAllocations = [...(targetDelivery.allocations || []), allocation];
+
+      await updateDoc(deliveryRef, {
+        allocations: updatedAllocations,
+        stockAdjustments: [
+          ...(targetDelivery.stockAdjustments || []),
+          {
+            ingredientName,
+            batchCode,
+            adjustment: -remainingQuantity,
+            reason: 'Wasted or sent to restaurant',
+            date: new Date().toISOString(),
+            type: 'waste-restaurant'
+          }
+        ]
+      });
+
+      // Update local state
+      const updatedDeliveries = deliveriesData.map(del => 
+        del.id === targetDelivery.id 
+          ? { 
+              ...del, 
+              allocations: updatedAllocations,
+              stockAdjustments: [
+                ...(del.stockAdjustments || []),
+                {
+                  ingredientName,
+                  batchCode,
+                  adjustment: -remainingQuantity,
+                  reason: 'Wasted or sent to restaurant',
+                  date: new Date().toISOString(),
+                  type: 'waste-restaurant'
+                }
+              ]
+            }
+          : del
+      );
+      setDeliveriesData(updatedDeliveries);
+      
+      // Update local inventory state directly
+      setInventory(prevInventory => 
+        prevInventory.map(item => {
+          if (item.name === ingredientName) {
+            return {
+              ...item,
+              totalQuantity: Math.max(0, item.totalQuantity - remainingQuantity),
+              batches: item.batches.map(batch => {
+                if (batch.batchCode === batchCode) {
+                  const newQuantity = Math.max(0, batch.quantity - remainingQuantity);
+                  return {
+                    ...batch,
+                    quantity: newQuantity
+                  };
+                }
+                return batch;
+              }).filter(batch => batch.quantity > 0) // Remove batches with 0 quantity
+            };
+          }
+          return item;
+        })
+      );
+      
+    } catch (error) {
+      console.error('Error processing waste/restaurant transfer:', error);
+      alert('Failed to process waste/restaurant transfer. Please try again.');
+    }
+  };
+
+  const refreshInventoryData = async () => {
+    try {
+      // Re-fetch and recalculate inventory
+      setLoading(true);
+      
+      // Fetch fresh deliveries data
+      const deliveriesSnapshot = await getDocs(collection(db, 'deliveries'));
+      const deliveriesData = deliveriesSnapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data() 
+      }));
+
+      // [Rest of the inventory calculation logic from the original useEffect]
+      // Extract allocations from deliveries
+      const allocationsData = [];
+      deliveriesData.forEach(delivery => {
+        if (delivery.allocations && Array.isArray(delivery.allocations)) {
+          delivery.allocations.forEach(allocation => {
+            allocationsData.push({
+              ingredientName: allocation.ingredientName,
+              quantityUsed: allocation.quantityAllocated || 0,
+              ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+              allocatedToBatchId: allocation.allocatedToBatchId,
+              allocatedToBatchCode: allocation.allocatedToBatchCode,
+              allocationDate: allocation.allocationDate
+            });
+          });
+        }
+      });
+
+      // Calculate inventory levels - start with all ingredients
+      const inventoryMap = {};
+      
+      // Initialize all ingredients with zero stock
+      ingredients.forEach(ingredient => {
+        inventoryMap[ingredient.name] = {
+          name: ingredient.name,
+          totalQuantity: 0,
+          batches: [],
+          packaging: ingredient.packaging || 'units'
+        };
+      });
+      
+      // Now populate stock levels from deliveries
+      deliveriesData.forEach(delivery => {
+        if (delivery.selectedGoods && Array.isArray(delivery.selectedGoods)) {
+          delivery.selectedGoods.forEach(goodName => {
+            // Create entry for ingredients not in ingredients collection but in deliveries
+            if (!inventoryMap[goodName]) {
+              inventoryMap[goodName] = {
+                name: goodName,
+                totalQuantity: 0,
+                batches: [],
+                packaging: ingredients.find(ing => ing.name === goodName)?.packaging || 'units'
+              };
+            }
+            
+              const quantity = delivery.quantities && delivery.quantities[goodName] 
+                ? parseInt(delivery.quantities[goodName]) || 0 
+                : 0;
+              
+              // Add found stock to the quantity
+              const foundStock = delivery.foundStock && delivery.foundStock[goodName]
+                ? parseFloat(delivery.foundStock[goodName]) || 0
+                : 0;
+              
+              const totalQuantity = quantity + foundStock;
+              
+              inventoryMap[goodName].totalQuantity += totalQuantity;
+              
+              if (totalQuantity > 0) {
+                inventoryMap[goodName].batches.push({
+                  batchCode: delivery.batchCodes?.[goodName] || 'N/A',
+                  quantity: totalQuantity,
+                  originalQuantity: quantity,
+                  foundStock: foundStock,
+                  useByDate: delivery.useByDates?.[goodName] || null,
+                  temperature: delivery.temperatures?.[goodName] || 'N/A',
+                  deliveryDate: delivery.deliveryDate,
+                  supplier: delivery.supplier || 'Unknown',
+                  deliveryId: delivery.id
+                });
+              }
+          });
+        }
+      });
+
+      // Subtract allocations from inventory totals
+      allocationsData.forEach(allocation => {
+        const ingredientName = allocation.ingredientName;
+        const quantityUsed = allocation.quantityUsed || 0;
+        const batchCodeUsed = allocation.ingredientBatchCode;
+        
+        if (inventoryMap[ingredientName] && quantityUsed > 0) {
+          // First try to subtract from the specific batch that was used
+          const targetBatch = inventoryMap[ingredientName].batches.find(
+            batch => batch.batchCode === batchCodeUsed
+          );
+          
+          if (targetBatch && targetBatch.quantity >= quantityUsed) {
+            targetBatch.quantity -= quantityUsed;
+            inventoryMap[ingredientName].totalQuantity -= quantityUsed;
+          } else {
+            // If specific batch not found or insufficient, subtract from total
+            inventoryMap[ingredientName].totalQuantity = Math.max(0, 
+              inventoryMap[ingredientName].totalQuantity - quantityUsed
+            );
+            
+            // Distribute the subtraction across available batches
+            let remainingToSubtract = quantityUsed;
+            for (const batch of inventoryMap[ingredientName].batches) {
+              if (remainingToSubtract <= 0) break;
+              const subtractFromThisBatch = Math.min(batch.quantity, remainingToSubtract);
+              batch.quantity -= subtractFromThisBatch;
+              remainingToSubtract -= subtractFromThisBatch;
+            }
+          }
+        }
+      });
+
+      // Remove batches with zero quantity and filter out completely consumed ingredients
+      Object.keys(inventoryMap).forEach(ingredientName => {
+        inventoryMap[ingredientName].batches = inventoryMap[ingredientName].batches.filter(
+          batch => batch.quantity > 0
+        );
+      });
+
+      // Convert to array and sort batches by use-by date
+      const inventoryArray = Object.values(inventoryMap).map(item => ({
+        ...item,
+        batches: item.batches.sort((a, b) => {
+          if (!a.useByDate) return 1;
+          if (!b.useByDate) return -1;
+          return new Date(a.useByDate) - new Date(b.useByDate);
+        }),
+        earliestExpiry: item.batches.find(batch => batch.useByDate)?.useByDate || null
+      }));
+
+      setInventory(inventoryArray);
+      setDeliveriesData(deliveriesData);
+      
+    } catch (error) {
+      console.error("Error refreshing inventory data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -420,24 +1010,102 @@ function InventoryView() {
                       const isExpiredBatch = isExpired(batch.useByDate);
                       
                       return (
-                        <div className='batch-info'>
+                        <div 
+                          key={`${batch.batchCode}-${index}`}
+                          className='batch-info' 
+                          style={{ position: 'relative', cursor: 'pointer' }}
+                          onClick={() => setSelectedBatch({
+                            ingredientName: item.name,
+                            batchCode: batch.batchCode,
+                            currentQuantity: batch.quantity,
+                            packaging: item.packaging,
+                            deliveryId: batch.deliveryId
+                          })}
+                        >
                          
                         <div 
-                          key={`${batch.batchCode}-${index}`} 
                           className={`batch-item ${isExpiredBatch ? 'expired' : isExpiringBatch ? 'expiring' : ''}`}
-                        ><div className="batch-code">Batch: {batch.batchCode}</div>
-                              <div className="batch-quantity">{batch.quantity} {item.packaging}</div>
-                            <div className="batch-details">
-                              <div className="use-by">
-                                Use by: {formatDate(batch.useByDate)}
-                                {isExpiredBatch && <div className="status-tag expired">EXPIRED</div>}
-                                {isExpiringBatch && !isExpiredBatch && <div className="status-tag expiring">EXPIRING</div>}
+                        >
+                          <div className="batch-code">Batch: {batch.batchCode}</div>
+                          <div className="batch-quantity">
+                            {batch.quantity} {item.packaging}
+                            {batch.foundStock > 0 && (
+                              <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
+                                (Original: {batch.originalQuantity} + Found: {batch.foundStock})
                               </div>
-                              <div className="supplier">Supplier: {batch.supplier}</div>
+                            )}
+                          </div>
+                          <div className="batch-details">
+                            <div className="use-by">
+                              Use by: {formatDate(batch.useByDate)}
+                              {isExpiredBatch && <div className="status-tag expired">EXPIRED</div>}
+                              {isExpiringBatch && !isExpiredBatch && <div className="status-tag expiring">EXPIRING</div>}
                             </div>
-                          
+                            <div className="supplier">Supplier: {batch.supplier}</div>
+                          </div>
                         </div>
+                        
                         <QuantityVisual quantity={batch.quantity} packaging={item.packaging} ingredientName={item.name} size="small" />
+                        
+                        {selectedBatch && 
+                         selectedBatch.ingredientName === item.name && 
+                         selectedBatch.batchCode === batch.batchCode && (
+                          <div className="stock-adjustment-controls" >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addFoundStock(item.name, batch.batchCode);
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#4CAF50',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                + Add Found ({getFoundIncrementAmount(item.name)} {item.packaging})
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  wasteOrSendSingleUnit(item.name, batch.batchCode);
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#FF9800',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                − Waste (1 {item.packaging})
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  wasteOrSendStock(item.name, batch.batchCode, batch.quantity);
+                                }}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#f44336',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                − Waste Remaining ({batch.quantity} {item.packaging})
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         </div>
                       );
                     })}

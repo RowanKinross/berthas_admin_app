@@ -113,6 +113,9 @@ textarea.input {
 .ingredientBatchCode {
   width: 250px;
 }
+.ingredient {
+  align-items: start
+}
 
 .pizzaDisplayTitles{
   display: flex;
@@ -282,6 +285,50 @@ textarea.input {
   color: var(--darkGrey);
   font-style: italic;
 }
+
+/* Ingredient Batch Buttons */
+.selectedBatch, .notSelectedBatch {
+  padding: 5px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 10px;
+}
+.selectedBatch {
+  background-color: var(--dark);
+  color: var(--pale);
+  border: none;
+}
+.notSelectedBatch{
+  border: 2px dashed var(--darkGrey);
+  background-color: transparent;
+  color: var(--dark);
+}
+.qtyUsed {
+  display: flex;
+  justify-content: space-between;
+}
+.qtyUsedLabel {
+  padding-right: 5px;
+}
+.starter {
+  padding-bottom: 10px;
+}
+.autoFillButton {
+  font-size: 10px;
+  padding: 5px;
+}
+/* Ingredients Carried Forward */
+.carriedIngr {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0px;
+  margin: 0;
+  cursor: pointer;
+}
+.carriedIngrLabel {
+  margin-right: 5px;
+}
+
 
 .deleteAction {
   
