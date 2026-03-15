@@ -101,6 +101,15 @@ function BatchCodesSection({
 
     // Process each ingredient
     for (const ingredient of availableIngredients) {
+      // Check if this ingredient already has batch codes assigned
+      const existingBatchCode = viewingBatch.pizzas
+        .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
+        .find(code => code && code.trim());
+
+      if (existingBatchCode) {
+        continue; // Skip ingredients that already have batch codes assigned
+      }
+
       const ingredientQuantity = ingredientQuantities[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
       const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
 

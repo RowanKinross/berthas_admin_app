@@ -1411,6 +1411,9 @@ const formatDateDisplay = (dateStr) => {
         // Track stock consumption when ingredient batch code is set
         if (value && value.trim()) {
           await trackStockConsumption(id, value, viewingBatch.id);
+        } else {
+          // Remove allocations when batch codes are cleared
+          await removeStockAllocation(id, viewingBatch.id);
         }
       }
   
