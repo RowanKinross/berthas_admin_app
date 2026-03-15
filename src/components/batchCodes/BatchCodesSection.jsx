@@ -129,7 +129,23 @@ function BatchCodesSection({
                           return (
                             <div
                               key={`${delivery.id}-${ingredient.name}`}
-                              className={`${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}`}
+                              className={`batchSelect ${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}`}
+                              onClick={(e) => {
+                                // Don't trigger if clicking on input or qty used area
+                                if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
+                                
+                                if (isSelected) {
+                                  // Deselect the batch
+                                  setEditingValue("");
+                                  handleInlineSave("ingredient", ingredient.name, null, "");
+                                } else {
+                                  // Select the batch and set quantity to ingredient needed
+                                  setEditingValue(batchCode);
+                                  setBatchQuantityInput(numberOfUnits.toFixed(2));
+                                  handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                }
+                              }}
+                              style={{ cursor: 'pointer' }}
                             >
                               <div className="batchLabel">
                                 <div>Batch Code: {batchCode} </div> 
