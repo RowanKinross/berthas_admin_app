@@ -154,7 +154,7 @@ function DeliveryHistory() {
 
   return (
     <div className="delivery-history">
-      <h3>Delivery History</h3>
+      <h3 className='deliveryHistoryTitle'>Delivery History</h3>
       <div className="deliveries-list">
         {deliveries.map(delivery => (
           <div key={delivery.id} className="delivery-card">
@@ -233,8 +233,8 @@ function DeliveryHistory() {
                 
                 {/* Allocations section */}
                 {delivery.allocations && delivery.allocations.length > 0 && (
-                  <div className="allocations-section">
-                    <h5 style={{ marginTop: '20px', marginBottom: '10px', color: '#666' }}>Stock Allocations:</h5>
+                  <div className="allocationsSection">
+                    <h5 className="stockAllocationsTitle"style={{ }}><strong>→</strong> Allocations:</h5>
                     <div className="allocations-details">
                       {delivery.selectedGoods?.map(good => {
                         const allocations = delivery.allocations.filter(alloc => alloc.ingredientName === good);
@@ -255,11 +255,6 @@ function DeliveryHistory() {
                               fontSize: '0.9em',
                               fontWeight: 'bold'
                             }}>
-                              <PackagingIcon 
-                                packaging={getIngredientData(good)?.packaging || 'box'} 
-                                ingredientName={good} 
-                                size="small" 
-                              />
                               {good}
                               <span style={{ 
                                 marginLeft: '10px', 
@@ -280,7 +275,7 @@ function DeliveryHistory() {
                                   fontSize: '0.8em'
                                 }}>
                                   <div className="allocation-batch">
-                                    Batch: {alloc.allocatedToBatchCode || 'N/A'}
+                                     •  Batch: {alloc.allocatedToBatchCode || 'N/A'}
                                   </div>
                                   <div className="allocation-quantity" style={{ fontWeight: 'bold' }}>
                                     {(alloc.quantityAllocated || 0).toFixed(1)} {getIngredientData(good)?.packaging || 'units'}

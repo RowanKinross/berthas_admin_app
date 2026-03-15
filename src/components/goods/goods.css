@@ -283,16 +283,29 @@
 /* Delivery History Styles */
 .delivery-history {
   padding: 20px;
+  text-align: left;
+}
+.deliveryHistoryTitle {
+  margin-bottom: 30px;
+}
+.stockAllocationsTitle {
+  text-align: left;
+  margin-bottom: 10px;
+}
+.allocationsSection {
+  border-radius: 8px;
+  margin: 10px;
+  padding: 10px 30px;
+  background-color: var(--pale);
 }
 
 .delivery-card {
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
+  border: 1px solid var(--bertha);
+  border-radius: 10px;
   margin-bottom: 15px;
   background: white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
 .delivery-header {
   padding: 15px;
   cursor: pointer;
@@ -300,38 +313,33 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #f1f3f4;
+  background-color: var(--bertha);
 }
-
 .delivery-header:hover {
-  background: #f8f9fa;
+  border-radius: 10px 10px 0 0 ;
 }
-
 .delivery-summary h4 {
   margin: 0 0 8px 0;
   color: #333;
   text-align: left;
 }
-
 .delivery-meta {
   display: flex;
   gap: 15px;
   color: #6c757d;
   font-size: 14px;
-
 }
-
 .expand-icon {
   transition: transform 0.3s ease;
   font-size: 14px;
 }
-
 .expand-icon.expanded {
   transform: rotate(180deg);
 }
-
 .delivery-details {
   padding: 15px;
-  border-top: 1px solid #f1f3f4;
+  background: var(--paleGrey);
+  border-radius: 0 0 10px 10px;
 }
 
 .delivery-info {
@@ -363,10 +371,11 @@
 
 
 .good-item {
+  display: flex;
+  justify-content: space-between;
   border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 12px;
-  background: #f8f9fa;
 }
 
 .good-name {
@@ -393,7 +402,7 @@
 
 .detail-value {
   font-weight: 500;
-  padding-left: 5px;
+  padding: 0 15px 0 5px;
 }
 
 .no-deliveries {
