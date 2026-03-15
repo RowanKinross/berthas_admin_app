@@ -120,7 +120,7 @@ function BatchCodesSection({
                         .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
                         .map(delivery => {
                           const batchCode = delivery.batchCodes[ingredient.name];
-                          const isSelected = editingValue === batchCode;
+                          const isSelected = editingValue.split(',').map(code => code.trim()).includes(batchCode);
 
                           const batchInputKey = `${delivery.id}-${ingredient.name}`;
                           const showInput = selectedBatchInput === batchInputKey;
@@ -134,16 +134,23 @@ function BatchCodesSection({
                                 // Don't trigger if clicking on input or qty used area
                                 if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
                                 
+                                const currentBatches = editingValue ? editingValue.split(',').map(code => code.trim()) : [];
+                                
                                 if (isSelected) {
-                                  // Deselect the batch
-                                  setEditingValue("");
-                                  handleInlineSave("ingredient", ingredient.name, null, "");
+                                  // Deselect this batch - remove it from the list
+                                  const updatedBatches = currentBatches.filter(code => code !== batchCode);
+                                  const newValue = updatedBatches.join(', ');
+                                  setEditingValue(newValue);
+                                  handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 } else {
-                                  // Select the batch and set quantity to ingredient needed
-                                  setEditingValue(batchCode);
+                                  // Select this batch - add it to the list
+                                  const updatedBatches = [...currentBatches, batchCode];
+                                  const newValue = updatedBatches.join(', ');
+                                  setEditingValue(newValue);
                                   setBatchQuantityInput(numberOfUnits.toFixed(2));
-                                  handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                  handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 }
+                                setEditingField(`ingredient-${ingredient.name}`); // Keep editing mode open
                               }}
                               style={{ cursor: 'pointer' }}
                             >
@@ -247,7 +254,13 @@ function BatchCodesSection({
                   setEditingField(`ingredient-${ingredient.name}`);
                   setEditingValue(batchCode || "");
                 }}>
-                  {batchCode ? <div className='selectedBatch'>Batch Code: {batchCode}</div> : <span style={{ color: 'red' }}>+</span>}
+                  {batchCode ? (
+                    <div className='selectedBatch'>
+                      Batch Code{batchCode.includes(',') ? 's' : ''}: {batchCode}
+                    </div>
+                  ) : (
+                    <span style={{ color: 'red' }}>+</span>
+                  )}
                 </p>
               )}
             </div>
