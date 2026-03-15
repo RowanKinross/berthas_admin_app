@@ -2757,12 +2757,18 @@ const formatDateDisplay = (dateStr) => {
               
               <h4>Ingredient Batch Codes:</h4>
               <div className='ingredientBatchcodeBox'>
-                {['Flour (Wholemeal)', 'Flour (Caputo Blue)'].map(ingredientName => {
+                {[
+                  { name: 'Flour (Wholemeal)', quantity: starterMixTotals.rye },
+                  { name: 'Flour (Caputo Blue)', quantity: starterMixTotals.caputo }
+                ].map(({ name: ingredientName, quantity }) => {
                   const batchCode = viewingBatch.ingredientBatchCodes?.[ingredientName] || '';
                   
                   return (
                     <div key={ingredientName} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
-                      <p><strong>{ingredientName}:</strong></p>
+                      <p>
+                        <strong>{ingredientName}:</strong>
+                        {quantity > 0 && ` ${quantity.toLocaleString()}g`}
+                      </p>
                       {editingField === `starter-ingredient-${ingredientName}` ? (
                         <div>
                           {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
@@ -2796,23 +2802,6 @@ const formatDateDisplay = (dateStr) => {
                                   );
                                 })
                               }
-                              <div
-                                className="batchButton"
-                                onClick={async () => {
-                                  setEditingValue('');
-                                  // Remove allocation from delivery
-                                  await removeStockAllocation(ingredientName, viewingBatch.id);
-                                  handleInlineSave("batch", null, "ingredientBatchCodes", {
-                                    ...viewingBatch.ingredientBatchCodes,
-                                    [ingredientName]: ''
-                                  });
-                                }}
-                                style={{ color: '#999', fontStyle: 'italic' }}
-                              >
-                                <div className="batchLabel">
-                                  Clear selection
-                                </div>
-                              </div>
                             </div>
                           ) : (
                             <>
@@ -2857,7 +2846,7 @@ const formatDateDisplay = (dateStr) => {
                           setEditingField(`starter-ingredient-${ingredientName}`);
                           setEditingValue(batchCode || "");
                         }}>
-                          {batchCode ? `# ${batchCode}` : <span style={{ color: 'red' }}>-</span>}
+                          {batchCode ? <div className='selectedBatch'>batchcode: {batchCode}</div> : <span style={{ color: 'red' }}>+</span>}
                         </p>
                       )}
                     </div>
