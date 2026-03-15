@@ -587,11 +587,12 @@ function BatchCodes() {
     "Rapeseed Oil",
     "Vegan Mozzarella",
     "Mozzarella",
-    "Vacuum Bags"
+    "Vacuum Bags",
+    "Dough Ball Pouches"
   ];
   const sortIngredients = (ingredients) => {
     // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
-    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella", "Vacuum Bags"]);
+    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella", "Vacuum Bags", "Dough Ball Pouches"]);
     const startSet = new Set(["Flour (Caputo Blue)", "Flour (Wholemeal)", "Salt", "Rye Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
@@ -2894,6 +2895,49 @@ const formatDateDisplay = (dateStr) => {
             }}
           >
             {userRole == 'admin'? pizza.sixpack_cases || '0' : pizza.sixpack_cases}
+          </span>
+        )}
+      </div>
+    )}
+    
+    {/* 10pk Boxes field - only for dough balls, only show in unit mode if value isn't 0, and only for dough ball batches */}
+    {(
+      userRole !== 'unit' || 
+      (pizza.tenpack_boxes != null && Number(pizza.tenpack_boxes) > 0)
+    ) && viewingBatch.batch_type === 'dough balls' && (
+      <div style={{ margin: '4px 0 0 18px' }}>
+        <span className='pkCases'>10-pack boxes x</span>{" "}
+        {editingField === `pizza-${pizza.id}-tenpack-boxes` && userRole !== 'unit' ? (
+          <input
+            type="number"
+            className='inputNumber pkCases'
+            value={editingValue}
+            autoFocus
+            onChange={(e) => setEditingValue(e.target.value)}
+            onBlur={() =>
+              handleInlineSave("pizza", pizza.id, "tenpack_boxes", editingValue)
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleInlineSave("pizza", pizza.id, "tenpack_boxes", editingValue);
+              }
+            }}
+          />
+        ) : (
+          <span
+            className='pkCases'
+            onClick={() => {
+              if (userRole !== 'unit') {
+                setEditingField(`pizza-${pizza.id}-tenpack-boxes`);
+                setEditingValue(pizza.tenpack_boxes || "");
+              }
+            }}
+            style={{ 
+              cursor: userRole !== 'unit' ? 'pointer' : 'default',
+              textDecoration: userRole !== 'unit' ? 'underline' : 'none',
+            }}
+          >
+            {userRole == 'admin'? pizza.tenpack_boxes || '0' : pizza.tenpack_boxes}
           </span>
         )}
       </div>
