@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Col, Row, Form } from 'react-bootstrap';
 import MixCalculator from './MixCalculator';
 import ImageCropModal from './ImageCropModal';
+import BatchCodesSection from './BatchCodesSection';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
 
@@ -585,11 +586,12 @@ function BatchCodes() {
     "Ham",
     "Rapeseed Oil",
     "Vegan Mozzarella",
-    "Mozzarella"
+    "Mozzarella",
+    "Vacuum Bags"
   ];
   const sortIngredients = (ingredients) => {
     // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
-    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella"]);
+    const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella", "Vacuum Bags"]);
     const startSet = new Set(["Flour (Caputo Blue)", "Flour (Wholemeal)", "Salt", "Rye Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
@@ -3292,7 +3294,7 @@ const formatDateDisplay = (dateStr) => {
           )}
             </div>
           )}
-                    {/* Common sections for non-starter batches */}
+          {/* Common sections for non-starter batches */}
           {viewingBatch.batch_type !== 'starter' && (
             <div>
               <p className='pizzaNumbers'>
@@ -3312,300 +3314,28 @@ const formatDateDisplay = (dateStr) => {
                 />
               </p>
               
-              <h4>Batch Codes:</h4>
-              <div className='ingredientBatchcodeBox'>
-              <div className='ingredient container' style={{ 
-                color: viewingBatch.starter_batch_code ? 'inherit' : 'red',
-                marginBottom: !viewingBatch.starter_batch_code ? '14px' : undefined 
-              }}> 
-                <div className='starter'><strong>Starter: </strong></div>
-                {editingField === 'starter-batch' ? (
-                  <select
-                    value={editingValue}
-                    autoFocus
-                    onChange={(e) => setEditingValue(e.target.value)}
-                    onBlur={() => handleInlineSave("batch", null, "starter_batch_code", editingValue)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleInlineSave("batch", null, "starter_batch_code", editingValue);
-                      }
-                    }}
-                  >
-                    <option value="">Select starter batch...</option>
-                    {batches
-                      .filter(batch => batch.batch_type === 'starter')
-                      .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-                      .map(batch => (
-                        <option key={batch.id} value={batch.batch_code}>
-                          {batch.batch_code} - {formatDateDisplay(batch.batch_date)}
-                        </option>
-                      ))}
-                  </select>
-                ) : (
-                  <div className='starter'   onClick={() => {
-                    setEditingField('starter-batch');
-                    setEditingValue(viewingBatch.starter_batch_code || "");
-                  }}>
-                    {viewingBatch.starter_batch_code ? `# ${viewingBatch.starter_batch_code}` : <span style={{ color: 'red' }}>-</span>}
-                  </div>
-                )}
-                </div>
-                
-                {/* Display rye & caputo batch codes from selected starter */}
-                {viewingBatch.starter_batch_code && (() => {
-                  const selectedStarter = batches.find(batch => 
-                    batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
-                  );
-                  return selectedStarter ? (
-                    <div style={{ marginLeft: '20px', fontSize: '0.9em', marginTop: '5px' }}>
-                      {selectedStarter.ingredientBatchCodes?.['Rye Flour'] && (
-                        <div style={{ color: '#666' }}>
-                          Rye: #{selectedStarter.ingredientBatchCodes['Rye Flour']}
-                        </div>
-                      )}
-                      {selectedStarter.ingredientBatchCodes?.['Flour (Caputo Blue)'] && (
-                        <div style={{ color: '#666' }}>
-                          Caputo Blue: #{selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}
-                        </div>
-                      )}
-                      {selectedStarter.ingredientBatchCodes?.['Flour (Wholemeal)'] && (
-                        <div style={{ color: '#666' }}>
-                          Wholemeal: #{selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']}
-                        </div>
-                      )}
-                    </div>
-                  ) : null;
-                })()}
-          {sortIngredients(
-            ingredients.filter(ingredient =>
-              viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
-            )
-          ).map(ingredient => {
-              const batchCode = viewingBatch.pizzas
-                .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
-                .find(code => code);
-              const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
-              const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
-  
-              return (
-                <div key={ingredient.id} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
-                  <p>
-                    <strong>{ingredient.name}:</strong>
-                    {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Flour (Wholemeal)" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" && 
-                      ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
-                    }
-                  </p>
-                  {editingField === `ingredient-${ingredient.name}` ? (
-                    <div>
-                      {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
-                        <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
-                          {deliveries
-                            .filter(delivery => 
-                              delivery.batchCodes && 
-                              delivery.batchCodes[ingredient.name]
-                            )
-                            .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
-                            .map(delivery => {
-                              const batchCode = delivery.batchCodes[ingredient.name];
-                              const isSelected = editingValue === batchCode;
-                              
-                              const batchInputKey = `${delivery.id}-${ingredient.name}`;
-                              const showInput = selectedBatchInput === batchInputKey;
-                              const isSelectedOrShowingInput = isSelected || showInput;
-                              
-                              return (
-                                <div
-                                  key={`${delivery.id}-${ingredient.name}`}
-                                  className={`batchButton ${isSelectedOrShowingInput ? 'selected' : ''}`}
-                                  onClick={() => {
-                                    if (showInput) {
-                                      // If already showing input, handle the save
-                                      setEditingValue(batchCode);
-                                      handleInlineSave("ingredient", ingredient.name, null, batchCode);
-                                      setSelectedBatchInput(null);
-                                      setBatchQuantityInput('');
-                                    } else {
-                                      // Show input and pre-fill with ingredient quantity
-                                      setSelectedBatchInput(batchInputKey);
-                                      setBatchQuantityInput(numberOfUnits.toFixed(2));
-                                    }
-                                  }}
-                                >
-                                  <div className="batchLabel">
-                                    {batchCode} <br /> delivered: <br/> {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')}
-                                  </div>
-                                  {showInput && (
-                                    <div style={{ marginTop: '8px', padding: '5px 0' }}>
-                                      <input
-                                        type="number"
-                                        value={batchQuantityInput}
-                                        onChange={(e) => setBatchQuantityInput(e.target.value)}
-                                        placeholder="Quantity"
-                                        style={{
-                                          maxWidth: '50px',
-                                          padding: '4px 8px',
-                                          borderRadius: '4px',
-                                          border: '1px solid #ccc',
-                                          fontSize: '12px'
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onKeyDown={(e) => {
-                                          e.stopPropagation();
-                                          if (e.key === 'Enter') {
-                                            setEditingValue(batchCode);
-                                            handleInlineSave("ingredient", ingredient.name, null, batchCode);
-                                            setSelectedBatchInput(null);
-                                            setBatchQuantityInput('');
-                                          }
-                                          if (e.key === 'Escape') {
-                                            setSelectedBatchInput(null);
-                                            setBatchQuantityInput('');
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
-                          }
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            type="text"
-                            list={`batch-code-suggestions-${ingredient.name}`}
-                            value={editingValue}
-                            autoFocus
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => handleInlineSave("ingredient", ingredient.name, null, editingValue)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleInlineSave("ingredient", ingredient.name, null, editingValue);
-                            }}
-                          />
-                          <datalist id={`batch-code-suggestions-${ingredient.name}`}>
-                            {(batchCodeSuggestions[ingredient.name] || [])
-                              .filter(code =>
-                                editingValue
-                                  ? code.toLowerCase().includes(editingValue.toLowerCase())
-                                  : true
-                              )
-                              .slice(0, 3) // Limit to 3 suggestions
-                              .map(code => (
-                                <option key={code} value={code} />
-                              ))}
-                          </datalist>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <p onClick={() => {
-                      setEditingField(`ingredient-${ingredient.name}`);
-                      setEditingValue(batchCode || "");
-                    }}>
-                      {batchCode ? `# ${batchCode}` : <span style={{ color: 'red' }}>+</span>}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-            
-            {/* Vacuum Bags - shown for all batches except starter */}
-            {viewingBatch.batch_type !== 'starter' && (() => {
-              const vacuumBagsBatchCode = viewingBatch.pizzas
-                .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
-                .find(code => code) || '';
-              
-              return (
-                <div key="vacuum-bags" className='ingredient container' style={{ color: vacuumBagsBatchCode ? 'inherit' : 'red' }}>
-                  <p>
-                    <strong>{viewingBatch.batch_type === 'dough balls' ? 'Packaging Bags:' : 'Vacuum Bags:'}</strong>
-                  </p>
-                  {editingField === `ingredient-Vacuum Bags` ? (
-                    <div>
-                      {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
-                        <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
-                          {deliveries
-                            .filter(delivery => 
-                              delivery.batchCodes && 
-                              delivery.batchCodes['Vacuum Bags']
-                            )
-                            .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
-                            .map(delivery => {
-                              const batchCode = delivery.batchCodes['Vacuum Bags'];
-                              const isSelected = editingValue === batchCode;
-                              
-                              return (
-                                <div
-                                  key={`${delivery.id}-VacuumBags`}
-                                  className={`batchButton ${isSelected ? 'selected' : ''}`}
-                                  onClick={() => {
-                                    setEditingValue(batchCode);
-                                    handleInlineSave("ingredient", "Vacuum Bags", null, batchCode);
-                                  }}
-                                >
-                                  <div className="batchLabel">
-                                    {batchCode} <br /> ({new Date(delivery.deliveryDate).toLocaleDateString('en-GB')})
-                                  </div>
-                                </div>
-                              );
-                            })
-                          }
-                          <div
-                            className="batchButton"
-                            onClick={async () => {
-                              setEditingValue('');
-                              // Remove allocation from delivery
-                              await removeStockAllocation("Vacuum Bags", viewingBatch.id);
-                              handleInlineSave("ingredient", "Vacuum Bags", null, '');
-                            }}
-                            style={{ color: '#999', fontStyle: 'italic' }}
-                          >
-                            <div className="batchLabel">
-                              Clear selection
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            type="text"
-                            list={`batch-code-suggestions-Vacuum Bags`}
-                            value={editingValue}
-                            autoFocus
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => handleInlineSave("ingredient", "Vacuum Bags", null, editingValue)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleInlineSave("ingredient", "Vacuum Bags", null, editingValue);
-                            }}
-                          />
-                          <datalist id={`batch-code-suggestions-Vacuum Bags`}>
-                            {(batchCodeSuggestions['Vacuum Bags'] || [])
-                              .filter(code =>
-                                editingValue
-                                  ? code.toLowerCase().includes(editingValue.toLowerCase())
-                                  : true
-                              )
-                              .slice(0, 3)
-                              .map(code => (
-                                <option key={code} value={code} />
-                              ))}
-                          </datalist>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <p onClick={() => {
-                      setEditingField(`ingredient-Vacuum Bags`);
-                      setEditingValue(vacuumBagsBatchCode || "");
-                    }}>
-                      {vacuumBagsBatchCode ? `# ${vacuumBagsBatchCode}` : <span style={{ color: 'red' }}>-</span>}
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
-            </div>
+              <BatchCodesSection
+                viewingBatch={viewingBatch}
+                editingField={editingField}
+                setEditingField={setEditingField}
+                editingValue={editingValue}
+                setEditingValue={setEditingValue}
+                handleInlineSave={handleInlineSave}
+                batches={batches}
+                formatDateDisplay={formatDateDisplay}
+                sortIngredients={sortIngredients}
+                ingredients={ingredients}
+                calculateIngredientQuantities={calculateIngredientQuantities}
+                formatQuantity={formatQuantity}
+                shouldUseDeliveryDropdown={shouldUseDeliveryDropdown}
+                deliveries={deliveries}
+                selectedBatchInput={selectedBatchInput}
+                setSelectedBatchInput={setSelectedBatchInput}
+                batchQuantityInput={batchQuantityInput}
+                setBatchQuantityInput={setBatchQuantityInput}
+                batchCodeSuggestions={batchCodeSuggestions}
+                removeStockAllocation={removeStockAllocation}
+              />
             </div>
           )}
           
