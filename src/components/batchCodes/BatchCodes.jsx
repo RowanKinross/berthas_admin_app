@@ -3548,9 +3548,6 @@ const formatDateDisplay = (dateStr) => {
                     </div>
                   </div>
                 ))}
-                <div className='total'>
-                  <h6><strong>Total: </strong>{totalPizzas}</h6>
-                </div>
               </Col>
             </>
           )}
