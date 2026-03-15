@@ -192,13 +192,15 @@ function BatchCodesSection({
                             if (!batchString) return [];
                             return batchString.split(',').map(item => {
                               const [code, qty] = item.trim().split(':');
-                              return { code, quantity: qty ? parseFloat(qty) : numberOfUnits };
+                              return { code: code.trim(), quantity: qty ? parseFloat(qty) : 0 };
                             });
                           };
 
-                          const currentBatchData = parseBatchData(editingValue);
+                          // Use the most current batch code value (either from editingValue or the actual batchCode)
+                          const currentBatchString = editingValue || batchCode || '';
+                          const currentBatchData = parseBatchData(currentBatchString);
                           const currentBatch = currentBatchData.find(b => b.code === batchCode);
-                          const isSelected = currentBatchData.some(b => b.code === batchCode);
+                          const isSelected = currentBatchData.some(b => b.code === batchCode && b.quantity > 0);
 
                           const batchInputKey = `${delivery.id}-${ingredient.name}`;
                           const showInput = selectedBatchInput === batchInputKey;
@@ -213,7 +215,7 @@ function BatchCodesSection({
                                 if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
                                 
                                 if (isSelected) {
-                                  // Deselect this batch - remove it from the list
+                                  // Remove this batch from the list (only if it has quantity > 0)
                                   const updatedBatchData = currentBatchData.filter(b => b.code !== batchCode);
                                   const newValue = updatedBatchData.length > 0 
                                     ? updatedBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ')
@@ -221,8 +223,9 @@ function BatchCodesSection({
                                   setEditingValue(newValue);
                                   handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 } else {
-                                  // Select this batch - add it to the list
-                                  const newBatchData = [...currentBatchData];
+                                  // Add this batch to the list
+                                  // First remove any existing entry for this batch code (including zero quantity ones)
+                                  let newBatchData = currentBatchData.filter(b => b.code !== batchCode);
                                   
                                   // Calculate available stock for this batch
                                   const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
@@ -270,23 +273,23 @@ function BatchCodesSection({
                                     
                                     const firstAvailableStock = firstDeliveredQty - firstAllocatedQty;
                                     
-                                    // Determine which batch to prioritize (earlier delivery date first)
+                                    // Always prioritize older delivery date, max out the older batch
                                     if (firstDeliveryDate <= currentDeliveryDate) {
-                                      // First batch is older, give it priority
-                                      const firstBatchQuantity = Math.min(numberOfUnits, firstAvailableStock);
-                                      const remainingQuantity = numberOfUnits - firstBatchQuantity;
-                                      const secondBatchQuantity = Math.min(remainingQuantity, availableStock);
+                                      // First batch is older, max it out first
+                                      const olderBatchQuantity = Math.min(numberOfUnits, firstAvailableStock);
+                                      const remainingQuantity = numberOfUnits - olderBatchQuantity;
+                                      const newerBatchQuantity = Math.min(remainingQuantity, availableStock);
                                       
-                                      newBatchData[0].quantity = firstBatchQuantity;
-                                      newBatchData.push({ code: batchCode, quantity: secondBatchQuantity });
+                                      newBatchData[0].quantity = olderBatchQuantity;
+                                      newBatchData.push({ code: batchCode, quantity: newerBatchQuantity });
                                     } else {
-                                      // Second (current) batch is older, give it priority
-                                      const secondBatchQuantity = Math.min(numberOfUnits, availableStock);
-                                      const remainingQuantity = numberOfUnits - secondBatchQuantity;
-                                      const firstBatchQuantity = Math.min(remainingQuantity, firstAvailableStock);
+                                      // Second (current) batch is older, max it out first
+                                      const olderBatchQuantity = Math.min(numberOfUnits, availableStock);
+                                      const remainingQuantity = numberOfUnits - olderBatchQuantity;
+                                      const newerBatchQuantity = Math.min(remainingQuantity, firstAvailableStock);
                                       
-                                      newBatchData[0].quantity = firstBatchQuantity;
-                                      newBatchData.push({ code: batchCode, quantity: secondBatchQuantity });
+                                      newBatchData[0].quantity = newerBatchQuantity;
+                                      newBatchData.push({ code: batchCode, quantity: olderBatchQuantity });
                                     }
                                   }
                                   
