@@ -139,14 +139,42 @@ function BatchCodesSection({
           const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
           const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
 
+          // Check if quantities are sufficient
+          const isQuantitySufficient = batchCode ? (() => {
+            const totalAllocated = batchCode.split(',').reduce((sum, item) => {
+              const [code, qty] = item.trim().split(':');
+              return sum + (qty ? parseFloat(qty) : 0);
+            }, 0);
+            return totalAllocated >= numberOfUnits;
+          })() : false;
+
           return (
-            <div key={ingredient.id} className='ingredient container' style={{ color: batchCode ? 'inherit' : 'red' }}>
+            <div key={ingredient.id} className='ingredient container' style={{ color: (batchCode && isQuantitySufficient) ? 'inherit' : 'red' }}>
               <p>
                 <strong>{ingredient.name}:</strong>
                 {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Flour (Wholemeal)" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" &&
                   ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
                 }
               </p>
+              {/* Check for insufficient allocation quantities */}
+              {(() => {
+                if (!batchCode) return null;
+                
+                // Parse batch codes to calculate total allocated quantity
+                const totalAllocated = batchCode.split(',').reduce((sum, item) => {
+                  const [code, qty] = item.trim().split(':');
+                  return sum + (qty ? parseFloat(qty) : 0);
+                }, 0);
+                
+                // Check if total allocated is insufficient
+                const isInsufficient = totalAllocated < numberOfUnits;
+                
+                return isInsufficient ? (
+                  <p style={{ color: 'red', fontSize: '0.9em', margin: '0 0 5px 0' }}>
+                    *insufficient allocation quantities
+                  </p>
+                ) : null;
+              })()}
               {editingField === `ingredient-${ingredient.name}` ? (
                 <div ref={batchEditingRef}>
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
