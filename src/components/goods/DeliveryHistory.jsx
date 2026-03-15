@@ -230,6 +230,71 @@ function DeliveryHistory() {
                     </div>
                   </div>
                 )}
+                
+                {/* Allocations section */}
+                {delivery.allocations && delivery.allocations.length > 0 && (
+                  <div className="allocations-section">
+                    <h5 style={{ marginTop: '20px', marginBottom: '10px', color: '#666' }}>Stock Allocations:</h5>
+                    <div className="allocations-details">
+                      {delivery.selectedGoods?.map(good => {
+                        const allocations = delivery.allocations.filter(alloc => alloc.ingredientName === good);
+                        if (allocations.length === 0) return null;
+                        
+                        const totalAllocated = allocations.reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                        const deliveredQty = delivery.quantities && delivery.quantities[good] 
+                          ? parseInt(delivery.quantities[good]) || 0 
+                          : 0;
+                        const remainingQty = deliveredQty - totalAllocated;
+                        
+                        return (
+                          <div key={`${good}-allocations`} className="ingredient-allocations">
+                            <div className="allocation-header" style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              marginBottom: '8px',
+                              fontSize: '0.9em',
+                              fontWeight: 'bold'
+                            }}>
+                              <PackagingIcon 
+                                packaging={getIngredientData(good)?.packaging || 'box'} 
+                                ingredientName={good} 
+                                size="small" 
+                              />
+                              {good}
+                              <span style={{ 
+                                marginLeft: '10px', 
+                                fontSize: '0.8em', 
+                                color: '#666',
+                                fontWeight: 'normal' 
+                              }}>
+                                ({totalAllocated.toFixed(1)} of {deliveredQty} allocated, {remainingQty.toFixed(1)} remaining)
+                              </span>
+                            </div>
+                            <div className="allocations-list" style={{ marginLeft: '30px' }}>
+                              {allocations.map((alloc, index) => (
+                                <div key={index} className="allocation-item" style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  padding: '4px 0',
+                                  borderBottom: '1px solid #f0f0f0',
+                                  fontSize: '0.8em'
+                                }}>
+                                  <div className="allocation-batch">
+                                    Batch: {alloc.allocatedToBatchCode || 'N/A'}
+                                  </div>
+                                  <div className="allocation-quantity" style={{ fontWeight: 'bold' }}>
+                                    {(alloc.quantityAllocated || 0).toFixed(1)} {getIngredientData(good)?.packaging || 'units'}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="delivery-info">
                   <div className="info-row">
                     <strong>Quality Checked:</strong> 

@@ -1176,7 +1176,7 @@ const formatDateDisplay = (dateStr) => {
   };
 
   // Track stock consumption by adding allocations to deliveries
-  const trackStockConsumption = async (ingredientName, batchCode, usedInBatchId) => {
+  const trackStockConsumption = async (ingredientName, batchCodeString, usedInBatchId) => {
     try {
       // Calculate how much of this ingredient is needed using preOrderAmount (prep/order weight)
       const ingredientData = ingredients.find(ing => ing.name === ingredientName);
@@ -1186,48 +1186,82 @@ const formatDateDisplay = (dateStr) => {
         return; // Only track ingredients with preOrderAmount to maintain accurate inventory
       }
 
-      // Calculate total quantity needed using preOrderAmount
-      const selectedPizzas = viewingBatch.pizzas.filter(p => p.quantity > 0 && p.ingredients.includes(ingredientName));
-      const totalQuantityInGrams = selectedPizzas.reduce((sum, pizza) => {
-        return sum + (ingredientData.preOrderAmount * pizza.quantity);
-      }, 0);
-      
-      const quantityInKg = Math.round((totalQuantityInGrams / 1000) * 100) / 100; // Convert to kg and round to 2 decimal places
-      
-      if (quantityInKg <= 0) {
-        return; // No consumption to track
+      // First, remove any existing allocations for this ingredient/batch combination
+      const updatedDeliveriesFromRemoval = await removeStockAllocation(ingredientName, usedInBatchId);
+
+      // Parse batch codes with quantities (format: "BATCH123:2.5, BATCH456:1.2" or just "BATCH123")
+      const parseBatchData = (batchString) => {
+        if (!batchString || !batchString.trim()) return [];
+        return batchString.split(',').map(item => {
+          const [code, qty] = item.trim().split(':');
+          return { 
+            code: code.trim(), 
+            quantity: qty ? parseFloat(qty) : null 
+          };
+        }).filter(item => item.code);
+      };
+
+      const batchData = parseBatchData(batchCodeString);
+      if (batchData.length === 0) {
+        return; // No valid batch codes to track
       }
 
-      // Find the delivery that contains this batch code for this ingredient
-      const delivery = deliveries.find(del => 
-        del.batchCodes && 
-        del.batchCodes[ingredientName] === batchCode
-      );
+      // Create a map of updated deliveries for quick lookup
+      const updatedDeliveryMap = new Map(updatedDeliveriesFromRemoval.map(del => [del.id, del]));
 
-      if (delivery) {
-        // Create allocation record to add to the delivery
-        const allocation = {
-          ingredientName: ingredientName,
-          quantityAllocated: quantityInKg, // in kg, using preOrderAmount for accurate inventory tracking
-          unit: ingredientData.packaging,
-          unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1,
-          allocatedToBatchId: usedInBatchId,
-          allocatedToBatchCode: viewingBatch.batch_code,
-          allocationDate: new Date().toISOString(),
-          batchType: viewingBatch.batch_type
-        };
-
-        // Update the delivery document with the new allocation
-        const deliveryRef = doc(db, "deliveries", delivery.id);
-        const currentAllocations = delivery.allocations || [];
+      // Create allocations for each batch code
+      for (const batch of batchData) {
+        const { code: batchCode, quantity: specifiedQuantity } = batch;
         
-        // Check if this allocation already exists to avoid duplicates
-        const existingAllocation = currentAllocations.find(alloc => 
-          alloc.allocatedToBatchId === usedInBatchId && 
-          alloc.ingredientName === ingredientName
+        // Find the delivery that contains this batch code for this ingredient
+        let delivery = deliveries.find(del => 
+          del.batchCodes && 
+          del.batchCodes[ingredientName] === batchCode
         );
+        
+        // Use updated version if available
+        if (delivery && updatedDeliveryMap.has(delivery.id)) {
+          delivery = updatedDeliveryMap.get(delivery.id);
+        }
 
-        if (!existingAllocation) {
+        if (delivery) {
+          // Use the specified quantity from the batch string, or calculate from preOrderAmount if not specified
+          let quantityInKg;
+          
+          if (specifiedQuantity !== null) {
+            // Use the quantity specified in the batch selection
+            quantityInKg = specifiedQuantity;
+          } else {
+            // Fallback to calculating from preOrderAmount
+            const selectedPizzas = viewingBatch.pizzas.filter(p => p.quantity > 0 && p.ingredients.includes(ingredientName));
+            const totalQuantityInGrams = selectedPizzas.reduce((sum, pizza) => {
+              return sum + (ingredientData.preOrderAmount * pizza.quantity);
+            }, 0);
+            quantityInKg = Math.round((totalQuantityInGrams / 1000) * 100) / 100;
+          }
+
+          if (quantityInKg <= 0) {
+            continue; // Skip this batch if no quantity to track
+          }
+
+          // Create allocation record to add to the delivery
+          const allocation = {
+            ingredientName: ingredientName,
+            quantityAllocated: quantityInKg, // in kg
+            batchCode: batchCode, // Store the individual batch code
+            unit: ingredientData.packaging,
+            unitWeight: ingredientData.ratio ? parseFloat(ingredientData.ratio.split(':')[1]) : 1,
+            allocatedToBatchId: usedInBatchId,
+            allocatedToBatchCode: viewingBatch.batch_code,
+            allocationDate: new Date().toISOString(),
+            batchType: viewingBatch.batch_type
+          };
+
+          // Update the delivery document with the new allocation
+          const deliveryRef = doc(db, "deliveries", delivery.id);
+          const currentAllocations = delivery.allocations || [];
+          
+          // Add the new allocation
           const updatedAllocations = [...currentAllocations, allocation];
           await updateDoc(deliveryRef, { allocations: updatedAllocations });
           
@@ -1240,10 +1274,13 @@ const formatDateDisplay = (dateStr) => {
             )
           );
           
-          console.log(`Tracked allocation: ${quantityInKg}kg of ${ingredientName} (batch ${batchCode}) allocated to batch ${viewingBatch.batch_code} using preOrderAmount`);
+          // Update our working delivery object for next iteration
+          updatedDeliveryMap.set(delivery.id, { ...delivery, allocations: updatedAllocations });
+          
+          console.log(`Tracked allocation: ${quantityInKg}kg of ${ingredientName} (batch ${batchCode}) allocated to batch ${viewingBatch.batch_code}`);
+        } else {
+          console.log(`No delivery found with batch code ${batchCode} for ingredient ${ingredientName}`);
         }
-      } else {
-        console.log(`No delivery found with batch code ${batchCode} for ingredient ${ingredientName}`);
       }
     } catch (error) {
       console.error("Error tracking stock allocation:", error);
@@ -1253,6 +1290,8 @@ const formatDateDisplay = (dateStr) => {
   // Remove allocation from delivery when batch code is cleared
   const removeStockAllocation = async (ingredientName, usedInBatchId) => {
     try {
+      const updatedDeliveries = [];
+      
       // Find all deliveries that might contain allocations for this ingredient and batch
       const relevantDeliveries = deliveries.filter(del => 
         del.allocations && 
@@ -1271,19 +1310,26 @@ const formatDateDisplay = (dateStr) => {
         const deliveryRef = doc(db, "deliveries", delivery.id);
         await updateDoc(deliveryRef, { allocations: updatedAllocations });
         
-        // Update local deliveries state
-        setDeliveries(prevDeliveries => 
-          prevDeliveries.map(del => 
-            del.id === delivery.id 
-              ? { ...del, allocations: updatedAllocations }
-              : del
-          )
-        );
+        const updatedDelivery = { ...delivery, allocations: updatedAllocations };
+        updatedDeliveries.push(updatedDelivery);
         
-        console.log(`Removed allocation for ${ingredientName} from batch ${viewingBatch.batch_code}`);
+        console.log(`Removed allocation(s) for ${ingredientName} from batch ${viewingBatch.batch_code}`);
       }
+      
+      // Update local deliveries state
+      if (updatedDeliveries.length > 0) {
+        setDeliveries(prevDeliveries => 
+          prevDeliveries.map(del => {
+            const updated = updatedDeliveries.find(upd => upd.id === del.id);
+            return updated || del;
+          })
+        );
+      }
+      
+      return updatedDeliveries;
     } catch (error) {
       console.error("Error removing stock allocation:", error);
+      return [];
     }
   };
 
