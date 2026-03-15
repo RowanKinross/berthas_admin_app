@@ -231,7 +231,7 @@ function BatchCodesSection({
                   setEditingField(`ingredient-${ingredient.name}`);
                   setEditingValue(batchCode || "");
                 }}>
-                  {batchCode ? `# ${batchCode}` : <span style={{ color: 'red' }}>+</span>}
+                  {batchCode ? <div className='selectedBatch'>Batch Code: {batchCode}</div> : <span style={{ color: 'red' }}>+</span>}
                 </p>
               )}
             </div>
