@@ -157,19 +157,37 @@ function BatchCodesSection({
                                   // Select this batch - add it to the list
                                   const newBatchData = [...currentBatchData];
                                   
+                                  // Calculate available stock for this batch
+                                  const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+                                    ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                    : 0;
+                                  
+                                  const allocatedQty = (delivery.allocations || [])
+                                    .filter(alloc => 
+                                      alloc.ingredientName === ingredient.name && 
+                                      delivery.batchCodes && 
+                                      delivery.batchCodes[ingredient.name] === batchCode
+                                    )
+                                    .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                  
+                                  const availableStock = deliveredQty - allocatedQty;
+                                  
                                   if (newBatchData.length === 0) {
-                                    // First batch gets full quantity
-                                    newBatchData.push({ code: batchCode, quantity: numberOfUnits });
+                                    // First batch gets full quantity but capped at available stock
+                                    const quantity = Math.min(numberOfUnits, availableStock);
+                                    newBatchData.push({ code: batchCode, quantity: quantity });
                                   } else if (newBatchData.length === 1) {
-                                    // Second batch: split quantity evenly
+                                    // Second batch: split quantity evenly but cap each at available stock
                                     const halfQuantity = numberOfUnits / 2;
-                                    newBatchData[0].quantity = halfQuantity;
-                                    newBatchData.push({ code: batchCode, quantity: halfQuantity });
+                                    const cappedQuantity = Math.min(halfQuantity, availableStock);
+                                    
+                                    newBatchData[0].quantity = Math.min(halfQuantity, numberOfUnits - cappedQuantity);
+                                    newBatchData.push({ code: batchCode, quantity: cappedQuantity });
                                   }
                                   
                                   const newValue = newBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
                                   setEditingValue(newValue);
-                                  setBatchQuantityInput(numberOfUnits.toFixed(2));
+                                  setBatchQuantityInput(Math.min(numberOfUnits, availableStock).toFixed(2));
                                   handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 }
                                 setEditingField(`ingredient-${ingredient.name}`); // Keep editing mode open
