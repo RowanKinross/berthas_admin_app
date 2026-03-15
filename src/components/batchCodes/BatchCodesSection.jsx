@@ -61,6 +61,26 @@ function BatchCodesSection({
     };
   }, [editingField, selectedBatchInput, setEditingField, setSelectedBatchInput, setBatchQuantityInput]);
 
+  // Helper function to get week's date range (Saturday to Friday) for a given date
+  const getWeekRange = (referenceDate) => {
+    const date = new Date(referenceDate);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Calculate days to subtract to get to Saturday
+    // Saturday = 6, so we want: Saturday = 0 days back, Sunday = 1 day back, Monday = 2 days back, etc.
+    const daysToSaturday = dayOfWeek === 6 ? 0 : dayOfWeek + 1;
+    
+    const weekStart = new Date(date);
+    weekStart.setDate(date.getDate() - daysToSaturday);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // Friday is 6 days after Saturday
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    return { weekStart, weekEnd };
+  };
+
   return (
     <div>
       <h4>Batch Codes:</h4>
@@ -71,62 +91,67 @@ function BatchCodesSection({
         }}>
           <div className='starter'><strong>Starter: </strong></div>
           {editingField === 'starter-batch' ? (
-            <select
-              value={editingValue}
-              autoFocus
-              onChange={(e) => setEditingValue(e.target.value)}
-              onBlur={() => handleInlineSave("batch", null, "starter_batch_code", editingValue)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleInlineSave("batch", null, "starter_batch_code", editingValue);
-                }
-              }}
-            >
-              <option value="">Select starter batch...</option>
-              {batches
-                .filter(batch => batch.batch_type === 'starter')
-                .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
-                .map(batch => (
-                  <option key={batch.id} value={batch.batch_code}>
-                    {batch.batch_code} - {formatDateDisplay(batch.batch_date)}
-                  </option>
-                ))}
-            </select>
+            <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
+              {/* Starter batch buttons - filtered by viewing batch's week */}
+              {(() => {
+                const { weekStart, weekEnd } = getWeekRange(viewingBatch.batch_date);
+                return batches
+                  .filter(batch => {
+                    if (batch.batch_type !== 'starter') return false;
+                    const batchDate = new Date(batch.batch_date);
+                    return batchDate >= weekStart && batchDate <= weekEnd;
+                  })
+                  .sort((a, b) => new Date(b.batch_date) - new Date(a.batch_date))
+                  .map(batch => {
+                    const isSelected = viewingBatch.starter_batch_code === batch.batch_code;
+                    return (
+                      <div
+                        key={batch.id}
+                        className={`batchSelect ${isSelected ? 'selectedBatch' : 'notSelectedBatch'}`}
+                        onClick={() => {
+                          const newValue = isSelected ? "" : batch.batch_code;
+                          handleInlineSave("batch", null, "starter_batch_code", newValue);
+                          setEditingField(null);
+                        }}
+                        style={{ cursor: 'pointer', marginBottom: '5px' }}
+                      >
+                        <div className="batchLabel">
+                          <div>Batch Code: {batch.batch_code}</div>
+                          <div>Date: {formatDateDisplay(batch.batch_date)}</div>
+                        </div>
+                      </div>
+                    );
+                  });
+              })()}
+            </div>
           ) : (
             <div className='starter' onClick={() => {
               setEditingField('starter-batch');
               setEditingValue(viewingBatch.starter_batch_code || "");
             }}>
-              {viewingBatch.starter_batch_code ? `# ${viewingBatch.starter_batch_code}` : <span style={{ color: 'red' }}>+</span>}
+              {viewingBatch.starter_batch_code ? (() => {
+                const selectedStarter = batches.find(batch =>
+                  batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
+                );
+                if (selectedStarter?.ingredientBatchCodes) {
+                  const ingredients = [];
+                  if (selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']) {
+                    ingredients.push(`Flour (Caputo Blue): ${selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}`);
+                  }
+                  if (selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']) {
+                    ingredients.push(`Flour (Wholemeal): ${selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']}`);
+                  }
+                  if (ingredients.length > 0) {
+                    return <div className='selectedBatch'>{ingredients.join(', ')}</div>;
+                  }
+                }
+                return <div className='selectedBatch'># {viewingBatch.starter_batch_code}</div>;
+              })() : <span style={{ color: 'red' }}>+</span>}
             </div>
           )}
         </div>
 
-        {/* Display rye & caputo batch codes from selected starter */}
-        {viewingBatch.starter_batch_code && (() => {
-          const selectedStarter = batches.find(batch =>
-            batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
-          );
-          return selectedStarter ? (
-            <div style={{ marginLeft: '20px', fontSize: '0.9em', marginTop: '5px' }}>
-              {selectedStarter.ingredientBatchCodes?.['Rye Flour'] && (
-                <div style={{ color: '#666' }}>
-                  Rye: #{selectedStarter.ingredientBatchCodes['Rye Flour']}
-                </div>
-              )}
-              {selectedStarter.ingredientBatchCodes?.['Flour (Caputo Blue)'] && (
-                <div style={{ color: '#666' }}>
-                  Caputo Blue: #{selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}
-                </div>
-              )}
-              {selectedStarter.ingredientBatchCodes?.['Flour (Wholemeal)'] && (
-                <div style={{ color: '#666' }}>
-                  Wholemeal: #{selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']}
-                </div>
-              )}
-            </div>
-          ) : null;
-        })()}
+        
 
         {sortIngredients(
           ingredients.filter(ingredient =>
