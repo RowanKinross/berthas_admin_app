@@ -136,7 +136,11 @@ function BatchCodesSection({
             )
             .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
           
-          const availableStock = deliveredQty - allocatedQty;
+          const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+            ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+            : 0;
+          
+          const availableStock = deliveredQty - allocatedQty + foundStock;
           
           return {
             batchCode,
@@ -373,7 +377,11 @@ function BatchCodesSection({
                                     )
                                     .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
                                   
-                                  const availableStock = deliveredQty - allocatedQty;
+                                  const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+                                    ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+                                    : 0;
+                                  
+                                  const availableStock = deliveredQty - allocatedQty + foundStock;
                                   
                                   if (newBatchData.length === 0) {
                                     // First batch gets full quantity but capped at available stock
@@ -404,7 +412,11 @@ function BatchCodesSection({
                                       )
                                       .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
                                     
-                                    const firstAvailableStock = firstDeliveredQty - firstAllocatedQty;
+                                    const firstFoundStock = firstBatchDelivery?.foundStock && firstBatchDelivery.foundStock[ingredient.name] 
+                                      ? parseFloat(firstBatchDelivery.foundStock[ingredient.name]) || 0 
+                                      : 0;
+                                    
+                                    const firstAvailableStock = firstDeliveredQty - firstAllocatedQty + firstFoundStock;
                                     
                                     // Always prioritize older delivery date, max out the older batch
                                     if (firstDeliveryDate <= currentDeliveryDate) {
@@ -438,7 +450,7 @@ function BatchCodesSection({
                               <div className="batchLabel">
                                 <div>Batch Code: {batchCode} </div> 
                                 <div> Qty in Stock: {(() => {
-                                  // Calculate quantity in stock: delivered - allocated
+                                  // Calculate quantity in stock: delivered - allocated + found stock
                                   const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
                                     ? parseInt(delivery.quantities[ingredient.name]) || 0 
                                     : 0;
@@ -450,8 +462,12 @@ function BatchCodesSection({
                                       delivery.batchCodes[ingredient.name] === batchCode
                                     )
                                     .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                
+                                  const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+                                    ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+                                    : 0;
                                   
-                                  const qtyInStock = deliveredQty - allocatedQty;
+                                  const qtyInStock = deliveredQty - allocatedQty + foundStock;
                                   return `${qtyInStock.toFixed(1)} ${ingredient.packaging || 'units'}`;
                                 })()} </div>
                                 <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
@@ -501,7 +517,11 @@ function BatchCodesSection({
                                             )
                                             .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
                                           
-                                          const maxAvailable = deliveredQty - allocatedQty;
+                                          const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+                                            ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+                                            : 0;
+                                          
+                                          const maxAvailable = deliveredQty - allocatedQty + foundStock;
                                           
                                           // Don't allow input to exceed available stock or go below 0
                                           const validValue = inputValue < 0 ? 0 : (inputValue > maxAvailable ? maxAvailable : inputValue);
@@ -553,7 +573,11 @@ function BatchCodesSection({
                                             )
                                             .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
                                           
-                                          const maxAvailable = deliveredQty - allocatedQty;
+                                          const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+                                            ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+                                            : 0;
+                                          
+                                          const maxAvailable = deliveredQty - allocatedQty + foundStock;
                                           const newQuantity = inputQuantity < 0 ? 0 : (inputQuantity > maxAvailable ? maxAvailable : inputQuantity);
                                           
                                           let updatedBatchData = [...currentBatchData];
@@ -596,7 +620,11 @@ function BatchCodesSection({
                                               )
                                               .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
                                             
-                                            const maxAvailable = deliveredQty - allocatedQty;
+                                            const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+                                              ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+                                              : 0;
+                                            
+                                            const maxAvailable = deliveredQty - allocatedQty + foundStock;
                                             const newQuantity = inputQuantity < 0 ? 0 : (inputQuantity > maxAvailable ? maxAvailable : inputQuantity);
                                             
                                             let updatedBatchData = [...currentBatchData];
