@@ -3432,6 +3432,7 @@ const formatDateDisplay = (dateStr) => {
                 setBatchQuantityInput={setBatchQuantityInput}
                 batchCodeSuggestions={batchCodeSuggestions}
                 removeStockAllocation={removeStockAllocation}
+                userRole={userRole}
               />
             </div>
           )}

@@ -313,6 +313,10 @@ textarea.input {
 .starter {
   padding-bottom: 10px;
 }
+.autoFillButton {
+  font-size: 10px;
+  padding: 5px;
+}
 /* Ingredients Carried Forward */
 .carriedIngr {
   display: flex;

@@ -20,7 +20,8 @@ function BatchCodesSection({
   batchQuantityInput,
   setBatchQuantityInput,
   batchCodeSuggestions,
-  removeStockAllocation
+  removeStockAllocation,
+  userRole
 }) {
   // Refs for click outside detection
   const batchEditingRef = useRef(null);
@@ -81,9 +82,101 @@ function BatchCodesSection({
     return { weekStart, weekEnd };
   };
 
+  // Auto-fill function for admin users
+  const autoFillAllBatchCodes = async () => {
+    if (userRole !== 'admin' || !shouldUseDeliveryDropdown(viewingBatch.batch_code)) {
+      return;
+    }
+
+    const ingredientQuantities = calculateIngredientQuantities(viewingBatch.pizzas);
+    const availableIngredients = ingredients.filter(ingredient =>
+      viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
+    );
+
+    // Process each ingredient
+    for (const ingredient of availableIngredients) {
+      const ingredientQuantity = ingredientQuantities[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
+      const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
+
+      // Find available deliveries for this ingredient
+      const availableDeliveries = deliveries
+        .filter(delivery =>
+          delivery.batchCodes &&
+          delivery.batchCodes[ingredient.name]
+        )
+        .sort((a, b) => new Date(a.deliveryDate) - new Date(b.deliveryDate)) // Sort by delivery date (oldest first)
+        .map(delivery => {
+          const batchCode = delivery.batchCodes[ingredient.name];
+          
+          // Calculate available stock
+          const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+            ? parseInt(delivery.quantities[ingredient.name]) || 0 
+            : 0;
+          
+          const allocatedQty = (delivery.allocations || [])
+            .filter(alloc => 
+              alloc.ingredientName === ingredient.name && 
+              delivery.batchCodes && 
+              delivery.batchCodes[ingredient.name] === batchCode
+            )
+            .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+          
+          const availableStock = deliveredQty - allocatedQty;
+          
+          return {
+            batchCode,
+            availableStock,
+            deliveryDate: new Date(delivery.deliveryDate)
+          };
+        })
+        .filter(item => item.availableStock > 0); // Only include batches with available stock
+
+      if (availableDeliveries.length === 0) {
+        continue; // Skip ingredients with no available stock
+      }
+
+      // Auto-allocate quantities using the same logic as the manual selection
+      let remainingQuantity = numberOfUnits;
+      const batchAllocations = [];
+
+      for (const delivery of availableDeliveries) {
+        if (remainingQuantity <= 0) break;
+        
+        const allocationQuantity = Math.min(remainingQuantity, delivery.availableStock);
+        if (allocationQuantity > 0) {
+          batchAllocations.push({
+            code: delivery.batchCode,
+            quantity: allocationQuantity
+          });
+          remainingQuantity -= allocationQuantity;
+        }
+      }
+
+      // Format the batch codes string
+      if (batchAllocations.length > 0) {
+        const newValue = batchAllocations.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
+        
+        // Save the batch codes for this ingredient
+        await handleInlineSave("ingredient", ingredient.name, null, newValue);
+      }
+    }
+  };
+
   return (
     <div>
-      <h4>Batch Codes:</h4>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+        <h4>Batch Codes:</h4>
+        {userRole === 'admin' && shouldUseDeliveryDropdown(viewingBatch.batch_code) && (
+          <button
+            type="button"
+            className="button autoFillButton"
+            onClick={autoFillAllBatchCodes}
+            title="Automatically fill all ingredient batch codes with available stock"
+          >
+            Auto-Fill All
+          </button>
+        )}
+      </div>
       <div className='ingredientBatchcodeBox'>
         <div className='ingredient container' style={{
           color: viewingBatch.starter_batch_code ? 'inherit' : 'red',
