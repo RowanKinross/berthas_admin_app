@@ -88,6 +88,12 @@ function BatchCodesSection({
       return;
     }
 
+    // Show confirmation dialog
+    const confirmed = window.confirm('Make sure all deliveries have been logged before autofill! Continue?');
+    if (!confirmed) {
+      return;
+    }
+
     const ingredientQuantities = calculateIngredientQuantities(viewingBatch.pizzas);
     const availableIngredients = ingredients.filter(ingredient =>
       viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
