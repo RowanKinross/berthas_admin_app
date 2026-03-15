@@ -120,7 +120,18 @@ function BatchCodesSection({
                         .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
                         .map(delivery => {
                           const batchCode = delivery.batchCodes[ingredient.name];
-                          const isSelected = editingValue.split(',').map(code => code.trim()).includes(batchCode);
+                          // Parse batch codes and quantities
+                          const parseBatchData = (batchString) => {
+                            if (!batchString) return [];
+                            return batchString.split(',').map(item => {
+                              const [code, qty] = item.trim().split(':');
+                              return { code, quantity: qty ? parseFloat(qty) : numberOfUnits };
+                            });
+                          };
+
+                          const currentBatchData = parseBatchData(editingValue);
+                          const currentBatch = currentBatchData.find(b => b.code === batchCode);
+                          const isSelected = currentBatchData.some(b => b.code === batchCode);
 
                           const batchInputKey = `${delivery.id}-${ingredient.name}`;
                           const showInput = selectedBatchInput === batchInputKey;
@@ -134,18 +145,29 @@ function BatchCodesSection({
                                 // Don't trigger if clicking on input or qty used area
                                 if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
                                 
-                                const currentBatches = editingValue ? editingValue.split(',').map(code => code.trim()) : [];
-                                
                                 if (isSelected) {
                                   // Deselect this batch - remove it from the list
-                                  const updatedBatches = currentBatches.filter(code => code !== batchCode);
-                                  const newValue = updatedBatches.join(', ');
+                                  const updatedBatchData = currentBatchData.filter(b => b.code !== batchCode);
+                                  const newValue = updatedBatchData.length > 0 
+                                    ? updatedBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ')
+                                    : '';
                                   setEditingValue(newValue);
                                   handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 } else {
                                   // Select this batch - add it to the list
-                                  const updatedBatches = [...currentBatches, batchCode];
-                                  const newValue = updatedBatches.join(', ');
+                                  const newBatchData = [...currentBatchData];
+                                  
+                                  if (newBatchData.length === 0) {
+                                    // First batch gets full quantity
+                                    newBatchData.push({ code: batchCode, quantity: numberOfUnits });
+                                  } else if (newBatchData.length === 1) {
+                                    // Second batch: split quantity evenly
+                                    const halfQuantity = numberOfUnits / 2;
+                                    newBatchData[0].quantity = halfQuantity;
+                                    newBatchData.push({ code: batchCode, quantity: halfQuantity });
+                                  }
+                                  
+                                  const newValue = newBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
                                   setEditingValue(newValue);
                                   setBatchQuantityInput(numberOfUnits.toFixed(2));
                                   handleInlineSave("ingredient", ingredient.name, null, newValue);
@@ -156,7 +178,23 @@ function BatchCodesSection({
                             >
                               <div className="batchLabel">
                                 <div>Batch Code: {batchCode} </div> 
-                                <div> Qty in Stock: {} </div>
+                                <div> Qty in Stock: {(() => {
+                                  // Calculate quantity in stock: delivered - allocated
+                                  const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+                                    ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                    : 0;
+                                  
+                                  const allocatedQty = (delivery.allocations || [])
+                                    .filter(alloc => 
+                                      alloc.ingredientName === ingredient.name && 
+                                      delivery.batchCodes && 
+                                      delivery.batchCodes[ingredient.name] === batchCode
+                                    )
+                                    .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                  
+                                  const qtyInStock = deliveredQty - allocatedQty;
+                                  return `${qtyInStock.toFixed(1)} ${ingredient.packaging || 'units'}`;
+                                })()} </div>
                                 <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
                                 <div className='qtyUsed'>
                                   <div className='qtyUsedLabel'>Qty Used:</div>
@@ -169,12 +207,11 @@ function BatchCodesSection({
                                       }}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        // Switch to input mode when clicking on the underlined value
                                         setSelectedBatchInput(batchInputKey);
-                                        setBatchQuantityInput(isSelected ? numberOfUnits.toFixed(2) : '0');
+                                        setBatchQuantityInput(currentBatch ? currentBatch.quantity.toFixed(2) : '0');
                                       }}
                                     >
-                                      {isSelected ? numberOfUnits.toFixed(2) : '0'}
+                                      {currentBatch ? currentBatch.quantity.toFixed(2) : '0'}
                                     </div>
                                   )}
                                   {showInput && (
@@ -182,7 +219,49 @@ function BatchCodesSection({
                                       <input
                                         type="number"
                                         value={batchQuantityInput}
-                                        onChange={(e) => setBatchQuantityInput(e.target.value)}
+                                        onChange={(e) => {
+                                          const inputValue = parseFloat(e.target.value) || 0;
+                                          
+                                          // Calculate max available stock
+                                          const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+                                            ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                            : 0;
+                                          
+                                          const allocatedQty = (delivery.allocations || [])
+                                            .filter(alloc => 
+                                              alloc.ingredientName === ingredient.name && 
+                                              delivery.batchCodes && 
+                                              delivery.batchCodes[ingredient.name] === batchCode
+                                            )
+                                            .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                          
+                                          const maxAvailable = deliveredQty - allocatedQty;
+                                          
+                                          // Don't allow input to exceed available stock or go below 0
+                                          const validValue = inputValue < 0 ? 0 : (inputValue > maxAvailable ? maxAvailable : inputValue);
+                                          setBatchQuantityInput(validValue.toString());
+                                          
+                                          // Real-time adjustment for visual feedback
+                                          if (currentBatchData.length === 2) {
+                                            const newQuantity = validValue;
+                                            let updatedBatchData = [...currentBatchData];
+                                            
+                                            // Update the current batch's quantity
+                                            const currentIndex = updatedBatchData.findIndex(b => b.code === batchCode);
+                                            if (currentIndex >= 0) {
+                                              updatedBatchData[currentIndex].quantity = newQuantity;
+                                              
+                                              // Adjust the other batch instantly
+                                              const otherIndex = currentIndex === 0 ? 1 : 0;
+                                              const remainingQuantity = numberOfUnits - newQuantity;
+                                              updatedBatchData[otherIndex].quantity = Math.max(0, remainingQuantity);
+                                              
+                                              // Update the editing value for instant visual feedback
+                                              const newValue = updatedBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
+                                              setEditingValue(newValue);
+                                            }
+                                          }
+                                        }}
                                         placeholder="Quantity"
                                         autoFocus
                                         style={{
@@ -193,16 +272,86 @@ function BatchCodesSection({
                                         }}
                                         onClick={(e) => e.stopPropagation()}
                                         onBlur={() => {
-                                          setEditingValue(batchCode);
-                                          handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                          const inputQuantity = parseFloat(batchQuantityInput) || 0;
+                                          
+                                          // Calculate max available stock
+                                          const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+                                            ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                            : 0;
+                                          
+                                          const allocatedQty = (delivery.allocations || [])
+                                            .filter(alloc => 
+                                              alloc.ingredientName === ingredient.name && 
+                                              delivery.batchCodes && 
+                                              delivery.batchCodes[ingredient.name] === batchCode
+                                            )
+                                            .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                          
+                                          const maxAvailable = deliveredQty - allocatedQty;
+                                          const newQuantity = inputQuantity < 0 ? 0 : (inputQuantity > maxAvailable ? maxAvailable : inputQuantity);
+                                          
+                                          let updatedBatchData = [...currentBatchData];
+                                          
+                                          // Update the current batch's quantity
+                                          const currentIndex = updatedBatchData.findIndex(b => b.code === batchCode);
+                                          if (currentIndex >= 0) {
+                                            updatedBatchData[currentIndex].quantity = newQuantity;
+                                          }
+
+                                          // If there are multiple batches, adjust the others to maintain total
+                                          if (updatedBatchData.length === 2) {
+                                            const otherIndex = currentIndex === 0 ? 1 : 0;
+                                            const remainingQuantity = numberOfUnits - newQuantity;
+                                            updatedBatchData[otherIndex].quantity = Math.max(0, remainingQuantity);
+                                          }
+
+                                          // Save the updated batch data
+                                          const newValue = updatedBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
+                                          setEditingValue(newValue);
+                                          handleInlineSave("ingredient", ingredient.name, null, newValue);
                                           setSelectedBatchInput(null);
                                           setBatchQuantityInput('');
                                         }}
                                         onKeyDown={(e) => {
                                           e.stopPropagation();
                                           if (e.key === 'Enter') {
-                                            setEditingValue(batchCode);
-                                            handleInlineSave("ingredient", ingredient.name, null, batchCode);
+                                            const inputQuantity = parseFloat(batchQuantityInput) || 0;
+                                            
+                                            // Calculate max available stock
+                                            const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+                                              ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                              : 0;
+                                            
+                                            const allocatedQty = (delivery.allocations || [])
+                                              .filter(alloc => 
+                                                alloc.ingredientName === ingredient.name && 
+                                                delivery.batchCodes && 
+                                                delivery.batchCodes[ingredient.name] === batchCode
+                                              )
+                                              .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                            
+                                            const maxAvailable = deliveredQty - allocatedQty;
+                                            const newQuantity = inputQuantity < 0 ? 0 : (inputQuantity > maxAvailable ? maxAvailable : inputQuantity);
+                                            
+                                            let updatedBatchData = [...currentBatchData];
+                                            
+                                            // Update the current batch's quantity
+                                            const currentIndex = updatedBatchData.findIndex(b => b.code === batchCode);
+                                            if (currentIndex >= 0) {
+                                              updatedBatchData[currentIndex].quantity = newQuantity;
+                                            }
+
+                                            // If there are multiple batches, adjust the others to maintain total
+                                            if (updatedBatchData.length === 2) {
+                                              const otherIndex = currentIndex === 0 ? 1 : 0;
+                                              const remainingQuantity = numberOfUnits - newQuantity;
+                                              updatedBatchData[otherIndex].quantity = Math.max(0, remainingQuantity);
+                                            }
+
+                                            // Save the updated batch data
+                                            const newValue = updatedBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
+                                            setEditingValue(newValue);
+                                            handleInlineSave("ingredient", ingredient.name, null, newValue);
                                             setSelectedBatchInput(null);
                                             setBatchQuantityInput('');
                                           }
@@ -256,7 +405,12 @@ function BatchCodesSection({
                 }}>
                   {batchCode ? (
                     <div className='selectedBatch'>
-                      Batch Code{batchCode.includes(',') ? 's' : ''}: {batchCode}
+                      Batch Code{batchCode.includes(',') ? 's' : ''}: {
+                        batchCode.split(',').map(item => {
+                          const [code, qty] = item.trim().split(':');
+                          return qty ? `${code}` : code;
+                        }).join(', ')
+                      }
                     </div>
                   ) : (
                     <span style={{ color: 'red' }}>+</span>
