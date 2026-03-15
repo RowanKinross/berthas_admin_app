@@ -177,12 +177,50 @@ function BatchCodesSection({
                                     const quantity = Math.min(numberOfUnits, availableStock);
                                     newBatchData.push({ code: batchCode, quantity: quantity });
                                   } else if (newBatchData.length === 1) {
-                                    // Second batch: split quantity evenly but cap each at available stock
-                                    const halfQuantity = numberOfUnits / 2;
-                                    const cappedQuantity = Math.min(halfQuantity, availableStock);
+                                    // Second batch: prioritize by delivery date (older first)
+                                    const currentDeliveryDate = new Date(delivery.deliveryDate);
+                                    const firstBatchCode = newBatchData[0].code;
                                     
-                                    newBatchData[0].quantity = Math.min(halfQuantity, numberOfUnits - cappedQuantity);
-                                    newBatchData.push({ code: batchCode, quantity: cappedQuantity });
+                                    // Find the first batch's delivery to compare dates
+                                    const firstBatchDelivery = deliveries.find(del => 
+                                      del.batchCodes && 
+                                      del.batchCodes[ingredient.name] === firstBatchCode
+                                    );
+                                    const firstDeliveryDate = firstBatchDelivery ? new Date(firstBatchDelivery.deliveryDate) : new Date();
+                                    
+                                    // Calculate available stock for first batch too
+                                    const firstDeliveredQty = firstBatchDelivery?.quantities?.[ingredient.name] 
+                                      ? parseInt(firstBatchDelivery.quantities[ingredient.name]) || 0 
+                                      : 0;
+                                    
+                                    const firstAllocatedQty = (firstBatchDelivery?.allocations || [])
+                                      .filter(alloc => 
+                                        alloc.ingredientName === ingredient.name && 
+                                        firstBatchDelivery.batchCodes && 
+                                        firstBatchDelivery.batchCodes[ingredient.name] === firstBatchCode
+                                      )
+                                      .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                    
+                                    const firstAvailableStock = firstDeliveredQty - firstAllocatedQty;
+                                    
+                                    // Determine which batch to prioritize (earlier delivery date first)
+                                    if (firstDeliveryDate <= currentDeliveryDate) {
+                                      // First batch is older, give it priority
+                                      const firstBatchQuantity = Math.min(numberOfUnits, firstAvailableStock);
+                                      const remainingQuantity = numberOfUnits - firstBatchQuantity;
+                                      const secondBatchQuantity = Math.min(remainingQuantity, availableStock);
+                                      
+                                      newBatchData[0].quantity = firstBatchQuantity;
+                                      newBatchData.push({ code: batchCode, quantity: secondBatchQuantity });
+                                    } else {
+                                      // Second (current) batch is older, give it priority
+                                      const secondBatchQuantity = Math.min(numberOfUnits, availableStock);
+                                      const remainingQuantity = numberOfUnits - secondBatchQuantity;
+                                      const firstBatchQuantity = Math.min(remainingQuantity, firstAvailableStock);
+                                      
+                                      newBatchData[0].quantity = firstBatchQuantity;
+                                      newBatchData.push({ code: batchCode, quantity: secondBatchQuantity });
+                                    }
                                   }
                                   
                                   const newValue = newBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
