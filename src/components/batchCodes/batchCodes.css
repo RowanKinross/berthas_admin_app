@@ -310,6 +310,9 @@ textarea.input {
 .qtyUsedLabel {
   padding-right: 5px;
 }
+.starter {
+  padding-bottom: 10px;
+}
 /* Ingredients Carried Forward */
 .carriedIngr {
   display: flex;
