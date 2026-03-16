@@ -125,8 +125,16 @@ const QuantityVisual = ({ quantity, packaging, ingredientName, size = 'normal' }
     );
   };
   const iconType = getIconType(packaging);
-  const wholeUnits = Math.floor(quantity);
-  const fractionalPart = quantity - wholeUnits;
+  
+  // Special handling for oregano and chillies - convert grams to box units (1000g = 1 box)
+  let displayQuantity = quantity;
+  const name = ingredientName.toLowerCase();
+  if (name.includes('oregano') || name.includes('chilli')) {
+    displayQuantity = quantity / 1000;
+  }
+  
+  const wholeUnits = Math.floor(displayQuantity);
+  const fractionalPart = displayQuantity - wholeUnits;
   const totalQuantity = fractionalPart > 0 ? wholeUnits + 1 : wholeUnits;
   
   // If we have more than 50 units, show "50+" instead
@@ -219,7 +227,7 @@ const QuantityVisual = ({ quantity, packaging, ingredientName, size = 'normal' }
       {icons.map((icon, index) => (
         <React.Fragment key={index}>{icon}</React.Fragment>
       ))}
-      {quantity === 0 && (
+      {displayQuantity === 0 && (
         <span style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>No stock</span>
       )}
     </div>
