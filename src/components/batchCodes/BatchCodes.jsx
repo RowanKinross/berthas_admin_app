@@ -580,7 +580,7 @@ function BatchCodes() {
   // Sort ingredients specifically:-
   const INGREDIENT_ORDER = [
     "Flour (Caputo Blue)",
-    "Flour (Wholemeal)", 
+    "Wholemeal Flour", 
     "Salt",
     // The rest will be handled alphabetically except for these at the end:
     "Tomato",
@@ -594,7 +594,7 @@ function BatchCodes() {
   const sortIngredients = (ingredients) => {
     // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
     const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella", "Vacuum Bags", "Dough Ball Pouches"]);
-    const startSet = new Set(["Flour (Caputo Blue)", "Flour (Wholemeal)", "Salt", "Rye Flour"]);
+    const startSet = new Set(["Flour (Caputo Blue)", "Wholemeal Flour", "Salt", "Rye Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
     const end = [];
@@ -1434,7 +1434,7 @@ const formatDateDisplay = (dateStr) => {
           // Check if starter ingredients are being set and add starter_rye/starter_caputo fields
           const ryeFlourCode = value['Rye Flour'];
           const caputoBlueCode = value['Flour (Caputo Blue)'];
-          const wholemealCode = value['Flour (Wholemeal)'];
+          const wholemealCode = value['Wholemeal Flour'];
           
           if (ryeFlourCode || caputoBlueCode || wholemealCode) {
             // Add starter codes to batch-level ingredientBatchCodes
@@ -1486,7 +1486,7 @@ const formatDateDisplay = (dateStr) => {
             if (selectedStarter && selectedStarter.ingredientBatchCodes) {
               const ryeCode = selectedStarter.ingredientBatchCodes['Rye Flour'];
               const caputoBlueCode = selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)'];
-              const wholemealCode = selectedStarter.ingredientBatchCodes['Flour (Wholemeal)'];
+              const wholemealCode = selectedStarter.ingredientBatchCodes['Wholemeal Flour'];
 
               // Add to batch-level ingredientBatchCodes
               if (ryeCode || caputoBlueCode || wholemealCode) {
@@ -1649,7 +1649,7 @@ const formatDateDisplay = (dateStr) => {
 
     if (viewingBatch.batch_type === 'starter') {
       // For starter batches, check ingredient batch codes and starter made checkbox
-      const requiredIngredients = ['Flour (Caputo Blue)', 'Flour (Wholemeal)'];
+      const requiredIngredients = ['Flour (Caputo Blue)', 'Wholemeal Flour'];
       const allIngredientCodesPresent = requiredIngredients.every(ingredient => 
         viewingBatch.ingredientBatchCodes?.[ingredient]?.trim()
       );
@@ -2758,7 +2758,7 @@ const formatDateDisplay = (dateStr) => {
               <h4>Ingredient Batch Codes:</h4>
               <div className='ingredientBatchcodeBox'>
                 {[
-                  { name: 'Flour (Wholemeal)', quantity: starterMixTotals.rye },
+                  { name: 'Wholemeal Flour', quantity: starterMixTotals.rye },
                   { name: 'Flour (Caputo Blue)', quantity: starterMixTotals.caputo }
                 ].map(({ name: ingredientName, quantity }) => {
                   const batchCode = viewingBatch.ingredientBatchCodes?.[ingredientName] || '';
@@ -2796,7 +2796,28 @@ const formatDateDisplay = (dateStr) => {
                                       }}
                                     >
                                       <div className="batchLabel">
-                                        {batchCode}<br /> ({new Date(delivery.deliveryDate).toLocaleDateString('en-GB')})
+                                        <div>Batch Code: {batchCode} </div> 
+                                <div> Qty in Stock: {(() => {
+                                  // Calculate quantity in stock: delivered - allocated + found stock
+                                  const deliveredQty = delivery.quantities && delivery.quantities[ingredientName] 
+                                    ? parseInt(delivery.quantities[ingredientName]) || 0 
+                                    : 0;
+                                  
+                                  const allocatedQty = (delivery.allocations || [])
+                                    .filter(alloc => 
+                                      alloc.ingredientName === ingredientName && 
+                                      delivery.batchCodes && 
+                                      delivery.batchCodes[ingredientName] === batchCode
+                                    )
+                                    .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                    const foundStock = delivery.foundStock && delivery.foundStock[ingredientName] 
+                                      ? parseFloat(delivery.foundStock[ingredientName]) || 0 
+                                      : 0;
+                                    const qtyInStock = deliveredQty - allocatedQty + foundStock;
+                                    const ingredient = ingredients.find(ing => ing.name === ingredientName);
+                                    return `${qtyInStock.toFixed(1)} ${ingredient?.packaging || 'units'}`;
+                                  })()} </div>
+                                  <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
                                      </div>
                                     </div>
                                   );
