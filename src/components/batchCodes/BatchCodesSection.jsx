@@ -250,8 +250,8 @@ function BatchCodesSection({
                   if (selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']) {
                     ingredients.push(`Flour (Caputo Blue): ${selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}`);
                   }
-                  if (selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']) {
-                    ingredients.push(`Flour (Wholemeal): ${selectedStarter.ingredientBatchCodes['Flour (Wholemeal)']}`);
+                  if (selectedStarter.ingredientBatchCodes['Wholemeal Flour']) {
+                    ingredients.push(`Wholemeal Flour: ${selectedStarter.ingredientBatchCodes['Wholemeal Flour']}`);
                   }
                   if (ingredients.length > 0) {
                     return <div className='selectedBatch'>{ingredients.join(', ')}</div>;
@@ -289,7 +289,7 @@ function BatchCodesSection({
             <div key={ingredient.id} className='ingredient container' style={{ color: (batchCode && isQuantitySufficient) ? 'inherit' : 'red' }}>
               <p>
                 <strong>{ingredient.name}:</strong>
-                {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Flour (Wholemeal)" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" &&
+                {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Wholemeal Flour" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" &&
                   ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
                 }
               </p>
