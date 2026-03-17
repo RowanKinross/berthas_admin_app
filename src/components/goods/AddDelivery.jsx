@@ -169,15 +169,20 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     const newQuantities = { ...quantities };
     
     updatedSelectedGoods.forEach(good => {
+      const ingredientData = ingredients.find(ing => ing.name === good);
+      const packaging = ingredientData?.packaging?.toLowerCase() || '';
+      const isVacuumOrDoughBall = packaging.includes('vacuum bag') || packaging.includes('dough ball pouch');
+      
       if (!newBatchCodes[good]) {
         newBatchCodes[good] = '';
       }
-      if (!newTemperatures[good]) {
-        newTemperatures[good] = '';
+      
+      // Force proper temperature initialization
+      if (!newTemperatures[good] || newTemperatures[good] === undefined) {
+        newTemperatures[good] = ingredientData?.temp_check ? '' : 'n/a';
+        console.log(`Initializing ${good}: temp_check=${ingredientData?.temp_check}, setting temperature to "${newTemperatures[good]}"`);
       }
-      if (!newUseByDates[good]) {
-        newUseByDates[good] = '';
-      }
+      
       if (!newQuantities[good]) {
         newQuantities[good] = '';
       }
@@ -246,12 +251,29 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
 
     // Check that all selected goods have required details
     for (const good of deliveryData.selectedGoods) {
+      const ingredientData = ingredients.find(ing => ing.name === good);
+      const packaging = ingredientData?.packaging?.toLowerCase() || '';
+      
       if (!batchCodes[good] || !batchCodes[good].trim() ||
-          !quantities[good] || !quantities[good].trim() ||
-          !temperatures[good] || !temperatures[good].trim() ||
-          !useByDates[good]) {
+          !quantities[good] || !quantities[good].trim()) {
         return false;
       }
+      
+      // Temperature validation - for temp_check items need real value, others can have 'n/a'
+      const tempValue = temperatures[good];
+      if (ingredientData?.temp_check) {
+        // Items with temp checking need actual temperature values
+        if (!tempValue || !tempValue.trim() || tempValue.trim() === 'n/a') {
+          return false;
+        }
+      } else {
+        // Items without temp checking should have 'n/a' or some value
+        if (!tempValue || !tempValue.trim()) {
+          return false;
+        }
+      }
+      
+
     }
     return true;
   };
@@ -282,18 +304,38 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
 
     // Check that all selected goods have required details
     for (const good of deliveryData.selectedGoods) {
+      const ingredientData = ingredients.find(ing => ing.name === good);
+      const packaging = ingredientData?.packaging?.toLowerCase() || '';
+      console.log(`Checking ${good}: packaging="${packaging}", ingredient data:`, ingredientData);
+      
       if (!batchCodes[good] || !batchCodes[good].trim()) {
         errors[`batchCode_${good}`] = true;
       }
       if (!quantities[good] || !quantities[good].trim()) {
         errors[`quantity_${good}`] = true;
       }
-      if (!temperatures[good] || !temperatures[good].trim()) {
-        errors[`temperature_${good}`] = true;
+      // Temperature validation - for temp_check items need real value, others can have 'n/a'
+      const tempValue = temperatures[good];
+      console.log(`Validating ${good}: tempValue="${tempValue}", temp_check=${ingredientData?.temp_check}`);
+      
+      if (ingredientData?.temp_check) {
+        // Items with temp checking need actual temperature values (numbers)
+        if (!tempValue || !tempValue.trim() || tempValue.trim() === 'n/a') {
+          errors[`temperature_${good}`] = true;
+          console.log(`${good} FAILED: needs real temperature but got "${tempValue}"`);
+        }
+      } else {
+        // Items without temp checking - should have 'n/a', auto-set if missing
+        if (!tempValue || tempValue === 'undefined') {
+          console.log(`${good} missing temperature, auto-setting to n/a`);
+          setTemperatures(prev => ({ ...prev, [good]: 'n/a' }));
+          // Don't mark as error if we can auto-fix it
+        } else if (!tempValue.trim()) {
+          errors[`temperature_${good}`] = true;
+          console.log(`${good} FAILED: has empty temperature`);
+        }
       }
-      if (!useByDates[good]) {
-        errors[`useByDate_${good}`] = true;
-      }
+      
     }
 
     return errors;
@@ -302,7 +344,18 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   const handleSaveDelivery = async () => {
     if (isSubmitting) return; // Prevent double submission
     
+    console.log('=== DELIVERY SAVE VALIDATION ===');
+    console.log('Selected goods:', deliveryData.selectedGoods);
+    console.log('Temperatures:', temperatures);
+    console.log('Ingredients data:');
+    deliveryData.selectedGoods.forEach(good => {
+      const ingredientData = ingredients.find(ing => ing.name === good);
+      console.log(`${good}: temp_check = ${ingredientData?.temp_check}, temperature = "${temperatures[good]}"`);
+    });
+    
     const errors = getFieldErrors();
+    console.log('Validation errors:', errors);
+    
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -462,27 +515,33 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
                           className="product-input"
                         />
                       </div>
-                      {ingredient.temp_check && (
+                      <div className="input-group">
+                        <label>Temperature (°C): {fieldErrors[`temperature_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
+                        <input
+                          type={ingredient.temp_check ? "number" : "text"}
+                          value={temperatures[ingredient.name] || ''}
+                          onChange={(e) => handleTemperatureChange(ingredient.name, e.target.value)}
+                          placeholder={ingredient.temp_check ? "e.g 4°C" : "n/a"}
+                          className="product-input product-input-number"
+                          readOnly={!ingredient.temp_check}
+                          style={{
+                            backgroundColor: ingredient.temp_check ? 'white' : '#f5f5f5',
+                            color: ingredient.temp_check ? 'black' : '#666'
+                          }}
+                        />
+                      </div>
+                      {!ingredient.name?.toLowerCase().includes('vacuum bags') && 
+                       !ingredient.name?.toLowerCase().includes('dough ball pouches') && (
                         <div className="input-group">
-                          <label>Temperature (°C): {fieldErrors[`temperature_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
+                          <label>Use-by/Best Before: </label>
                           <input
-                            type="number"
-                            value={temperatures[ingredient.name] || ''}
-                            onChange={(e) => handleTemperatureChange(ingredient.name, e.target.value)}
-                            placeholder="e.g 4°C"
-                            className="product-input product-input-number"
+                            type="date"
+                            value={useByDates[ingredient.name] || ''}
+                            onChange={(e) => handleUseByDateChange(ingredient.name, e.target.value)}
+                            className="product-input"
                           />
                         </div>
                       )}
-                      <div className="input-group">
-                        <label>Use-by/Best Before: {fieldErrors[`useByDate_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
-                        <input
-                          type="date"
-                          value={useByDates[ingredient.name] || ''}
-                          onChange={(e) => handleUseByDateChange(ingredient.name, e.target.value)}
-                          className="product-input"
-                        />
-                      </div>
                     </div>
                   )}
                 </div>
