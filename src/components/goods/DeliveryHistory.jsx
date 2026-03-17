@@ -97,7 +97,7 @@ function DeliveryHistory() {
     const fetchData = async () => {
       try {
         // Fetch deliveries
-        const q = query(collection(db, 'deliveries'), orderBy('dateCreated', 'desc'));
+        const q = query(collection(db, 'deliveries'), orderBy('deliveryDate', 'desc'));
         const querySnapshot = await getDocs(q);
         const deliveriesData = querySnapshot.docs.map(doc => ({ 
           id: doc.id, 

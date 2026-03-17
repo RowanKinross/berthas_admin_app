@@ -101,6 +101,8 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   const [temperatures, setTemperatures] = useState({});
   const [useByDates, setUseByDates] = useState({});
   const [quantities, setQuantities] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Fetch ingredients from Firestore
   useEffect(() => {
@@ -146,6 +148,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   }, [deliveryData.supplier, ingredients]);
 
   const handleGoodsChange = (ingredientName, isChecked) => {
+    setFieldErrors({}); // Clear errors when user makes changes
     let updatedSelectedGoods;
     
     if (isChecked) {
@@ -197,6 +200,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   };
 
   const handleBatchCodeChange = (ingredient, value) => {
+    setFieldErrors({}); // Clear errors when user makes changes
     setBatchCodes(prev => ({
       ...prev,
       [ingredient]: value
@@ -204,6 +208,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   };
 
   const handleTemperatureChange = (ingredient, value) => {
+    setFieldErrors({}); // Clear errors when user makes changes
     setTemperatures(prev => ({
       ...prev,
       [ingredient]: value
@@ -211,6 +216,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   };
 
   const handleUseByDateChange = (ingredient, value) => {
+    setFieldErrors({}); // Clear errors when user makes changes
     setUseByDates(prev => ({
       ...prev,
       [ingredient]: value
@@ -218,6 +224,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
   };
 
   const handleQuantityChange = (ingredient, value) => {
+    setFieldErrors({}); // Clear errors when user makes changes
     setQuantities(prev => ({
       ...prev,
       [ingredient]: value
@@ -229,7 +236,80 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     return ingredients.find(ingredient => ingredient.name === name);
   };
 
+  // Check if form is complete (for button state - no alerts)
+  const isFormComplete = () => {
+    if (!deliveryData.deliveryDate || !deliveryData.poNumber.trim() || 
+        !deliveryData.supplier || !deliveryData.staffInitials.trim() || 
+        !deliveryData.deliveryChecksComplete || deliveryData.selectedGoods.length === 0) {
+      return false;
+    }
+
+    // Check that all selected goods have required details
+    for (const good of deliveryData.selectedGoods) {
+      if (!batchCodes[good] || !batchCodes[good].trim() ||
+          !quantities[good] || !quantities[good].trim() ||
+          !temperatures[good] || !temperatures[good].trim() ||
+          !useByDates[good]) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // Check which fields have errors
+  const getFieldErrors = () => {
+    const errors = {};
+    
+    // Check basic delivery info
+    if (!deliveryData.deliveryDate) {
+      errors.deliveryDate = true;
+    }
+    if (!deliveryData.poNumber.trim()) {
+      errors.poNumber = true;
+    }
+    if (!deliveryData.supplier) {
+      errors.supplier = true;
+    }
+    if (!deliveryData.staffInitials.trim()) {
+      errors.staffInitials = true;
+    }
+    if (!deliveryData.deliveryChecksComplete) {
+      errors.deliveryChecksComplete = true;
+    }
+    if (deliveryData.selectedGoods.length === 0) {
+      errors.selectedGoods = true;
+    }
+
+    // Check that all selected goods have required details
+    for (const good of deliveryData.selectedGoods) {
+      if (!batchCodes[good] || !batchCodes[good].trim()) {
+        errors[`batchCode_${good}`] = true;
+      }
+      if (!quantities[good] || !quantities[good].trim()) {
+        errors[`quantity_${good}`] = true;
+      }
+      if (!temperatures[good] || !temperatures[good].trim()) {
+        errors[`temperature_${good}`] = true;
+      }
+      if (!useByDates[good]) {
+        errors[`useByDate_${good}`] = true;
+      }
+    }
+
+    return errors;
+  };
+
   const handleSaveDelivery = async () => {
+    if (isSubmitting) return; // Prevent double submission
+    
+    const errors = getFieldErrors();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+    
+    setFieldErrors({}); // Clear any existing errors
+    setIsSubmitting(true);
     try {
       const deliveryRecord = {
         ...deliveryData,
@@ -246,6 +326,8 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
     } catch (error) {
       console.error("Error saving delivery record:", error);
       alert('Error saving delivery record');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -259,36 +341,45 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
       <form className="newDeliveryForm">
         {/* Delivery Date */}
         <div className="form-group newDeliveryFormGroup">
-          <label>Delivery Date:</label>
+          <label>Delivery Date: {fieldErrors.deliveryDate && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
           <input
             type="date"
             className="form-input"
             value={deliveryData.deliveryDate}
-            onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryDate: e.target.value }))}
+            onChange={(e) => {
+              setFieldErrors({}); // Clear errors when user makes changes
+              setDeliveryData(prev => ({ ...prev, deliveryDate: e.target.value }))
+            }}
           />
         </div>
 
         {/* PO Number */}
         <div className="form-group newDeliveryFormGroup">
-          <label>PO Number:</label>
+          <label>PO Number: {fieldErrors.poNumber && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
           <input
             type="text"
             className="form-input"
             value={deliveryData.poNumber}
-            onChange={(e) => setDeliveryData(prev => ({ ...prev, poNumber: e.target.value }))}
+            onChange={(e) => {
+              setFieldErrors({}); // Clear errors when user makes changes  
+              setDeliveryData(prev => ({ ...prev, poNumber: e.target.value }))
+            }}
             placeholder="Enter PO number"
           />
         </div>
 
         {/* Supplier */}
         <div className="form-group newDeliveryFormGroup">
-          <label>Supplier:</label>
+          <label>Supplier: {fieldErrors.supplier && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
           <div className="supplierButtons" >
             {availableSuppliers.map(supplier => (
               <button
                 key={supplier}
                 type="button"
-                onClick={() => setDeliveryData(prev => ({ ...prev, supplier }))}
+                onClick={() => {
+                  setFieldErrors({}); // Clear errors when user makes changes
+                  setDeliveryData(prev => ({ ...prev, supplier }))
+                }}
                 className={`supplierButton ${
                   deliveryData.supplier === supplier ? 'selectedSupplier' : 
                   deliveryData.supplier ? 'notSelectedSupplier' : ''
@@ -313,7 +404,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
         {/* Product Details for All Filtered Goods */}
         {deliveryData.supplier && (
           <div className="form-group">
-            <h4>Product Details:</h4>
+            <h4>Product Details: {fieldErrors.selectedGoods && <span style={{color: '#d32f2f'}}>*necessary field - select at least one item</span>}</h4>
             {ingredients
               .filter(ingredient => ingredient.supplier === deliveryData.supplier)
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -350,7 +441,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
                   {deliveryData.selectedGoods.includes(ingredient.name) && (
                     <div className="product-inputs">
                       <div className="input-group">
-                        <label>Quantity ({packaging}):</label>
+                        <label>Quantity ({packaging}): {fieldErrors[`quantity_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
                         <input
                           type="number"
                           value={quantities[ingredient.name] || ''}
@@ -362,7 +453,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
                         />
                       </div>
                       <div className="input-group">
-                        <label>Batch Code:</label>
+                        <label>Batch Code: {fieldErrors[`batchCode_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
                         <input
                           type="text"
                           value={batchCodes[ingredient.name] || ''}
@@ -373,7 +464,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
                       </div>
                       {ingredient.temp_check && (
                         <div className="input-group">
-                          <label>Temperature (°C): </label>
+                          <label>Temperature (°C): {fieldErrors[`temperature_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
                           <input
                             type="number"
                             value={temperatures[ingredient.name] || ''}
@@ -384,7 +475,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
                         </div>
                       )}
                       <div className="input-group">
-                        <label>Use-by/Best Before:</label>
+                        <label>Use-by/Best Before: {fieldErrors[`useByDate_${ingredient.name}`] && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
                         <input
                           type="date"
                           value={useByDates[ingredient.name] || ''}
@@ -402,25 +493,38 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
 
         {/* Delivery Checks Complete */}
         <div className="form-group checkbox-group">
-          <label htmlFor="delivery-checks">Quality Checks </label>
+          <label htmlFor="delivery-checks">Quality Checks: {fieldErrors.deliveryChecksComplete && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
           <input
             type="checkbox"
             className='qualityCheck'
             id="delivery-checks"
             checked={deliveryData.deliveryChecksComplete}
-            onChange={(e) => setDeliveryData(prev => ({ ...prev, deliveryChecksComplete: e.target.checked }))}
+            onChange={(e) => {
+              setFieldErrors({}); // Clear errors when user makes changes
+              setDeliveryData(prev => ({ ...prev, deliveryChecksComplete: e.target.checked }))
+            }}
           />
         </div>
+        <ul className='qualityChecks'>
+            <li>packed to protect the product (no loose deliveries of product are permitted)</li>
+            <li>free from any pest infestation</li>
+            <li>within shelf life (use by date & best before date)</li>
+            <li>in good condition - no visible sign of damage etc</li>
+            <li>allergenic ingredients free from damage and sufficiently packaged to prevent contamination</li>
+        </ul>
 
         {/* Staff Initials */}
         <div className="form-group newDeliveryFormGroup">
-          <label htmlFor="staff-initials">Checked By:</label>
+          <label htmlFor="staff-initials">Checked By: {fieldErrors.staffInitials && <span style={{color: '#d32f2f'}}>*necessary field</span>}</label>
           <input
             type="text"
             className='form-input'
             id="staff-initials"
             value={deliveryData.staffInitials}
-            onChange={(e) => setDeliveryData(prev => ({ ...prev, staffInitials: e.target.value.toUpperCase() }))}
+            onChange={(e) => {
+              setFieldErrors({}); // Clear errors when user makes changes
+              setDeliveryData(prev => ({ ...prev, staffInitials: e.target.value.toUpperCase() }))
+            }}
             placeholder="Enter initials"
             maxLength="4"
           />
@@ -440,11 +544,17 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
           setTemperatures({});
           setUseByDates({});
           setQuantities({});
+          setFieldErrors({});
         }}>
           Clear Fields
         </button>
-        <button type="button" className="save-btn button" onClick={handleSaveDelivery}>
-          Save Delivery
+        <button 
+          type="button" 
+          className={`save-btn button ${isSubmitting ? 'disabled' : ''}`} 
+          onClick={handleSaveDelivery}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Saving...' : 'Save Delivery'}
         </button>
       </div>
       </form>

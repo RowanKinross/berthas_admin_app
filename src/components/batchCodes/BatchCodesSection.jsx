@@ -368,6 +368,40 @@ function BatchCodesSection({
                                 if (isSelected) {
                                   // Remove this batch from the list (only if it has quantity > 0)
                                   const updatedBatchData = currentBatchData.filter(b => b.code !== batchCode);
+                                  
+                                  // If only one batch remains, max it out to full quantity needed
+                                  if (updatedBatchData.length === 1) {
+                                    const remainingBatch = updatedBatchData[0];
+                                    const remainingBatchDelivery = deliveries.find(del => 
+                                      del.batchCodes && 
+                                      del.batchCodes[ingredient.name] === remainingBatch.code
+                                    );
+                                    
+                                    if (remainingBatchDelivery) {
+                                      // Calculate available stock for remaining batch
+                                      const remainingDeliveredQty = remainingBatchDelivery.quantities && remainingBatchDelivery.quantities[ingredient.name] 
+                                        ? parseInt(remainingBatchDelivery.quantities[ingredient.name]) || 0 
+                                        : 0;
+                                      
+                                      const remainingAllocatedQty = (remainingBatchDelivery.allocations || [])
+                                        .filter(alloc => 
+                                          alloc.ingredientName === ingredient.name && 
+                                          remainingBatchDelivery.batchCodes && 
+                                          remainingBatchDelivery.batchCodes[ingredient.name] === remainingBatch.code
+                                        )
+                                        .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                      
+                                      const remainingFoundStock = remainingBatchDelivery.foundStock && remainingBatchDelivery.foundStock[ingredient.name] 
+                                        ? parseFloat(remainingBatchDelivery.foundStock[ingredient.name]) || 0 
+                                        : 0;
+                                      
+                                      const remainingAvailableStock = remainingDeliveredQty - remainingAllocatedQty + remainingFoundStock;
+                                      
+                                      // Max out the remaining batch to full quantity needed (or available stock)
+                                      remainingBatch.quantity = Math.min(numberOfUnits, remainingAvailableStock);
+                                    }
+                                  }
+                                  
                                   const newValue = updatedBatchData.length > 0 
                                     ? updatedBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ')
                                     : '';
