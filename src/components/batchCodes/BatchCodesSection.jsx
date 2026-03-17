@@ -338,12 +338,20 @@ function BatchCodesSection({
                           const currentBatchData = parseBatchData(currentBatchString);
                           const currentBatch = currentBatchData.find(b => b.code === batchCode);
                           // Check if this specific delivery has allocations for this ingredient and batch code
-                          const isSelected = (delivery.allocations || []).some(alloc => 
+                          const hasAllocationInDB = (delivery.allocations || []).some(alloc => 
                             alloc.ingredientName === ingredient.name && 
                             delivery.batchCodes && 
                             delivery.batchCodes[ingredient.name] === batchCode &&
                             alloc.quantityAllocated > 0
                           );
+                          
+                          // Also check current editing state - if we're editing and this batch has quantity > 0
+                          const hasAllocationInEdit = currentBatch && currentBatch.quantity > 0;
+                          
+                          // Selected if it has allocation in DB, unless we're currently editing and it has 0 quantity
+                          const isSelected = editingField === `ingredient-${ingredient.name}` 
+                            ? hasAllocationInEdit 
+                            : hasAllocationInDB;
 
                           const batchInputKey = `${delivery.id}-${ingredient.name}`;
                           const showInput = selectedBatchInput === batchInputKey;
@@ -424,24 +432,12 @@ function BatchCodesSection({
                                     
                                     const firstAvailableStock = firstDeliveredQty - firstAllocatedQty + firstFoundStock;
                                     
-                                    // Always prioritize older delivery date, max out the older batch
-                                    if (firstDeliveryDate <= currentDeliveryDate) {
-                                      // First batch is older, max it out first
-                                      const olderBatchQuantity = Math.min(numberOfUnits, firstAvailableStock);
-                                      const remainingQuantity = numberOfUnits - olderBatchQuantity;
-                                      const newerBatchQuantity = Math.min(remainingQuantity, availableStock);
-                                      
-                                      newBatchData[0].quantity = olderBatchQuantity;
-                                      newBatchData.push({ code: batchCode, quantity: newerBatchQuantity });
-                                    } else {
-                                      // Second (current) batch is older, max it out first
-                                      const olderBatchQuantity = Math.min(numberOfUnits, availableStock);
-                                      const remainingQuantity = numberOfUnits - olderBatchQuantity;
-                                      const newerBatchQuantity = Math.min(remainingQuantity, firstAvailableStock);
-                                      
-                                      newBatchData[0].quantity = newerBatchQuantity;
-                                      newBatchData.push({ code: batchCode, quantity: olderBatchQuantity });
-                                    }
+                                    // Keep existing allocation for first batch, only add what's needed for second batch
+                                    const existingFirstBatchQuantity = newBatchData[0].quantity;
+                                    const remainingQuantityNeeded = numberOfUnits - existingFirstBatchQuantity;
+                                    const secondBatchQuantity = Math.min(remainingQuantityNeeded, availableStock);
+                                    
+                                    newBatchData.push({ code: batchCode, quantity: secondBatchQuantity });
                                   }
                                   
                                   const newValue = newBatchData.map(b => `${b.code}:${b.quantity.toFixed(2)}`).join(', ');
