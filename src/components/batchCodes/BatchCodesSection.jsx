@@ -337,7 +337,13 @@ function BatchCodesSection({
                           const currentBatchString = editingValue || batchCode || '';
                           const currentBatchData = parseBatchData(currentBatchString);
                           const currentBatch = currentBatchData.find(b => b.code === batchCode);
-                          const isSelected = currentBatchData.some(b => b.code === batchCode && b.quantity > 0);
+                          // Check if this specific delivery has allocations for this ingredient and batch code
+                          const isSelected = (delivery.allocations || []).some(alloc => 
+                            alloc.ingredientName === ingredient.name && 
+                            delivery.batchCodes && 
+                            delivery.batchCodes[ingredient.name] === batchCode &&
+                            alloc.quantityAllocated > 0
+                          );
 
                           const batchInputKey = `${delivery.id}-${ingredient.name}`;
                           const showInput = selectedBatchInput === batchInputKey;
