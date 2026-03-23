@@ -904,7 +904,10 @@ const orderHasBatchErrors = (order) => {
       return true;
     }
     if (!isSplitChecked) {
-      const batch = batches.find(b => b.batch_code === selectedBatches[0]?.batch_number);
+      const batch = batches.find(b => 
+        b.batch_code === selectedBatches[0]?.batch_number &&
+        b.pizzas.some(p => p.id === pizzaName)
+      );
       if (!batch) {
         // console.log(`❌ ${pizzaName} - Batch not found:`, selectedBatches[0]?.batch_number);
         return true;
@@ -915,7 +918,10 @@ const orderHasBatchErrors = (order) => {
       return hasError;
     } else {
       const anyOverused = selectedBatches.some(b => {
-        const batch = batches.find(batch => batch.batch_code === b.batch_number);
+        const batch = batches.find(batch => 
+          batch.batch_code === b.batch_number &&
+          batch.pizzas.some(p => p.id === pizzaName)
+        );
         return !batch || b.quantity > getAvailableQuantity(batch, pizzaName, order.id);
       });
       const mismatch = totalAssigned !== totalOrdered;
