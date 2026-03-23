@@ -2179,14 +2179,20 @@ function getPizzaAllocatedTally(pizzaData) {
                 if (selectedBatches.length === 0) {
                   errorType = "missing";
                 } else if (!isSplitChecked) {
-                  const batch = batches.find(b => b.batch_code === selectedBatches[0]?.batch_number);
+                  const batch = batches.find(b => 
+                    b.batch_code === selectedBatches[0]?.batch_number && 
+                    b.pizzas.some(p => p.id === pizzaName)
+                  );
                   const available = getAvailableQuantity(batch, pizzaName, selectedOrder.id);
                   if (available < totalOrdered) {
                     errorType = "understock";
                   }
                 } else {
                   const anyOverused = selectedBatches.some(b => {
-                    const batch = batches.find(batch => batch.batch_code === b.batch_number);
+                    const batch = batches.find(batch => 
+                      batch.batch_code === b.batch_number &&
+                      batch.pizzas.some(p => p.id === pizzaName)
+                    );
                     return batch && b.quantity > getAvailableQuantity(batch, pizzaName, selectedOrder.id);
                   });
                   if (anyOverused) {
