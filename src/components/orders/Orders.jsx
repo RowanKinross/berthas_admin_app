@@ -273,7 +273,10 @@ const handleBatchQuantityChange = async (pizzaId, batchCode, newQuantity) => {
 
 
 const removePizzaAllocationFromBatch = async ({ pizzaId, batchCode }) => {
-  const batchDoc = batches.find(b => b.batch_code === batchCode);
+  const batchDoc = batches.find(b => 
+    b.batch_code === batchCode && 
+    b.pizzas?.some(p => p.id === pizzaId)
+  );
   if (!batchDoc) return;
   const allocations = batchDoc.pizza_allocations || [];
   const orderId = selectedOrder.id;
@@ -461,7 +464,10 @@ const updateDeliveryDate = async (orderId, newDate) => {
 
 
 const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
-  const batchDoc = batches.find(b => b.batch_code === batchCode);
+  const batchDoc = batches.find(b => 
+    b.batch_code === batchCode && 
+    b.pizzas?.some(p => p.id === pizzaId)
+  );
   if (!batchDoc) return;
   const allocations = batchDoc.pizza_allocations || [];
   const orderId = selectedOrder.id;
