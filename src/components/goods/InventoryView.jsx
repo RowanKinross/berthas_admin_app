@@ -1003,7 +1003,7 @@ function InventoryView() {
               <div className="item-header">
                 <h4>{item.name}</h4>
                 <div className="total-quantity">
-                  <span className="quantity">{item.totalQuantity}</span>
+                  <span className="quantity">{Number(item.totalQuantity) % 1 === 0 ? item.totalQuantity : Number(item.totalQuantity).toFixed(2).replace(/\.?0+$/, '')}</span>
                   <span className="unit">{item.packaging}</span>
                 </div>
                 <QuantityVisual quantity={item.totalQuantity} packaging={item.packaging} ingredientName={item.name} />
@@ -1036,10 +1036,10 @@ function InventoryView() {
                         >
                           <div className="batch-code">Batch: {batch.batchCode}</div>
                           <div className="batch-quantity">
-                            {batch.quantity} {item.packaging}
+                            {Number(batch.quantity) % 1 === 0 ? batch.quantity : Number(batch.quantity).toFixed(2).replace(/\.?0+$/, '')} {item.packaging}
                             {batch.foundStock > 0 && (
                               <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
-                                (Original: {batch.originalQuantity} + Found: {batch.foundStock})
+                                (Original: {Number(batch.originalQuantity) % 1 === 0 ? batch.originalQuantity : Number(batch.originalQuantity).toFixed(2).replace(/\.?0+$/, '')} + Found: {Number(batch.foundStock) % 1 === 0 ? batch.foundStock : Number(batch.foundStock).toFixed(2).replace(/\.?0+$/, '')})
                               </div>
                             )}
                           </div>
