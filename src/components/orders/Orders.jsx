@@ -46,8 +46,8 @@ function Orders() {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 25;
   // sort filter
-  const [sortField, setSortField] = useState("order_status");
-  const [sortDirection, setSortDirection] = useState("asc");
+  const [sortField, setSortField] = useState("delivery_day");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [searchTerm, setSearchTerm] = useState("");
   const STATUS_ORDER = ["order placed", "ready to pack", "packed", "complete"];
   const [lastCheckedIndex, setLastCheckedIndex] = useState(null);
@@ -1004,31 +1004,10 @@ const orderHasBatchErrors = (order) => {
   // Apply sort function to filtered orders
   const sortedOrders = sortOrders(filteredOrders);
 
-  // Sort by delivery date - invalid dates at top, then valid dates newest first
-  const sortedByDeliveryDate = [...filteredOrders].sort((a, b) => {
-    // Check if delivery_day is a valid YYYY-MM-DD format
-    const isValidDate = (dateStr) => {
-      return dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(new Date(dateStr));
-    };
-    
-    const aValid = isValidDate(a.delivery_day);
-    const bValid = isValidDate(b.delivery_day);
-    
-    // Both invalid - maintain order
-    if (!aValid && !bValid) return 0;
-    // A invalid, B valid - A goes first (top)
-    if (!aValid && bValid) return -1;
-    // A valid, B invalid - B goes first (top)
-    if (aValid && !bValid) return 1;
-    
-    // Both valid - sort by date newest first
-    return b.delivery_day.localeCompare(a.delivery_day);
-  });
-  
   // Add pagination
   const indexOfLastOrder = currentPage * ordersPerPage;
   const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = sortedByDeliveryDate.slice(indexOfFirstOrder, indexOfLastOrder);
+  const currentOrders = sortedOrders.slice(indexOfFirstOrder, indexOfLastOrder);
   
 
 
