@@ -240,6 +240,7 @@ function InventoryView() {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('name'); // name, quantity, expiry
   const [filterExpiring, setFilterExpiring] = useState(false);
+  // selectedBatch uniquely identified by ingredientName, batchCode, and deliveryId
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [deliveriesData, setDeliveriesData] = useState([]);
 
@@ -1019,14 +1020,12 @@ function InventoryView() {
                       
                       return (
                         <div 
-                          key={`${batch.batchCode}-${index}`}
-                          className='batch-info' 
+                          key={`${batch.batchCode}-${batch.deliveryId || index}`}
+                          className={`batch-info${selectedBatch && selectedBatch.ingredientName === item.name && selectedBatch.batchCode === batch.batchCode && selectedBatch.deliveryId === batch.deliveryId ? ' selected' : ''}`}
                           style={{ position: 'relative', cursor: 'pointer' }}
                           onClick={() => setSelectedBatch({
                             ingredientName: item.name,
                             batchCode: batch.batchCode,
-                            currentQuantity: batch.quantity,
-                            packaging: item.packaging,
                             deliveryId: batch.deliveryId
                           })}
                         >
@@ -1057,8 +1056,12 @@ function InventoryView() {
                         
                         {selectedBatch && 
                          selectedBatch.ingredientName === item.name && 
-                         selectedBatch.batchCode === batch.batchCode && (
+                         selectedBatch.batchCode === batch.batchCode &&
+                         selectedBatch.deliveryId === batch.deliveryId && (
                           <div className="stock-adjustment-controls" >
+                            <div className='deliveredBatchInfo'>
+                              <strong>Delivered:</strong> {formatDate(batch.deliveryDate)}
+                            </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
                               <button
                                 onClick={(e) => {
