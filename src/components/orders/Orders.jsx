@@ -1606,21 +1606,21 @@ function getPizzaAllocatedTally(pizzaData) {
           </div>
         </div>
         <div className='orderHeadersAndFilters'>
-          <div className='orderHeader'>No. of Pizzas:</div>
+          <div className='orderHeader'>No. of Units:</div>
           <div className='filter' onClick={() => handleSort("pizzaTotal")}>
             <FontAwesomeIcon icon={faSort} />
             {sortField === "pizzaTotal" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
         <div className='orderHeadersAndFilters  orderStatus'>
-          <div className='orderHeader'>Order Status:</div>
+          <div className='orderHeader'>Status:</div>
           <div className='filter' onClick={() => handleSort("order_status")}>
             <FontAwesomeIcon icon={faSort} />
             {sortField === "order_status" && (sortDirection === "asc" ? "▲" : "▼")}
           </div>
         </div>
         <div className='orderHeadersAndFilters'>
-          <div className='orderHeader'>Delivery Day:</div>
+          <div className='orderHeader'>Delivery:</div>
           <div className='filter' onClick={() => handleSort("delivery_day")}>
             <FontAwesomeIcon icon={faSort} />
             {sortField === "delivery_day" && (sortDirection === "asc" ? "▲" : "▼")}
