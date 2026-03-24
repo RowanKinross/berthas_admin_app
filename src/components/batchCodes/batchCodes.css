@@ -1,3 +1,22 @@
+.pulse-batch {
+  animation: pulseBatch 1.2s infinite;
+  z-index: 2;
+}
+
+@keyframes pulseBatch {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 180, 0, 0.5);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 12px 4px rgba(255, 180, 0, 0.25);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 180, 0, 0.5);
+  }
+}
 .batchDiv {
   background-color: var(--berthas);
   display: flex;

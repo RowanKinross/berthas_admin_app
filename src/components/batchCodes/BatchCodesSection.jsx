@@ -316,13 +316,18 @@ function BatchCodesSection({
                 <div ref={batchEditingRef}>
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
-                      {deliveries
-                        .filter(delivery =>
-                          delivery.batchCodes &&
-                          delivery.batchCodes[ingredient.name]
-                        )
-                        .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
-                        .map(delivery => {
+                      {(() => {
+                        const filteredDeliveries = deliveries
+                          .filter(delivery =>
+                            delivery.batchCodes &&
+                            delivery.batchCodes[ingredient.name]
+                          );
+                        // Find the delivery with the earliest delivery date (farthest right after sort)
+                        const sortedDeliveries = filteredDeliveries.sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
+                        const earliestDelivery = sortedDeliveries[sortedDeliveries.length - 1];
+                        return sortedDeliveries.map((delivery, idx) => {
+                          const isEarliest = delivery === earliestDelivery;
+                          // ...existing code...
                           const batchCode = delivery.batchCodes[ingredient.name];
                           // Parse batch codes and quantities
                           const parseBatchData = (batchString) => {
@@ -339,9 +344,9 @@ function BatchCodesSection({
                           const currentBatch = currentBatchData.find(b => b.code === batchCode);
                           // Check if this specific delivery has allocations for this ingredient and batch code
                           const hasAllocationInDB = (delivery.allocations || []).some(alloc => 
-                            alloc.ingredientName === ingredient.name && 
-                            delivery.batchCodes && 
-                            delivery.batchCodes[ingredient.name] === batchCode &&
+                            alloc.ingredientName === ingredient.name &&
+                            alloc.batchCode === batchCode &&
+                            alloc.deliveryId === delivery.id &&
                             alloc.quantityAllocated > 0
                           );
                           
@@ -360,7 +365,7 @@ function BatchCodesSection({
                           return (
                             <div
                               key={`${delivery.id}-${ingredient.name}`}
-                              className={`batchSelect ${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}`}
+                              className={`batchSelect ${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}${isEarliest ? ' pulse-batch' : ''}`}
                               onClick={(e) => {
                                 // Don't trigger if clicking on input or qty used area
                                 if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
@@ -697,8 +702,8 @@ function BatchCodesSection({
                               </div>
                             </div>
                           );
-                        })
-                      }
+                        });
+                      })()}
                     </div>
                   ) : (
                     <>
