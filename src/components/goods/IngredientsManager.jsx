@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc } from '@firebase/firestore';
+import { collection, getDocs, updateDoc, doc, addDoc } from '@firebase/firestore';
 import { db } from '../firebase/firebase';
-import {faSort} from '@fortawesome/free-solid-svg-icons';
+import {faSort, faPlus} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 // Component to render visual packaging indicators
@@ -95,6 +95,16 @@ function IngredientsManager() {
   const [loading, setLoading] = useState(true);
   const [existingSuppliers, setExistingSuppliers] = useState([]);
   const [sortBy, setSortBy] = useState('name'); // 'name' or 'supplier'
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [newIngredientForm, setNewIngredientForm] = useState({
+    name: '',
+    packaging: 'box',
+    supplier: '',
+    perPizzaQuantity: '0',
+    unitQuantity: '0',
+    preOrderAmount: '0'
+  });
 
   // Fetch ingredients from Firestore
   useEffect(() => {
@@ -126,6 +136,23 @@ function IngredientsManager() {
     setExistingSuppliers(suppliers);
   }, [ingredientsArr]);
 
+  // Handle keyboard shortcuts for modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && showModal) {
+        closeModal();
+      }
+    };
+
+    if (showModal) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showModal]);
+
   const handleEditChange = (e) => {
     setEditValue(e.target.value);
   };
@@ -142,9 +169,6 @@ function IngredientsManager() {
       let updateData = {};
 
       switch (editingField.field) {
-        case 'name':
-          updateData.name = editValue;
-          break;
         case 'packaging':
           updateData.packaging = editValue;
           break;
@@ -187,6 +211,65 @@ function IngredientsManager() {
 
     setEditingField({ id: null, field: null });
     setEditValue('');
+  };
+
+  // Modal functions
+  const openAddModal = () => {
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setNewIngredientForm({
+      name: '',
+      packaging: 'box',
+      supplier: '',
+      perPizzaQuantity: '0',
+      unitQuantity: '0',
+      preOrderAmount: '0'
+    });
+  };
+
+  const handleFormChange = (field, value) => {
+    setNewIngredientForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!newIngredientForm.name.trim()) {
+      alert('Please enter an ingredient name');
+      return;
+    }
+
+    try {
+      const newIngredient = {
+        name: newIngredientForm.name.trim(),
+        packaging: newIngredientForm.packaging,
+        supplier: newIngredientForm.supplier.trim(),
+        ratio: `${newIngredientForm.perPizzaQuantity}:${newIngredientForm.unitQuantity}`,
+        preOrderAmount: parseFloat(newIngredientForm.preOrderAmount) || 0
+      };
+
+      const docRef = await addDoc(collection(db, 'ingredients'), newIngredient);
+      
+      // Add to local state with the generated ID
+      const ingredientWithId = {
+        id: docRef.id,
+        ...newIngredient
+      };
+      
+      setIngredientsArr(prev => [...prev, ingredientWithId]);
+      closeModal();
+      
+      console.log('New ingredient added successfully');
+    } catch (error) {
+      console.error('Error adding new ingredient:', error);
+      alert('Error adding new ingredient');
+    }
   };
 
   // Sort ingredients based on current sort preference
@@ -246,6 +329,8 @@ function IngredientsManager() {
           {/* <p className='nameUnit nameUnitPerPizza'><strong>Per pizza:</strong></p>
           <p className='nameUnit nameUnitPreOrder'><strong>Prep/Order amount:</strong></p> */}
         </div>
+
+      
         
         {ingredientsArr.length > 0 ? (
           <div>
@@ -258,30 +343,14 @@ function IngredientsManager() {
                   <div className='ingredientRow'>
                     {/* Name field */}
                     <div className='nameUnit nameUnitIngredient'>
-                      {editingField.id === ingredient.id && editingField.field === 'name' ? (
-                        <input
-                          className='inputField'
-                          type="text"
-                          value={editValue}
-                          onChange={handleEditChange}
-                          onBlur={() => handleBlur(ingredient)}
-                          onKeyDown={(e) => handleKeyPress(e, ingredient)}
-                          autoFocus
+                      <p style={{ cursor: 'default', margin: 0 }}>
+                        <PackagingIcon 
+                          packaging={ingredient.packaging || 'box'} 
+                          ingredientName={ingredient.name || ''} 
+                          size="normal" 
                         />
-                      ) : (
-                        <p
-                         onClick={() => {
-                          setEditingField({ id: ingredient.id, field: 'name' });
-                          setEditValue(ingredient.name);
-                        }}>
-                          <PackagingIcon 
-                            packaging={ingredient.packaging || 'box'} 
-                            ingredientName={ingredient.name || ''} 
-                            size="normal" 
-                          />
-                          <strong className="iconName">{ingredient.name} </strong>
-                        </p>
-                      )}
+                        <strong className="iconName">{ingredient.name} </strong>
+                      </p>
                       
                       {/* Packaging */}
                       {!isSimpleUnit && (
@@ -422,6 +491,16 @@ function IngredientsManager() {
                 </div>
               );
             })}
+
+          <div className="addIngredientSection">
+          <button 
+            className="button addIngredientButton"
+            onClick={openAddModal}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            <div className='addIngredient'>Add New Ingredient</div>
+          </button>
+        </div>
           </div>
         ) : (
           <div className="no-ingredients">
@@ -429,6 +508,219 @@ function IngredientsManager() {
           </div>
         )}
       </div>
+
+      {/* Add Ingredient Modal */}
+      {showModal && (
+        <div 
+          className="modal-overlay" 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
+          <div 
+            className="modal-content"
+            style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '10px',
+              minWidth: '400px',
+              maxWidth: '600px',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Add New Ingredient</h3>
+            
+            <form onSubmit={handleFormSubmit}>
+              {/* Ingredient Name */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Ingredient Name *
+                </label>
+                <input
+                  type="text"
+                  value={newIngredientForm.name}
+                  onChange={(e) => handleFormChange('name', e.target.value)}
+                  placeholder="Enter ingredient name"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Packaging */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Packaging
+                </label>
+                <select
+                  value={newIngredientForm.packaging}
+                  onChange={(e) => handleFormChange('packaging', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="box">Box</option>
+                  <option value="bag">Bag</option>
+                  <option value="tin">Tin/Can</option>
+                  <option value="bottle">Bottle</option>
+                  <option value="jar">Jar</option>
+                  <option value="bucket">Bucket</option>
+                  <option value="tray">Tray</option>
+                  <option value="sack">Sack</option>
+                  <option value="kg">Kg</option>
+                </select>
+              </div>
+
+              {/* Supplier */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Supplier
+                </label>
+                <input
+                  type="text"
+                  value={newIngredientForm.supplier}
+                  onChange={(e) => handleFormChange('supplier', e.target.value)}
+                  placeholder="Enter supplier name"
+                  list="suppliers-modal"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                <datalist id="suppliers-modal">
+                  {existingSuppliers.map((supplier, index) => (
+                    <option key={index} value={supplier} />
+                  ))}
+                </datalist>
+              </div>
+
+              {/* Quantity per Pizza */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Quantity per Pizza (grams)
+                </label>
+                <input
+                  type="number"
+                  value={newIngredientForm.perPizzaQuantity}
+                  onChange={(e) => handleFormChange('perPizzaQuantity', e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.1"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Unit Quantity */}
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Unit Quantity (kg per package)
+                </label>
+                <input
+                  type="number"
+                  value={newIngredientForm.unitQuantity}
+                  onChange={(e) => handleFormChange('unitQuantity', e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="0.1"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Prep/Order Amount */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                  Prep/Order Amount (grams)
+                </label>
+                <input
+                  type="number"
+                  value={newIngredientForm.preOrderAmount}
+                  onChange={(e) => handleFormChange('preOrderAmount', e.target.value)}
+                  placeholder="0"
+                  min="0"
+                  step="1"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Form Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Add Ingredient
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

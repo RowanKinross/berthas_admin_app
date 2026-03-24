@@ -86,7 +86,6 @@
 .unitSpacing {
   padding: 0 3px;
 }
-
 .ingredientSupplierHeader {
   display: flex;
   width: 48%;
@@ -134,7 +133,6 @@
   padding: 0 10px;
   color: var(--darkGrey);
 }
-
 .ingredients-manager {
   padding: 5px;
 }
@@ -174,6 +172,19 @@
   background: var(--primaryGreen, #28a745);
   color: white;
   border-color: var(--primaryGreen, #28a745);
+}
+.addIngredient {
+  margin: 5px;
+}
+.addIngredientButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.addIngredientSection {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
 
 
