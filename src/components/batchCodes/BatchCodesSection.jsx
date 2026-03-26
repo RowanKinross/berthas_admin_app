@@ -296,16 +296,15 @@ function BatchCodesSection({
               {/* Check for insufficient allocation quantities */}
               {(() => {
                 if (!batchCode) return null;
-                
                 // Parse batch codes to calculate total allocated quantity
                 const totalAllocated = batchCode.split(',').reduce((sum, item) => {
                   const [code, qty] = item.trim().split(':');
                   return sum + (qty ? parseFloat(qty) : 0);
                 }, 0);
-                
-                // Check if total allocated is insufficient
-                const isInsufficient = totalAllocated < numberOfUnits;
-                
+                // Round both values to 2 decimal places for comparison
+                const roundedAllocated = Math.round(totalAllocated * 100) / 100;
+                const roundedRequired = Math.round(numberOfUnits * 100) / 100;
+                const isInsufficient = roundedAllocated < roundedRequired;
                 return isInsufficient ? (
                   <p style={{ color: 'red', fontSize: '0.9em', margin: '0 0 5px 0' }}>
                     *insufficient allocation quantities
