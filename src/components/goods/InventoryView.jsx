@@ -309,7 +309,7 @@ function InventoryView() {
               }
               
               const quantity = delivery.quantities && delivery.quantities[goodName] 
-                ? parseInt(delivery.quantities[goodName]) || 0 
+                ? parseFloat(delivery.quantities[goodName]) || 0 
                 : 0;
               
               // Add found stock to the quantity

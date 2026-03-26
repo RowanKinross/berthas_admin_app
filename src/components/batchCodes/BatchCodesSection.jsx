@@ -124,10 +124,10 @@ function BatchCodesSection({
         .map(delivery => {
           const batchCode = delivery.batchCodes[ingredient.name];
           
-          // Calculate available stock
-          const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
-            ? parseInt(delivery.quantities[ingredient.name]) || 0 
-            : 0;
+            // Calculate available stock
+            const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+              ? parseFloat(delivery.quantities[ingredient.name]) || 0 
+              : 0;
           
           const allocatedQty = (delivery.allocations || [])
             .filter(alloc => 
@@ -392,7 +392,7 @@ function BatchCodesSection({
                                   
                                   // Calculate available stock for this batch
                                   const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
-                                    ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                    ? parseFloat(delivery.quantities[ingredient.name]) || 0 
                                     : 0;
                                   
                                   const allocatedQty = (delivery.allocations || [])
@@ -466,7 +466,7 @@ function BatchCodesSection({
                                 <div> Qty in Stock: {(() => {
                                   // Calculate quantity in stock: delivered - allocated + found stock
                                   const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
-                                    ? parseInt(delivery.quantities[ingredient.name]) || 0 
+                                    ? parseFloat(delivery.quantities[ingredient.name]) || 0 
                                     : 0;
                                   
                                   const allocatedQty = (delivery.allocations || [])
@@ -476,13 +476,14 @@ function BatchCodesSection({
                                       delivery.batchCodes[ingredient.name] === batchCode
                                     )
                                     .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
-                                
+                                  
                                   const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
                                     ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
                                     : 0;
                                   
                                   const qtyInStock = deliveredQty - allocatedQty + foundStock;
-                                  return `${qtyInStock.toFixed(1)} ${ingredient.packaging || 'units'}`;
+                                  const qtyDisplay = Number(qtyInStock) % 1 === 0 ? qtyInStock : Number(qtyInStock).toFixed(2).replace(/\.?0+$/, '');
+                                  return `${qtyDisplay} ${ingredient.packaging || 'units'}`;
                                 })()} </div>
                                 <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
                                 <div className='qtyUsed' onClick={(e) => {
