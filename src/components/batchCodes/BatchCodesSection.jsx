@@ -290,11 +290,28 @@ function BatchCodesSection({
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
                       {(() => {
+                        // Only show deliveries with available stock > 0
                         const filteredDeliveries = deliveries
-                          .filter(delivery =>
-                            delivery.batchCodes &&
-                            delivery.batchCodes[ingredient.name]
-                          );
+                          .filter(delivery => {
+                            if (!(delivery.batchCodes && delivery.batchCodes[ingredient.name])) return false;
+                            // Calculate available stock for this delivery
+                            const batchCode = delivery.batchCodes[ingredient.name];
+                            const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name]
+                              ? parseFloat(delivery.quantities[ingredient.name]) || 0
+                              : 0;
+                            const allocatedQty = (delivery.allocations || [])
+                              .filter(alloc =>
+                                alloc.ingredientName === ingredient.name &&
+                                delivery.batchCodes &&
+                                delivery.batchCodes[ingredient.name] === batchCode
+                              )
+                              .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                            const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name]
+                              ? parseFloat(delivery.foundStock[ingredient.name]) || 0
+                              : 0;
+                            const availableStock = deliveredQty - allocatedQty + foundStock;
+                            return availableStock > 0;
+                          });
                         // Find the delivery with the earliest delivery date (farthest right after sort)
                         const sortedDeliveries = filteredDeliveries.sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
                         const earliestDelivery = sortedDeliveries[sortedDeliveries.length - 1];

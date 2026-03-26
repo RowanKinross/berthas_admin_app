@@ -1654,9 +1654,7 @@ const formatDateDisplay = (dateStr) => {
       const allIngredientCodesSufficient = requiredIngredients.every(ingredient => {
         const batchCodeString = viewingBatch.ingredientBatchCodes?.[ingredient]?.trim();
         const ingredientData = (ingredients || []).find(ing => ing.name === ingredient);
-        if (!batchCodeString || !ingredientData) return false;
-        const requiredQuantity = ingredientData.preOrderAmount ? ingredientData.preOrderAmount : 0;
-        return isIngredientAllocationSufficient(batchCodeString, requiredQuantity);
+        return !!batchCodeString && !!ingredientData;
       });
       newCompletionChecklist = {
         ingredientCodes: allIngredientCodesSufficient,
