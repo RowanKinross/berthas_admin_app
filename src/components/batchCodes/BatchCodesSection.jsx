@@ -142,12 +142,9 @@ function BatchCodesSection({
             availableStock,
             deliveryDate: new Date(delivery.deliveryDate).toISOString()
           };
-        })
-        .filter(item => item.availableStock > 0); // Only include batches with available stock
+        }); // Show all batches, even with availableStock <= 0
 
-      if (availableDeliveries.length === 0) {
-        continue; // Skip ingredients with no available stock
-      }
+      // No longer skip ingredients with no available stock
 
       // Auto-allocate quantities using the same logic as the manual selection
       let remainingQuantity = numberOfUnits;
@@ -283,30 +280,10 @@ function BatchCodesSection({
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
                       {(() => {
-                        // Only show deliveries with available stock > 0
-                        const filteredDeliveries = deliveries
-                          .filter(delivery => {
-                            if (!(delivery.batchCodes && delivery.batchCodes[ingredient.name])) return false;
-                            // Calculate available stock for this delivery
-                            const batchCode = delivery.batchCodes[ingredient.name];
-                            const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name]
-                              ? parseFloat(delivery.quantities[ingredient.name]) || 0
-                              : 0;
-                            const allocatedQty = (delivery.allocations || [])
-                              .filter(alloc =>
-                                alloc.ingredientName === ingredient.name &&
-                                delivery.batchCodes &&
-                                delivery.batchCodes[ingredient.name] === batchCode
-                              )
-                              .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
-                            const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name]
-                              ? parseFloat(delivery.foundStock[ingredient.name]) || 0
-                              : 0;
-                            const availableStock = deliveredQty - allocatedQty + foundStock;
-                            return availableStock > 0;
-                          });
-                        // Find the delivery with the earliest delivery date (farthest right after sort)
-                        const sortedDeliveries = filteredDeliveries.sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
+                        // Show all deliveries, even with available stock <= 0
+                        const sortedDeliveries = deliveries
+                          .filter(delivery => delivery.batchCodes && delivery.batchCodes[ingredient.name])
+                          .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
                         const earliestDelivery = sortedDeliveries[sortedDeliveries.length - 1];
                         return sortedDeliveries.map((delivery, idx) => {
                           const isEarliest = delivery === earliestDelivery;
@@ -380,14 +357,16 @@ function BatchCodesSection({
                                 
                                 if (isSelected) {
                                   // Remove this batch from the list (only if it has quantity > 0)
-                                  const updatedBatchData = currentBatchData.filter(b => !(b.code === batchCode && normalizeDate(b.deliveryDate) === deliveryDateNorm));
+                                  let updatedBatchData = currentBatchData.filter(b => !(b.code === batchCode && normalizeDate(b.deliveryDate) === deliveryDateNorm));
+                                  // Only keep batches with quantity > 0
+                                  updatedBatchData = updatedBatchData.filter(b => b.quantity > 0);
                                   const newValue = updatedBatchData.length > 0 
                                     ? updatedBatchData.map(b => `${b.code}:${b.deliveryDate}:${b.quantity.toFixed(2)}`).join(', ')
                                     : '';
                                   setEditingValue(newValue);
                                   handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 } else {
-                                  // Add this batch to the list
+                                  // Add this batch to the list only if quantity > 0
                                   // First remove any existing entry for this batch code (including zero quantity ones)
                                   let updatedBatchData = currentBatchData.filter(b => !(b.code === batchCode && normalizeDate(b.deliveryDate) === deliveryDateNorm));
                                   // Calculate available stock for this batch
@@ -409,10 +388,16 @@ function BatchCodesSection({
                                   const sumOtherBatches = updatedBatchData.reduce((sum, b) => sum + (typeof b.quantity === 'number' ? b.quantity : 0), 0);
                                   const quantityNeeded = numberOfUnits - sumOtherBatches;
                                   const quantity = Math.max(0, Math.min(quantityNeeded, availableStock));
-                                  updatedBatchData.push({ code: batchCode, deliveryDate: new Date(delivery.deliveryDate).toISOString(), quantity });
-                                  const newValue = updatedBatchData.map(b => `${b.code}:${b.deliveryDate}:${b.quantity.toFixed(2)}`).join(', ');
+                                  if (quantity > 0) {
+                                    updatedBatchData.push({ code: batchCode, deliveryDate: new Date(delivery.deliveryDate).toISOString(), quantity });
+                                  }
+                                  // Only keep batches with quantity > 0
+                                  const filteredBatchData = updatedBatchData.filter(b => b.quantity > 0);
+                                  const newValue = filteredBatchData.length > 0
+                                    ? filteredBatchData.map(b => `${b.code}:${b.deliveryDate}:${b.quantity.toFixed(2)}`).join(', ')
+                                    : '';
                                   setEditingValue(newValue);
-                                  setBatchQuantityInput(quantity.toFixed(2));
+                                  setBatchQuantityInput(quantity > 0 ? quantity.toFixed(2) : '');
                                   handleInlineSave("ingredient", ingredient.name, null, newValue);
                                 }
                                 setEditingField(`ingredient-${ingredient.name}`); // Keep editing mode open
@@ -455,16 +440,7 @@ function BatchCodesSection({
                                   <div className='qtyUsedLabel'>Qty Used:</div>
                                   {!showInput && (
                                     <div 
-                                      style={{ 
-                                        textDecoration: 'underline', 
-                                        cursor: 'pointer',
-                                        display: 'inline-block'
-                                      }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSelectedBatchInput(batchInputKey);
-                                        setBatchQuantityInput(currentBatch && typeof currentBatch.quantity === 'number' ? currentBatch.quantity.toFixed(2) : '0');
-                                      }}
+
                                     >
                                       {currentBatch && typeof currentBatch.quantity === 'number' ? currentBatch.quantity.toFixed(2) : '0'}
                                     </div>

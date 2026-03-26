@@ -1190,14 +1190,26 @@ const formatDateDisplay = (dateStr) => {
       // First, remove any existing allocations for this ingredient/batch combination
       const updatedDeliveriesFromRemoval = await removeStockAllocation(ingredientName, usedInBatchId);
 
-      // Parse batch codes with quantities (format: "BATCH123:2.5, BATCH456:1.2" or just "BATCH123")
+      // Parse batch codes with quantities (format: "BATCH123:2024-03-26:2.5" or just "BATCH123")
       const parseBatchData = (batchString) => {
         if (!batchString || !batchString.trim()) return [];
         return batchString.split(',').map(item => {
-          const [code, qty] = item.trim().split(':');
-          return { 
-            code: code.trim(), 
-            quantity: qty ? parseFloat(qty) : null 
+          const trimmed = item.trim();
+          const firstColon = trimmed.indexOf(':');
+          const lastColon = trimmed.lastIndexOf(':');
+          if (firstColon === -1 || lastColon === -1 || firstColon === lastColon) {
+            // fallback for legacy or malformed
+            const parts = trimmed.split(':');
+            return {
+              code: parts[0]?.trim() || '',
+              deliveryDate: parts[1] || '',
+              quantity: parts[2] ? parseFloat(parts[2]) : (parts[1] && !isNaN(parts[1])) ? parseFloat(parts[1]) : null
+            };
+          }
+          return {
+            code: trimmed.slice(0, firstColon).trim(),
+            deliveryDate: trimmed.slice(firstColon + 1, lastColon),
+            quantity: parseFloat(trimmed.slice(lastColon + 1))
           };
         }).filter(item => item.code);
       };
@@ -1212,14 +1224,17 @@ const formatDateDisplay = (dateStr) => {
 
       // Create allocations for each batch code
       for (const batch of batchData) {
-        const { code: batchCode, quantity: specifiedQuantity } = batch;
-        
-        // Find the delivery that contains this batch code for this ingredient
+        const { code: batchCode, deliveryDate, quantity: specifiedQuantity } = batch;
+        // Find the delivery that contains this batch code for this ingredient AND the correct delivery date
         let delivery = deliveries.find(del => 
           del.batchCodes && 
-          del.batchCodes[ingredientName] === batchCode
+          del.batchCodes[ingredientName] === batchCode &&
+          (
+            // If deliveryDate is present in batch, match it to delivery.deliveryDate (normalized to YYYY-MM-DD)
+            !deliveryDate ||
+            (del.deliveryDate && (new Date(del.deliveryDate).toISOString().split('T')[0] === new Date(deliveryDate).toISOString().split('T')[0]))
+          )
         );
-        
         // Use updated version if available
         if (delivery && updatedDeliveryMap.has(delivery.id)) {
           delivery = updatedDeliveryMap.get(delivery.id);
