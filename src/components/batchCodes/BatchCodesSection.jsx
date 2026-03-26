@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { isIngredientAllocationSufficient } from '../../utils/allocationUtils';
 
 function BatchCodesSection({
   viewingBatch,
@@ -242,21 +243,6 @@ function BatchCodesSection({
               setEditingValue(viewingBatch.starter_batch_code || "");
             }}>
               {viewingBatch.starter_batch_code ? (() => {
-                const selectedStarter = batches.find(batch =>
-                  batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
-                );
-                if (selectedStarter?.ingredientBatchCodes) {
-                  const ingredients = [];
-                  if (selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']) {
-                    ingredients.push(`Flour (Caputo Blue): ${selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}`);
-                  }
-                  if (selectedStarter.ingredientBatchCodes['Wholemeal Flour']) {
-                    ingredients.push(`Wholemeal Flour: ${selectedStarter.ingredientBatchCodes['Wholemeal Flour']}`);
-                  }
-                  if (ingredients.length > 0) {
-                    return <div className='selectedBatch'>{ingredients.join(', ')}</div>;
-                  }
-                }
                 return <div className='selectedBatch'># {viewingBatch.starter_batch_code}</div>;
               })() : <span style={{ color: 'red' }}>+</span>}
             </div>
@@ -277,13 +263,9 @@ function BatchCodesSection({
           const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
 
           // Check if quantities are sufficient
-          const isQuantitySufficient = batchCode ? (() => {
-            const totalAllocated = batchCode.split(',').reduce((sum, item) => {
-              const [code, qty] = item.trim().split(':');
-              return sum + (qty ? parseFloat(qty) : 0);
-            }, 0);
-            return totalAllocated >= numberOfUnits;
-          })() : false;
+          const isQuantitySufficient = ingredient.name === 'starter'
+            ? true
+            : (batchCode ? isIngredientAllocationSufficient(batchCode, numberOfUnits) : false);
 
           return (
             <div key={ingredient.id} className='ingredient container' style={{ color: (batchCode && isQuantitySufficient) ? 'inherit' : 'red' }}>
@@ -295,16 +277,8 @@ function BatchCodesSection({
               </p>
               {/* Check for insufficient allocation quantities */}
               {(() => {
-                if (!batchCode) return null;
-                // Parse batch codes to calculate total allocated quantity
-                const totalAllocated = batchCode.split(',').reduce((sum, item) => {
-                  const [code, qty] = item.trim().split(':');
-                  return sum + (qty ? parseFloat(qty) : 0);
-                }, 0);
-                // Round both values to 2 decimal places for comparison
-                const roundedAllocated = Math.round(totalAllocated * 100) / 100;
-                const roundedRequired = Math.round(numberOfUnits * 100) / 100;
-                const isInsufficient = roundedAllocated < roundedRequired;
+                if (!batchCode || ingredient.name === 'starter') return null;
+                const isInsufficient = !isIngredientAllocationSufficient(batchCode, numberOfUnits);
                 return isInsufficient ? (
                   <p style={{ color: 'red', fontSize: '0.9em', margin: '0 0 5px 0' }}>
                     *insufficient allocation quantities
@@ -733,7 +707,7 @@ function BatchCodesSection({
                   )}
                 </div>
               ) : (
-                <p onClick={() => {
+                <div onClick={() => {
                   setEditingField(`ingredient-${ingredient.name}`);
                   setEditingValue(batchCode || "");
                 }}>
@@ -749,7 +723,7 @@ function BatchCodesSection({
                   ) : (
                     <span style={{ color: 'red' }}>+</span>
                   )}
-                </p>
+                </div>
               )}
             </div>
           );
