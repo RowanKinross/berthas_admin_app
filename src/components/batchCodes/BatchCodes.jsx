@@ -1,3 +1,4 @@
+import { isIngredientAllocationSufficient } from '../../utils/allocationUtils';
 import './batchCodes.css'
 import React from 'react';
 import { db } from '../firebase/firebase';
@@ -1650,18 +1651,20 @@ const formatDateDisplay = (dateStr) => {
     if (viewingBatch.batch_type === 'starter') {
       // For starter batches, check ingredient batch codes and starter made checkbox
       const requiredIngredients = ['Flour (Caputo Blue)', 'Wholemeal Flour'];
-      const allIngredientCodesPresent = requiredIngredients.every(ingredient => 
-        viewingBatch.ingredientBatchCodes?.[ingredient]?.trim()
-      );
-      
+      const allIngredientCodesSufficient = requiredIngredients.every(ingredient => {
+        const batchCodeString = viewingBatch.ingredientBatchCodes?.[ingredient]?.trim();
+        const ingredientData = (ingredients || []).find(ing => ing.name === ingredient);
+        if (!batchCodeString || !ingredientData) return false;
+        const requiredQuantity = ingredientData.preOrderAmount ? ingredientData.preOrderAmount : 0;
+        return isIngredientAllocationSufficient(batchCodeString, requiredQuantity);
+      });
       newCompletionChecklist = {
-        ingredientCodes: allIngredientCodesPresent,
+        ingredientCodes: allIngredientCodesSufficient,
         pizzaNumbersComplete: !!viewingBatch.pizza_numbers_complete,
         sleevePhotos: true, // N/A for starter batches
         pizzaWeights: true  // N/A for starter batches
       };
-      
-      shouldBeCompleted = allIngredientCodesPresent && !!viewingBatch.pizza_numbers_complete;
+      shouldBeCompleted = allIngredientCodesSufficient && !!viewingBatch.pizza_numbers_complete;
     } else {
       // For pizza/dough ball batches, use existing logic plus new checks
       const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
@@ -1679,20 +1682,11 @@ const formatDateDisplay = (dateStr) => {
     
       const allIngredientCodesFilled =
         requiredIngredients.length > 0 &&
-        requiredIngredients.every(
-          ingredient =>
-            mergedIngredientCodes[ingredient] &&
-            mergedIngredientCodes[ingredient].trim() !== ""
-        );
-
-      // Check vacuum bags for non-starter batches and include in ingredient check
-      const vacuumBagsBatchCode = selectedPizzas
-        .flatMap(pizza => pizza.ingredientBatchCodes ? pizza.ingredientBatchCodes['Vacuum Bags'] : [])
-        .find(code => code) || '';
-      const vacuumBagsComplete = vacuumBagsBatchCode && vacuumBagsBatchCode.trim() !== "";
-      
-      // Include vacuum bags in overall ingredient completion
-      const allIngredientsIncludingVacuumBags = allIngredientCodesFilled && vacuumBagsComplete;
+        requiredIngredients.every(ingredient => {
+          const batchCodeString = mergedIngredientCodes[ingredient]?.trim();
+          const ingredientData = (ingredients || []).find(ing => ing.name === ingredient);
+          return !!batchCodeString && !!ingredientData;
+        });
 
       // Check sleeve photos - pizzas with sleeve:true need photos
       const sleevePhotosComplete = selectedPizzas.every(pizza => {
@@ -1713,13 +1707,13 @@ const formatDateDisplay = (dateStr) => {
       });
 
       newCompletionChecklist = {
-        ingredientCodes: allIngredientsIncludingVacuumBags,
+        ingredientCodes: allIngredientCodesFilled,
         pizzaNumbersComplete: !!viewingBatch.pizza_numbers_complete,
         sleevePhotos: sleevePhotosComplete,
         pizzaWeights: pizzaWeightsComplete
       };
     
-      shouldBeCompleted = allIngredientsIncludingVacuumBags && 
+      shouldBeCompleted = allIngredientCodesFilled && 
                          !!viewingBatch.pizza_numbers_complete &&
                          sleevePhotosComplete &&
                          pizzaWeightsComplete;
@@ -2883,7 +2877,7 @@ const formatDateDisplay = (dateStr) => {
                   {viewingBatch.batch_type === 'dough balls' ? 'Dough Balls:' : 'Pizzas:'}
                 </h4>
                 <h6 className='pizzaWeightsOuter pizzaWeights'>
-                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Weights:' : 'Pizza Weights:'}
+                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball (4pk) Weights:' : 'Pizza Weights:'}
                 </h6>
               </div>
           {sortPizzas(viewingBatch.pizzas.filter(pizza => pizza.quantity > 0)).map(pizza => (

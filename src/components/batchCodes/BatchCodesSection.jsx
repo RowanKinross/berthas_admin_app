@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { isIngredientAllocationSufficient } from '../../utils/allocationUtils';
 
 function BatchCodesSection({
   viewingBatch,
@@ -242,21 +243,6 @@ function BatchCodesSection({
               setEditingValue(viewingBatch.starter_batch_code || "");
             }}>
               {viewingBatch.starter_batch_code ? (() => {
-                const selectedStarter = batches.find(batch =>
-                  batch.batch_type === 'starter' && batch.batch_code === viewingBatch.starter_batch_code
-                );
-                if (selectedStarter?.ingredientBatchCodes) {
-                  const ingredients = [];
-                  if (selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']) {
-                    ingredients.push(`Flour (Caputo Blue): ${selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)']}`);
-                  }
-                  if (selectedStarter.ingredientBatchCodes['Wholemeal Flour']) {
-                    ingredients.push(`Wholemeal Flour: ${selectedStarter.ingredientBatchCodes['Wholemeal Flour']}`);
-                  }
-                  if (ingredients.length > 0) {
-                    return <div className='selectedBatch'>{ingredients.join(', ')}</div>;
-                  }
-                }
                 return <div className='selectedBatch'># {viewingBatch.starter_batch_code}</div>;
               })() : <span style={{ color: 'red' }}>+</span>}
             </div>
@@ -277,13 +263,9 @@ function BatchCodesSection({
           const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
 
           // Check if quantities are sufficient
-          const isQuantitySufficient = batchCode ? (() => {
-            const totalAllocated = batchCode.split(',').reduce((sum, item) => {
-              const [code, qty] = item.trim().split(':');
-              return sum + (qty ? parseFloat(qty) : 0);
-            }, 0);
-            return totalAllocated >= numberOfUnits;
-          })() : false;
+          const isQuantitySufficient = ingredient.name === 'starter'
+            ? true
+            : (batchCode ? isIngredientAllocationSufficient(batchCode, numberOfUnits) : false);
 
           return (
             <div key={ingredient.id} className='ingredient container' style={{ color: (batchCode && isQuantitySufficient) ? 'inherit' : 'red' }}>
@@ -295,17 +277,8 @@ function BatchCodesSection({
               </p>
               {/* Check for insufficient allocation quantities */}
               {(() => {
-                if (!batchCode) return null;
-                
-                // Parse batch codes to calculate total allocated quantity
-                const totalAllocated = batchCode.split(',').reduce((sum, item) => {
-                  const [code, qty] = item.trim().split(':');
-                  return sum + (qty ? parseFloat(qty) : 0);
-                }, 0);
-                
-                // Check if total allocated is insufficient
-                const isInsufficient = totalAllocated < numberOfUnits;
-                
+                if (!batchCode || ingredient.name === 'starter') return null;
+                const isInsufficient = !isIngredientAllocationSufficient(batchCode, numberOfUnits);
                 return isInsufficient ? (
                   <p style={{ color: 'red', fontSize: '0.9em', margin: '0 0 5px 0' }}>
                     *insufficient allocation quantities
@@ -316,13 +289,18 @@ function BatchCodesSection({
                 <div ref={batchEditingRef}>
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
-                      {deliveries
-                        .filter(delivery =>
-                          delivery.batchCodes &&
-                          delivery.batchCodes[ingredient.name]
-                        )
-                        .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
-                        .map(delivery => {
+                      {(() => {
+                        const filteredDeliveries = deliveries
+                          .filter(delivery =>
+                            delivery.batchCodes &&
+                            delivery.batchCodes[ingredient.name]
+                          );
+                        // Find the delivery with the earliest delivery date (farthest right after sort)
+                        const sortedDeliveries = filteredDeliveries.sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
+                        const earliestDelivery = sortedDeliveries[sortedDeliveries.length - 1];
+                        return sortedDeliveries.map((delivery, idx) => {
+                          const isEarliest = delivery === earliestDelivery;
+                          // ...existing code...
                           const batchCode = delivery.batchCodes[ingredient.name];
                           // Parse batch codes and quantities
                           const parseBatchData = (batchString) => {
@@ -339,9 +317,9 @@ function BatchCodesSection({
                           const currentBatch = currentBatchData.find(b => b.code === batchCode);
                           // Check if this specific delivery has allocations for this ingredient and batch code
                           const hasAllocationInDB = (delivery.allocations || []).some(alloc => 
-                            alloc.ingredientName === ingredient.name && 
-                            delivery.batchCodes && 
-                            delivery.batchCodes[ingredient.name] === batchCode &&
+                            alloc.ingredientName === ingredient.name &&
+                            alloc.batchCode === batchCode &&
+                            alloc.deliveryId === delivery.id &&
                             alloc.quantityAllocated > 0
                           );
                           
@@ -360,7 +338,7 @@ function BatchCodesSection({
                           return (
                             <div
                               key={`${delivery.id}-${ingredient.name}`}
-                              className={`batchSelect ${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}`}
+                              className={`batchSelect ${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}${isEarliest ? ' pulse-batch' : ''}`}
                               onClick={(e) => {
                                 // Don't trigger if clicking on input or qty used area
                                 if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
@@ -697,8 +675,8 @@ function BatchCodesSection({
                               </div>
                             </div>
                           );
-                        })
-                      }
+                        });
+                      })()}
                     </div>
                   ) : (
                     <>
@@ -729,7 +707,7 @@ function BatchCodesSection({
                   )}
                 </div>
               ) : (
-                <p onClick={() => {
+                <div onClick={() => {
                   setEditingField(`ingredient-${ingredient.name}`);
                   setEditingValue(batchCode || "");
                 }}>
@@ -745,7 +723,7 @@ function BatchCodesSection({
                   ) : (
                     <span style={{ color: 'red' }}>+</span>
                   )}
-                </p>
+                </div>
               )}
             </div>
           );

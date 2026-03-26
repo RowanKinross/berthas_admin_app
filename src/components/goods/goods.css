@@ -1,3 +1,6 @@
+.batch-info.selected {
+  flex-direction: column;
+}
 /* Goods component styling */
 .goods {
   padding: 20px 0;
@@ -86,7 +89,6 @@
 .unitSpacing {
   padding: 0 3px;
 }
-
 .ingredientSupplierHeader {
   display: flex;
   width: 48%;
@@ -134,7 +136,6 @@
   padding: 0 10px;
   color: var(--darkGrey);
 }
-
 .ingredients-manager {
   padding: 5px;
 }
@@ -174,6 +175,19 @@
   background: var(--primaryGreen, #28a745);
   color: white;
   border-color: var(--primaryGreen, #28a745);
+}
+.addIngredient {
+  margin: 5px;
+}
+.addIngredientButton {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.addIngredientSection {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
 
 
@@ -468,15 +482,18 @@
   width: 100%;
   max-width: 100%;
 }
+
+.stock-adjustment-controls.inline-controls {
+  position: static;
+  top: auto;
+  left: auto;
+  right: auto;
+  z-index: auto;
+  margin-top: 8px;
+}
 .stock-adjustment-controls {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background-color: #f1f1f2;
-  padding: 10px;
-  border-radius: 0 0 10px 10px;
-  z-index: 10;
+  padding: 5px;
+  background: var(--pale);
 }
 
 .item-header {
@@ -552,6 +569,12 @@
   font-size: 12px;
   color: #6c757d;
 }
+.deliveredBatchInfo {
+  text-align: left;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #333;
+}
 
 .status-tag {
   padding: 2px 6px;
@@ -610,6 +633,8 @@
   background: #efeff0da;
   width: 100%;
   box-sizing: border-box;
+  
+  border: solid 1px var(--darkGrey);
 }
 
 /* Checkbox styling */
