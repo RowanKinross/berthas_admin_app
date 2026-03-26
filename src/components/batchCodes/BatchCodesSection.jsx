@@ -280,14 +280,14 @@ function BatchCodesSection({
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
                       {(() => {
-                        // Show all deliveries, even with available stock <= 0
+                        // Show all deliveries
                         const sortedDeliveries = deliveries
                           .filter(delivery => delivery.batchCodes && delivery.batchCodes[ingredient.name])
                           .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
                         const earliestDelivery = sortedDeliveries[sortedDeliveries.length - 1];
                         return sortedDeliveries.map((delivery, idx) => {
+
                           const isEarliest = delivery === earliestDelivery;
-                          // ...existing code...
                           const batchCode = delivery.batchCodes[ingredient.name];
                           // Parse batch codes, delivery dates, and quantities
                           const parseBatchData = (batchString) => {
@@ -312,7 +312,6 @@ function BatchCodesSection({
                               };
                             });
                           };
-
                           // Use the most current batch code value (either from editingValue or the actual batchCode)
                           const currentBatchString = editingValue || batchCode || '';
                           const currentBatchData = parseBatchData(currentBatchString);
@@ -326,6 +325,27 @@ function BatchCodesSection({
                           };
                           const deliveryDateNorm = normalizeDate(delivery.deliveryDate);
                           const currentBatch = currentBatchData.find(b => b.code === batchCode && normalizeDate(b.deliveryDate) === deliveryDateNorm);
+
+                          // Calculate available stock for this delivery
+                          const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name] 
+                            ? parseFloat(delivery.quantities[ingredient.name]) || 0 
+                            : 0;
+                          const allocatedQty = (delivery.allocations || [])
+                            .filter(alloc => 
+                              alloc.ingredientName === ingredient.name && 
+                              delivery.batchCodes && 
+                              delivery.batchCodes[ingredient.name] === batchCode
+                            )
+                            .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                          const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name] 
+                            ? parseFloat(delivery.foundStock[ingredient.name]) || 0 
+                            : 0;
+                          const availableStock = deliveredQty - allocatedQty + foundStock;
+
+                          // HIDE delivery if availableStock === 0 && (currentBatch?.quantity ?? 0) === 0
+                          if (availableStock === 0 && (!currentBatch || currentBatch.quantity === 0)) {
+                            return null;
+                          }
                           
                           // Check if this specific delivery has allocations for this ingredient and batch code
                           const hasAllocationInDB = (delivery.allocations || []).some(alloc => 
