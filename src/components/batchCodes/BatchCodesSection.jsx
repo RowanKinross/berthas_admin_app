@@ -342,6 +342,7 @@ function BatchCodesSection({
                           const isSelected = editingField === `ingredient-${ingredient.name}` 
                             ? hasAllocationInEdit 
                             : hasAllocationInDB;
+                            
 
                           const batchInputKey = `${delivery.id}-${ingredient.name}`;
                           const showInput = selectedBatchInput === batchInputKey;
