@@ -353,8 +353,7 @@ function BatchCodesSection({
                               key={`${delivery.id}-${ingredient.name}`}
                               className={`batchSelect ${isSelectedOrShowingInput ? 'selectedBatch' : 'notSelectedBatch'}${isEarliest ? ' pulse-batch' : ''}`}
                               onClick={(e) => {
-                                // Don't trigger if clicking on input or qty used area
-                                if (e.target.tagName === 'INPUT' || e.target.closest('.qtyUsed')) return;
+                                
                                 
                                 if (isSelected) {
                                   // Remove this batch from the list (only if it has quantity > 0)
