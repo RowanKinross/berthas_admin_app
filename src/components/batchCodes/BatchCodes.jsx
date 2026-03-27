@@ -10,6 +10,7 @@ import ImageCropModal from './ImageCropModal';
 import BatchCodesSection from './BatchCodesSection';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faPencilAlt, faCube, faCheck, faSave } from '@fortawesome/free-solid-svg-icons';
+import { round } from 'lodash';
 
 function BatchCodes() {
   const [batches, setBatches] = useState([]);
@@ -2788,23 +2789,44 @@ const formatDateDisplay = (dateStr) => {
                                 .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
                                 .map(delivery => {
                                   const batchCode = delivery.batchCodes[ingredientName];
-                                  const isSelected = editingValue === batchCode;
+                                  // editingValue is in the format batchcode:deliveryDate:usedQty
+                                  // batchCode is the code for this delivery
+                                  // delivery.deliveryDate is the delivery date for this delivery
+                                  let isSelected = false;
+                                  if (editingValue) {
+                                    // Split editingValue into parts
+                                    const [editCode, editDate] = editingValue.split(':');
+                                    // Normalize delivery date to YYYY-MM-DD for comparison
+                                    const normalizeDate = (dateStr) => {
+                                      if (!dateStr) return '';
+                                      const d = new Date(dateStr);
+                                      if (isNaN(d)) return dateStr.split('T')[0] || dateStr;
+                                      return d.toISOString().split('T')[0];
+                                    };
+                                    isSelected = editCode === batchCode && normalizeDate(editDate) === normalizeDate(delivery.deliveryDate);
+                                  }
                                   
                                   return (
                                     <div
                                       key={`${delivery.id}-${ingredientName}`}
-                                      className={`batchButton ${isSelected ? 'selected' : ''}`}
+                                      className={`batchSelect ${isSelected ? 'selectedBatch' : 'notSelectedBatch'}`}
                                       onClick={() => {
                                         setEditingValue(batchCode);
                                         handleInlineSave("batch", null, "ingredientBatchCodes", {
                                           ...viewingBatch.ingredientBatchCodes,
-                                          [ingredientName]: batchCode
+                                          [ingredientName]: `${batchCode}:${delivery.deliveryDate}:${
+                                            ingredientName === 'Wholemeal Flour'
+                                              ? (starterMixTotals.rye/25000).toFixed(3) // convert to number of 25kg sacks
+                                              : ingredientName === 'Flour (Caputo Blue)'
+                                                ? (starterMixTotals.caputo/15000).toFixed(3) // convert to 15kg sacks
+                                                : 0
+                                          }`
                                         });
                                       }}
                                     >
-                                      <div className="batchLabel">
-                                        <div>Batch Code: {batchCode} </div> 
-                                <div> Qty in Stock: {(() => {
+                                    <div className="batchLabel">
+                                      <div>Batch Code: {batchCode} </div> 
+                                      <div> Qty in Stock: {(() => {
                                   // Calculate quantity in stock: delivered - allocated + found stock
                                   const deliveredQty = delivery.quantities && delivery.quantities[ingredientName] 
                                     ? parseInt(delivery.quantities[ingredientName]) || 0 
@@ -2825,6 +2847,7 @@ const formatDateDisplay = (dateStr) => {
                                     return `${qtyInStock.toFixed(1)} ${ingredient?.packaging || 'units'}`;
                                   })()} </div>
                                   <div>Delivered: {new Date(delivery.deliveryDate).toLocaleDateString('en-GB')} </div>
+
                                      </div>
                                     </div>
                                   );
@@ -2874,7 +2897,11 @@ const formatDateDisplay = (dateStr) => {
                           setEditingField(`starter-ingredient-${ingredientName}`);
                           setEditingValue(batchCode || "");
                         }}>
-                          {batchCode ? <div className='selectedBatch'>batchcode: {batchCode}</div> : <span style={{ color: 'red' }}>+</span>}
+                          {batchCode ? (
+                            <div className='selectedBatch'>
+                              batchcode: {batchCode.split(':')[0]}
+                            </div>
+                          ) : <span style={{ color: 'red' }}>+</span>}
                         </p>
                       )}
                     </div>
