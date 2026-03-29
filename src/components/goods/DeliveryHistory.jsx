@@ -87,10 +87,92 @@ const PackagingIcon = ({ packaging, ingredientName, size = 'normal' }) => {
 };
 
 function DeliveryHistory() {
+      // Inline edit state for checked by
+      const [editingCheckedBy, setEditingCheckedBy] = useState({});
+      const [tempCheckedBy, setTempCheckedBy] = useState({});
+
+      // Save checked by to Firestore and update local state
+      const handleCheckedBySave = async (deliveryId) => {
+        if (!tempCheckedBy[deliveryId]) {
+          setEditingCheckedBy((prev) => ({ ...prev, [deliveryId]: false }));
+          return;
+        }
+        try {
+          const deliveryRef = doc(db, 'deliveries', deliveryId);
+          await import('firebase/firestore').then(({ updateDoc }) =>
+            updateDoc(deliveryRef, { staffInitials: tempCheckedBy[deliveryId] })
+          );
+          setDeliveries((prev) => prev.map(d =>
+            d.id === deliveryId ? { ...d, staffInitials: tempCheckedBy[deliveryId] } : d
+          ));
+        } catch (err) {
+          alert('Error saving checked by: ' + err.message);
+        }
+        setEditingCheckedBy((prev) => ({ ...prev, [deliveryId]: false }));
+      };
+    // Inline edit state for batch: { [deliveryId_good]: true }
+    const [editingBatch, setEditingBatch] = useState({});
+    // Temp value state for batch: { [deliveryId_good]: batchString }
+    const [tempBatch, setTempBatch] = useState({});
+
+    // Save batch code to Firestore and update local state
+    const handleBatchSave = async (deliveryId, good) => {
+      const key = `${deliveryId}_${good}`;
+      let newBatch = tempBatch[key] || '';
+      if (newBatch.includes(':')) {
+        newBatch = newBatch.replace(/:/g, ';');
+      }
+      try {
+        const deliveryRef = doc(db, 'deliveries', deliveryId);
+        const delivery = deliveries.find(d => d.id === deliveryId);
+        if (!delivery) return;
+        const updatedBatchCodes = { ...(delivery.batchCodes || {}), [good]: newBatch };
+        await import('firebase/firestore').then(({ updateDoc }) =>
+          updateDoc(deliveryRef, { batchCodes: updatedBatchCodes })
+        );
+        setDeliveries((prev) => prev.map(d =>
+          d.id === deliveryId ? { ...d, batchCodes: updatedBatchCodes } : d
+        ));
+      } catch (err) {
+        alert('Error saving batch code: ' + err.message);
+      }
+      setEditingBatch((prev) => ({ ...prev, [key]: false }));
+    };
   const [deliveries, setDeliveries] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedDelivery, setExpandedDelivery] = useState(null);
+  // Inline edit state: { [deliveryId_good]: true }
+  const [editingUseBy, setEditingUseBy] = useState({});
+  // Temp value state: { [deliveryId_good]: dateString }
+  const [tempUseBy, setTempUseBy] = useState({});
+  // Save use by date to Firestore and update local state
+  const handleUseBySave = async (deliveryId, good) => {
+    const key = `${deliveryId}_${good}`;
+    const newDate = tempUseBy[key];
+    if (!newDate) {
+      setEditingUseBy((prev) => ({ ...prev, [key]: false }));
+      return;
+    }
+    try {
+      // Update Firestore
+      const deliveryRef = doc(db, 'deliveries', deliveryId);
+      // Find the delivery
+      const delivery = deliveries.find(d => d.id === deliveryId);
+      if (!delivery) return;
+      const updatedUseByDates = { ...(delivery.useByDates || {}), [good]: newDate };
+      await import('firebase/firestore').then(({ updateDoc }) =>
+        updateDoc(deliveryRef, { useByDates: updatedUseByDates })
+      );
+      // Update local state
+      setDeliveries((prev) => prev.map(d =>
+        d.id === deliveryId ? { ...d, useByDates: updatedUseByDates } : d
+      ));
+    } catch (err) {
+      alert('Error saving use by date: ' + err.message);
+    }
+    setEditingUseBy((prev) => ({ ...prev, [key]: false }));
+  };
 
   const handleDeleteDelivery = async (deliveryId) => {
     const delivery = deliveries.find(d => d.id === deliveryId);
@@ -225,10 +307,48 @@ function DeliveryHistory() {
                                 <span className="detail-value">{delivery.quantities[good]}</span>
                               </div>
                             )}
-                            {delivery.batchCodes && delivery.batchCodes[good] && (
+                            {delivery.batchCodes && (
                               <div className="detail-item">
                                 <span className="detail-label">Batch:</span>
-                                <span className="detail-value">{delivery.batchCodes[good]}</span>
+                                {(() => {
+                                  const key = `${delivery.id}_${good}`;
+                                  if (editingBatch[key]) {
+                                    return (
+                                      <input
+                                        type="text"
+                                        className="inline-batch-input"
+                                        value={
+                                          tempBatch[key] !== undefined
+                                            ? tempBatch[key]
+                                            : (delivery.batchCodes[good] || '')
+                                        }
+                                        onChange={e => {
+                                          setTempBatch(prev => ({ ...prev, [key]: e.target.value }));
+                                        }}
+                                        onBlur={() => handleBatchSave(delivery.id, good)}
+                                        autoFocus
+                                        style={{ marginLeft: 8, width: 90 }}
+                                      />
+                                    );
+                                  } else {
+                                    return (
+                                      <span
+                                        className="detail-value"
+                                        style={{ marginLeft: 8, cursor: 'pointer', borderBottom: '1px dashed #888' }}
+                                        title="Click to edit"
+                                        onClick={() => {
+                                          setEditingBatch(prev => ({ ...prev, [key]: true }));
+                                          setTempBatch(prev => ({
+                                            ...prev,
+                                            [key]: delivery.batchCodes[good] || ''
+                                          }));
+                                        }}
+                                      >
+                                        {delivery.batchCodes[good] || <span style={{ color: '#aaa' }}>Set batch</span>}
+                                      </span>
+                                    );
+                                  }
+                                })()}
                               </div>
                             )}
                             {delivery.temperatures && delivery.temperatures[good] && (
@@ -237,10 +357,54 @@ function DeliveryHistory() {
                                 <span className="detail-value">{delivery.temperatures[good]}</span>
                               </div>
                             )}
-                            {delivery.useByDates && delivery.useByDates[good] && (
+                            {delivery.useByDates && (
                               <div className="detail-item">
                                 <span className="detail-label">Use by:</span>
-                                <span className="detail-value">{formatDate(new Date(delivery.useByDates[good]))}</span>
+                                {(() => {
+                                  const key = `${delivery.id}_${good}`;
+                                  if (editingUseBy[key]) {
+                                    return (
+                                      <input
+                                        type="date"
+                                        className="inline-useby-input"
+                                        value={
+                                          tempUseBy[key] ||
+                                          (delivery.useByDates[good]
+                                            ? new Date(delivery.useByDates[good]).toISOString().slice(0, 10)
+                                            : '')
+                                        }
+                                        onChange={e => {
+                                          setTempUseBy(prev => ({ ...prev, [key]: e.target.value }));
+                                        }}
+                                        onBlur={() => handleUseBySave(delivery.id, good)}
+                                        autoFocus
+                                        style={{ marginLeft: 8 }}
+                                      />
+                                    );
+                                  } else {
+                                    return (
+                                      <span
+                                        className="detail-value"
+                                        style={{ marginLeft: 8, cursor: 'pointer', borderBottom: '1px dashed #888' }}
+                                        title="Click to edit"
+                                        onClick={() => {
+                                          const key = `${delivery.id}_${good}`;
+                                          setEditingUseBy(prev => ({ ...prev, [key]: true }));
+                                          setTempUseBy(prev => ({
+                                            ...prev,
+                                            [key]: delivery.useByDates[good]
+                                              ? new Date(delivery.useByDates[good]).toISOString().slice(0, 10)
+                                              : ''
+                                          }));
+                                        }}
+                                      >
+                                        {delivery.useByDates[good]
+                                          ? formatDate(new Date(delivery.useByDates[good]))
+                                          : <span style={{ color: '#aaa' }}>Set date</span>}
+                                      </span>
+                                    );
+                                  }
+                                })()}
                               </div>
                             )}
                           </div>
@@ -316,15 +480,51 @@ function DeliveryHistory() {
                     <span className={`status ${delivery.deliveryChecksComplete ? 'completed' : 'pending'}`}>
                       {delivery.deliveryChecksComplete ? ' ✓' : ' ✗'}
                     </span>
+                    <ul className='qualityChecks'>
+                      <li>packed to protect the product (no loose deliveries of product are permitted)</li>
+                      <li>free from any pest infestation</li>
+                      <li>within shelf life (use by date & best before date)</li>
+                      <li>in good condition - no visible sign of damage etc</li>
+                      <li>allergenic ingredients free from damage and sufficiently packaged to prevent contamination</li>
+                  </ul>
                   </div>
                 </div>
                 <div className="delivery-info">
-                  {delivery.staffInitials && (
-                    <div className="info-row">
-                      <strong>Checked by:</strong> 
-                      <span className="staffInitials">{delivery.staffInitials}</span>
-                    </div>
-                  )}
+                  <div className="info-row">
+                    <strong>Checked by:</strong>
+                    {editingCheckedBy[delivery.id] ? (
+                      <input
+                        type="text"
+                        className="inline-checkedby-input"
+                        value={
+                          tempCheckedBy[delivery.id] !== undefined
+                            ? tempCheckedBy[delivery.id]
+                            : (delivery.staffInitials || '')
+                        }
+                        onChange={e => {
+                          setTempCheckedBy(prev => ({ ...prev, [delivery.id]: e.target.value }));
+                        }}
+                        onBlur={() => handleCheckedBySave(delivery.id)}
+                        autoFocus
+                        style={{ marginLeft: 8, width: 60 }}
+                      />
+                    ) : (
+                      <span
+                        className="staffInitials"
+                        style={{ marginLeft: 8, cursor: 'pointer', borderBottom: '1px dashed #888' }}
+                        title="Click to edit"
+                        onClick={() => {
+                          setEditingCheckedBy(prev => ({ ...prev, [delivery.id]: true }));
+                          setTempCheckedBy(prev => ({
+                            ...prev,
+                            [delivery.id]: delivery.staffInitials || ''
+                          }));
+                        }}
+                      >
+                        {delivery.staffInitials || <span style={{ color: '#aaa' }}>Set initials</span>}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="delivery-info deleteDeliverySection">
                   <div className="button deleteDelivery"
