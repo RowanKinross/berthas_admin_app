@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from '@firebase/firestore';
+import { collection, getDocs, query, orderBy, deleteDoc, doc} from '@firebase/firestore';
 import { db } from '../firebase/firebase';
 
 // Component to render visual packaging indicators
@@ -92,6 +92,26 @@ function DeliveryHistory() {
   const [loading, setLoading] = useState(true);
   const [expandedDelivery, setExpandedDelivery] = useState(null);
 
+  const handleDeleteDelivery = async (deliveryId) => {
+    const delivery = deliveries.find(d => d.id === deliveryId);
+    if (!delivery) return;
+    if (delivery.allocations && delivery.allocations.length > 0) {
+      alert('Cannot delete this delivery because it has allocations.');
+      return;
+    }
+    const supplier = delivery.supplier || 'Unknown Supplier';
+    const dateStr = delivery.deliveryDate ? formatDate(new Date(delivery.deliveryDate)) : 'Unknown Date';
+    const confirmed = window.confirm(`Are you sure you want to delete the delivery from ${supplier} on ${dateStr}? This action cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await deleteDoc(doc(db, 'deliveries', deliveryId));
+      setDeliveries(deliveries.filter(d => d.id !== deliveryId));
+    } catch (err) {
+      alert('Error deleting delivery: ' + err.message);
+    }
+  };
+  
+  
   // Fetch deliveries from Firestore
   useEffect(() => {
     const fetchData = async () => {
@@ -305,6 +325,12 @@ function DeliveryHistory() {
                       <span className="staffInitials">{delivery.staffInitials}</span>
                     </div>
                   )}
+                </div>
+                <div className="delivery-info deleteDeliverySection">
+                  <div className="button deleteDelivery"
+                   onClick={() => handleDeleteDelivery(delivery.id)}>
+                    Delete Delivery
+                  </div>
                 </div>
               </div>
             )}
