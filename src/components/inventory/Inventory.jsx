@@ -1,6 +1,6 @@
 // import berthasLogo from './bertha_logo'
 import './inventory.css';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import { app, db } from '../firebase/firebase';
 import { collection, addDoc, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore'; 
 import { Dropdown, Button, Form } from 'react-bootstrap';
@@ -270,79 +270,77 @@ function Inventory() {
   }
 };
 
-const adjustArchive = async (delta) => {
+
+
+// Batching for minus (archive) and plus (un-archive) actions
+const minusArchiveCountRef = useRef(0);
+const plusArchiveCountRef = useRef(0);
+const minusArchiveTimeoutRef = useRef(null);
+const plusArchiveTimeoutRef = useRef(null);
+
+const adjustArchive = (delta) => {
+  if (delta === -1) {
+    minusArchiveCountRef.current += 1;
+    if (minusArchiveTimeoutRef.current) clearTimeout(minusArchiveTimeoutRef.current);
+    minusArchiveTimeoutRef.current = setTimeout(() => {
+      doMinusArchiveBatch();
+    }, 500); // 500ms debounce
+  } else if (delta === 1) {
+    plusArchiveCountRef.current += 1;
+    if (plusArchiveTimeoutRef.current) clearTimeout(plusArchiveTimeoutRef.current);
+    plusArchiveTimeoutRef.current = setTimeout(() => {
+      doPlusArchiveBatch();
+    }, 500); // 500ms debounce
+  }
+};
+
+const doMinusArchiveBatch = async () => {
+  const count = minusArchiveCountRef.current;
+  if (count === 0) return;
+  minusArchiveCountRef.current = 0;
   try {
     const batchRef = doc(db, "batches", selectedBatch.id);
     const batchSnap = await getDoc(batchRef);
     const batchData = batchSnap.data();
-
     const allocations = [...(batchData.pizza_allocations || [])];
     const pizzas = [...(batchData.pizzas || [])];
-
     const pizzaIndex = pizzas.findIndex(p => p.id === selectedPizzaId);
     const archivedIndex = allocations.findIndex(a =>
       a.pizzaId === selectedPizzaId &&
       a.orderId === 'archived' &&
       a.status === 'completed'
     );
-
-    if (delta === -1) {
-      // ARCHIVE one — increase archived allocation
-      if (pizzaIndex === -1) return; // safety check
-
-      const completed = allocations
-        .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
-
-      const active = allocations
-        .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
-        .reduce((sum, a) => sum + a.quantity, 0);
-
-      const effective = pizzas[pizzaIndex].quantity - completed;
-      const available = effective - active;
-
-      if (available <= 0) return; // nothing to archive
-
-      if (archivedIndex > -1) {
-        allocations[archivedIndex].quantity += 1;
-      } else {
-        allocations.push({
-          pizzaId: selectedPizzaId,
-          orderId: 'archived',
-          quantity: 1,
-          status: 'completed'
-        });
-      }
-    } 
-    
-    else if (delta === 1) {
-      // UN-ARCHIVE one
-      if (archivedIndex > -1) {
-        allocations[archivedIndex].quantity -= 1;
-        if (allocations[archivedIndex].quantity <= 0) {
-          allocations.splice(archivedIndex, 1);
-        }
-      } else if (pizzaIndex > -1) {
-        // No archived allocation exists — increase total batch quantity by 1
-        pizzas[pizzaIndex].quantity += 1;
-      }
+    if (pizzaIndex === -1) return;
+    const completed = allocations
+      .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
+      .reduce((sum, a) => sum + a.quantity, 0);
+    const active = allocations
+      .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
+      .reduce((sum, a) => sum + a.quantity, 0);
+    const effective = pizzas[pizzaIndex].quantity - completed;
+    const available = effective - active;
+    const toArchive = Math.min(count, available);
+    if (toArchive <= 0) return;
+    if (archivedIndex > -1) {
+      allocations[archivedIndex].quantity += toArchive;
+    } else {
+      allocations.push({
+        pizzaId: selectedPizzaId,
+        orderId: 'archived',
+        quantity: toArchive,
+        status: 'completed'
+      });
     }
-
-    // 🔄 Update Firestore
     await updateDoc(batchRef, {
       pizza_allocations: allocations,
       pizzas: pizzas
     });
-
-    // ✅ Update local selectedBatch
     const updatedBatch = {
       ...selectedBatch,
       pizza_allocations: allocations,
       pizzas: pizzas
     };
     setSelectedBatch(updatedBatch);
-
-    // Update top-level stock
     setStock(prevStock =>
       prevStock.map(batch =>
         batch.id === selectedBatch.id
@@ -354,9 +352,56 @@ const adjustArchive = async (delta) => {
           : batch
       )
     );
-
   } catch (error) {
-    console.error("❌ Error adjusting archive:", error);
+    console.error("❌ Error adjusting archive (batch):", error);
+  }
+};
+
+const doPlusArchiveBatch = async () => {
+  const count = plusArchiveCountRef.current;
+  if (count === 0) return;
+  plusArchiveCountRef.current = 0;
+  try {
+    const batchRef = doc(db, "batches", selectedBatch.id);
+    const batchSnap = await getDoc(batchRef);
+    const batchData = batchSnap.data();
+    const allocations = [...(batchData.pizza_allocations || [])];
+    const pizzas = [...(batchData.pizzas || [])];
+    const pizzaIndex = pizzas.findIndex(p => p.id === selectedPizzaId);
+    const archivedIndex = allocations.findIndex(a =>
+      a.pizzaId === selectedPizzaId &&
+      a.orderId === 'archived' &&
+      a.status === 'completed'
+    );
+    if (archivedIndex === -1) return;
+    const toUnarchive = Math.min(count, allocations[archivedIndex].quantity);
+    allocations[archivedIndex].quantity -= toUnarchive;
+    if (allocations[archivedIndex].quantity <= 0) {
+      allocations.splice(archivedIndex, 1);
+    }
+    await updateDoc(batchRef, {
+      pizza_allocations: allocations,
+      pizzas: pizzas
+    });
+    const updatedBatch = {
+      ...selectedBatch,
+      pizza_allocations: allocations,
+      pizzas: pizzas
+    };
+    setSelectedBatch(updatedBatch);
+    setStock(prevStock =>
+      prevStock.map(batch =>
+        batch.id === selectedBatch.id
+          ? {
+              ...batch,
+              pizza_allocations: allocations,
+              pizzas: pizzas
+            }
+          : batch
+      )
+    );
+  } catch (error) {
+    console.error("❌ Error adjusting archive (plus batch):", error);
   }
 };
 
