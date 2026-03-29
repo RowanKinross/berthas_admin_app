@@ -2269,58 +2269,6 @@ function getPizzaAllocatedTally(pizzaData) {
                       </div>
                     );
                   })}
-              {/* Found Stock - moved to end of batch list */}
-              <div className='foundStockFlex batchButton'
-                    onClick={() => toggleFoundStock(pizzaName)}>
-                  <div 
-                    className="foundStockHeader"
-                  >
-                  Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}
-                </div>
-
-                {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
-                  <div className='foundStockData' style={{ 
-                    backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour || '#fff',
-
-                  }}>
-                    <h4 className='foundStockPizza'>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
-                    <div className='foundStockList'>
-                    {foundStockData[pizzaName].map(batch => {
-                      const pizza = batch.pizzas?.find(p => p.id === pizzaName);
-                      if (!pizza) return null;
-                      
-                      return (
-                        <div key={batch.id} className='foundStockListItem'>
-                          <strong>{formatBatchCode(batch.batch_code)}</strong>
-                          <div>Available: {getAvailableQuantity(batch, pizzaName, selectedOrder.id)} {pizza.archived ? '(archived)' : ''}</div>
-                          <div className='foundStockButtons'>
-                            <button
-                              className='addMinusButton'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateBatchQuantity(batch.id, pizzaName, -1);
-                              }}
-                              disabled={pizza.quantity <= 0}
-                            >
-                              -
-                            </button>
-                            <button
-                              className='addMinusButton'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateBatchQuantity(batch.id, pizzaName, 1);
-                              }}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    </div>
-                  </div>
-                )}
-              </div>
               </div>
 
 
