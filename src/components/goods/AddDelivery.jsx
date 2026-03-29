@@ -206,9 +206,11 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
 
   const handleBatchCodeChange = (ingredient, value) => {
     setFieldErrors({}); // Clear errors when user makes changes
+    // Replace any ':' with ';' in the batch code
+    const sanitisedValue = value.replace(/:/g, ';');
     setBatchCodes(prev => ({
       ...prev,
-      [ingredient]: value
+      [ingredient]: sanitisedValue
     }));
   };
 

@@ -72,9 +72,7 @@ function Orders() {
   // Sleeve Filter:
   const [sleeveFilter, setSleeveFilter] = useState("all");
 
-  // Found stock data
-  const [foundStockData, setFoundStockData] = useState({});
-  const [expandedFoundStock, setExpandedFoundStock] = useState({});
+
 
   // format batchcode into a date as it appears on the sleeves
 const formatBatchCode = (code) => {
@@ -573,97 +571,6 @@ const syncPizzaAllocation = async ({ pizzaId, batchCode, quantity }) => {
       );
     };
 
-  // Found stock functions
-  const toggleFoundStock = async (pizzaId) => {
-    const isExpanded = expandedFoundStock[pizzaId];
-    
-    if (!isExpanded) {
-      try {
-        // Get all batches for this pizza type
-        const allBatches = await getDocs(collection(db, "batches"));
-        const nineMonthsAgo = dayjs().subtract(9, 'months');
-        
-        const pizzaBatches = allBatches.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(batch => {
-            // Show all batches that contain this pizza type and are completed
-            if (!batch.pizzas?.some(p => p.id === pizzaId) || batch.pizza_numbers_complete !== true) {
-              return false;
-            }
-            
-            // Filter by date - only show batches from last 9 months
-            const batchDate = dayjs(batch.batch_code, 'DDMMYYYY');
-            return batchDate.isValid() && batchDate.isAfter(nineMonthsAgo);
-          })
-          .sort((a, b) => b.batch_code.localeCompare(a.batch_code)); // newest first
-        
-        setFoundStockData(prev => ({ ...prev, [pizzaId]: pizzaBatches }));
-      } catch (error) {
-        console.error("Error fetching found stock:", error);
-      }
-    }
-    
-    setExpandedFoundStock(prev => ({ ...prev, [pizzaId]: !isExpanded }));
-  };
-
-  const updateBatchQuantity = async (batchId, pizzaId, change) => {
-    try {
-      const batchRef = doc(db, "batches", batchId);
-      const batchDoc = await getDoc(batchRef);
-      const batchData = batchDoc.data();
-      
-      const updatedPizzas = batchData.pizzas.map(pizza => {
-        if (pizza.id === pizzaId) {
-          return { ...pizza, quantity: Math.max(0, pizza.quantity + change) };
-        }
-        return pizza;
-      });
-      
-      await updateDoc(batchRef, { pizzas: updatedPizzas });
-      
-      // Update local state for the specific pizza
-      setFoundStockData(prev => ({
-        ...prev,
-        [pizzaId]: (prev[pizzaId] || []).map(batch => {
-          if (batch.id === batchId) {
-            return { ...batch, pizzas: updatedPizzas };
-          }
-          return batch;
-        })
-      }));
-      
-    } catch (error) {
-      console.error("Error updating batch quantity:", error);
-    }
-  };
-
-  const archivePizza = async (batchId, pizzaId) => {
-    try {
-      const batchRef = doc(db, "batches", batchId);
-      const batchDoc = await getDoc(batchRef);
-      const batchData = batchDoc.data();
-      
-      const updatedPizzas = batchData.pizzas.map(pizza => {
-        if (pizza.id === pizzaId) {
-          return { ...pizza, archived: true };
-        }
-        return pizza;
-      });
-      
-      await updateDoc(batchRef, { pizzas: updatedPizzas });
-      
-      // Update local state
-      setFoundStockData(prev => prev.map(batch => {
-        if (batch.id === batchId) {
-          return { ...batch, pizzas: updatedPizzas };
-        }
-        return batch;
-      }));
-      
-    } catch (error) {
-      console.error("Error archiving pizza:", error);
-    }
-  };
 
   const handleBatchClick = async (pizzaName, batchCode) => {
     const currentBatches = [...(selectedOrder.pizzas[pizzaName].batchesUsed || [])];
@@ -2269,58 +2176,6 @@ function getPizzaAllocatedTally(pizzaData) {
                       </div>
                     );
                   })}
-              {/* Found Stock - moved to end of batch list */}
-              <div className='foundStockFlex batchButton'
-                    onClick={() => toggleFoundStock(pizzaName)}>
-                  <div 
-                    className="foundStockHeader"
-                  >
-                  Add Found Stock {expandedFoundStock[pizzaName] ? '⌄' : '>'}
-                </div>
-
-                {expandedFoundStock[pizzaName] && foundStockData[pizzaName] && (
-                  <div className='foundStockData' style={{ 
-                    backgroundColor: pizzaCatalog.find(p => p.id === pizzaName)?.hex_colour || '#fff',
-
-                  }}>
-                    <h4 className='foundStockPizza'>Found Stock - {pizzaTitles[pizzaName] || pizzaName}</h4>
-                    <div className='foundStockList'>
-                    {foundStockData[pizzaName].map(batch => {
-                      const pizza = batch.pizzas?.find(p => p.id === pizzaName);
-                      if (!pizza) return null;
-                      
-                      return (
-                        <div key={batch.id} className='foundStockListItem'>
-                          <strong>{formatBatchCode(batch.batch_code)}</strong>
-                          <div>Available: {getAvailableQuantity(batch, pizzaName, selectedOrder.id)} {pizza.archived ? '(archived)' : ''}</div>
-                          <div className='foundStockButtons'>
-                            <button
-                              className='addMinusButton'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateBatchQuantity(batch.id, pizzaName, -1);
-                              }}
-                              disabled={pizza.quantity <= 0}
-                            >
-                              -
-                            </button>
-                            <button
-                              className='addMinusButton'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateBatchQuantity(batch.id, pizzaName, 1);
-                              }}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    </div>
-                  </div>
-                )}
-              </div>
               </div>
 
 

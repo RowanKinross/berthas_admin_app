@@ -382,6 +382,16 @@
   margin-bottom: 12px;
   color: #495057;
 }
+.deleteDeliverySection {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+.deleteDelivery {
+  width: max-content;
+  background-color: var(--MH);
+  color: white;
+}
 
 
 .good-item {
