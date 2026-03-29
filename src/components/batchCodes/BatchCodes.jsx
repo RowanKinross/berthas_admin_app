@@ -2813,9 +2813,25 @@ const formatDateDisplay = (dateStr) => {
                                           ...viewingBatch.ingredientBatchCodes,
                                           [ingredientName]: `${batchCode}:${delivery.deliveryDate}:${
                                             ingredientName === 'Wholemeal Flour'
-                                              ? (starterMixTotals.rye/25000).toFixed(3) // convert to number of 25kg sacks
+                                              ? (() => {
+                                                  const wholemeal = ingredients.find(ing => ing.name === 'Wholemeal Flour');
+                                                  if (!wholemeal || !wholemeal.ratio) return 0;
+                                                  const parts = wholemeal.ratio.split(':');
+                                                  if (parts.length < 2) return 0;
+                                                  const unitWeight = parseFloat(parts[1]);
+                                                  if (isNaN(unitWeight) || unitWeight === 0) return 0;
+                                                  return (starterMixTotals.rye / (unitWeight * 1000)).toFixed(3);
+                                                })()
                                               : ingredientName === 'Flour (Caputo Blue)'
-                                                ? (starterMixTotals.caputo/15000).toFixed(3) // convert to 15kg sacks
+                                                ? (() => {
+                                                    const caputo = ingredients.find(ing => ing.name === 'Flour (Caputo Blue)');
+                                                    if (!caputo || !caputo.ratio) return 0;
+                                                    const parts = caputo.ratio.split(':');
+                                                    if (parts.length < 2) return 0;
+                                                    const unitWeight = parseFloat(parts[1]);
+                                                    if (isNaN(unitWeight) || unitWeight === 0) return 0;
+                                                    return (starterMixTotals.caputo / (unitWeight * 1000)).toFixed(3);
+                                                  })()
                                                 : 0
                                           }`
                                         });

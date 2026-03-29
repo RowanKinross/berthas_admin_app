@@ -446,7 +446,7 @@ function DeliveryHistory() {
                                 color: '#666',
                                 fontWeight: 'normal' 
                               }}>
-                                ({totalAllocated.toFixed(1)} of {deliveredQty} allocated, {remainingQty.toFixed(1)} remaining)
+                                ({totalAllocated.toFixed(2)} of {deliveredQty} allocated, {remainingQty.toFixed(2)} remaining)
                               </span>
                             </div>
                             <div className="allocations-list" style={{ marginLeft: '30px' }}>
@@ -462,7 +462,7 @@ function DeliveryHistory() {
                                      •  Batch: {alloc.allocatedToBatchCode || 'N/A'}
                                   </div>
                                   <div className="allocation-quantity" style={{ fontWeight: 'bold' }}>
-                                    {(alloc.quantityAllocated || 0).toFixed(1)} {getIngredientData(good)?.packaging || 'units'}
+                                    {(alloc.quantityAllocated || 0).toFixed(2)} {getIngredientData(good)?.packaging || 'units'}
                                   </div>
                                 </div>
                               ))}
