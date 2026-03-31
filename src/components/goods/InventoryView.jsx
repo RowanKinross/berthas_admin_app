@@ -957,11 +957,12 @@ function InventoryView() {
     }
   });
 
-  const filteredInventory = filterExpiring 
+  const filteredInventory = (filterExpiring 
     ? sortedInventory.filter(item => 
         item.earliestExpiry && (isExpiringSoon(item.earliestExpiry) || isExpired(item.earliestExpiry))
       )
-    : sortedInventory;
+    : sortedInventory
+  ).filter(item => item.name !== 'Patting Out Flour');
 
   if (loading) {
     return <div className="loading">Loading inventory...</div>;
@@ -971,33 +972,7 @@ function InventoryView() {
     <div className="inventory-view">
       <div className="inventory-header">
         <h3>Current Stock</h3>
-        <div className="inventory-controls">
-          <div className="filter-controls">
-            <label>
-              <input
-                type="checkbox"
-                checked={filterExpiring}
-                onChange={(e) => setFilterExpiring(e.target.checked)}
-              />
-              Show expiring items only
-            </label>
-          </div>
-          <div className="sort-controls">
-            <label>Sort by:</label>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              <option value="name">Name</option>
-              <option value="quantity">Quantity</option>
-              <option value="expiry">Expiry Date</option>
-            </select>
-          </div>
-        </div>
       </div>
-
-      {filteredInventory.length === 0 ? (
-        <div className="no-inventory">
-          <p>{filterExpiring ? 'No items expiring soon.' : 'No inventory items found.'}</p>
-        </div>
-      ) : (
         <div className="inventory-grid">
           {filteredInventory.map(item => (
             <div key={item.name} className="inventory-item">
@@ -1127,7 +1102,7 @@ function InventoryView() {
             </div>
           ))}
         </div>
-      )}
+      }
     </div>
   );
 }
