@@ -222,6 +222,27 @@
   background-color: #f8f9fa;
   border-radius: 3px;
 }
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 10px;
+  min-width: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: auto;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
 
 
 
@@ -293,6 +314,15 @@
   color: var(--darkGrey);
   font-style: italic;
 }
+.selectedGoodButton {
+  background-color: var(--bertha);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.notSelectedGoodButton {  display: none;
+}
 
 /* Delivery History Styles */
 .delivery-history {
@@ -311,6 +341,10 @@
   margin: 10px;
   padding: 10px 30px;
   background-color: var(--pale);
+}
+.allocationBatch {
+  display: flex;
+  gap: 0 3px;
 }
 
 .delivery-card {
