@@ -490,7 +490,7 @@ function AddDelivery({ onDeliveryAdded, onCancel }) {
                       />
                     )}
                     <div className={deliveryData.selectedGoods.includes(ingredient.name) ? 'selectedGood' : 'notSelectedGood'}>
-                      {ingredient.name}
+                      {ingredient.name} 
                     </div>
                   </div>
                   {deliveryData.selectedGoods.includes(ingredient.name) && (
