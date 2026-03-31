@@ -242,9 +242,14 @@ function BatchCodesSection({
         
 
         {sortIngredients(
-          ingredients.filter(ingredient =>
-            viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
-          )
+          ingredients
+            .filter(ingredient =>
+            // filter out patting out flour for now
+              ingredient.name !== 'Patting-Out Flour' &&
+
+
+              viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
+            )
         ).map(ingredient => {
           const batchCode = viewingBatch.pizzas
             .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
