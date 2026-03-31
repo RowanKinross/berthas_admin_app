@@ -584,6 +584,8 @@ function BatchCodes() {
     "Flour (Caputo Blue)",
     "Wholemeal Flour", 
     "Salt",
+    "Flour (Caputo Red)",
+    "Patting-Out Flour",
     // The rest will be handled alphabetically except for these at the end:
     "Tomato",
     "Ham",
@@ -596,7 +598,7 @@ function BatchCodes() {
   const sortIngredients = (ingredients) => {
     // Ingredients to always put at the end (except Flour, Salt, Rye Flour which are at the start)
     const endSet = new Set(["Tomato", "Rapeseed Oil", "Ham", "Vegan Mozzarella", "Mozzarella", "Vacuum Bags", "Dough Ball Pouches"]);
-    const startSet = new Set(["Flour (Caputo Blue)", "Wholemeal Flour", "Salt", "Rye Flour"]);
+    const startSet = new Set(["Flour (Caputo Blue)", "Wholemeal Flour", "Salt", "Rye Flour", "Flour (Caputo Red)", "Patting-Out Flour"]);
     // Split into start, middle (alphabetical), and end
     const start = [];
     const end = [];
@@ -2745,10 +2747,32 @@ const formatDateDisplay = (dateStr) => {
                           {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                             <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
                               {deliveries
-                                .filter(delivery => 
-                                  delivery.batchCodes && 
-                                  delivery.batchCodes[ingredientName]
-                                )
+                                .filter(delivery => {
+                                  if (!(delivery.batchCodes && delivery.batchCodes[ingredientName])) return false;
+                                  // Calculate available stock
+                                  const batchCode = delivery.batchCodes[ingredientName];
+                                  const deliveredQty = delivery.quantities && delivery.quantities[ingredientName]
+                                    ? parseFloat(delivery.quantities[ingredientName]) || 0
+                                    : 0;
+                                  const allocatedQty = (delivery.allocations || [])
+                                    .filter(alloc =>
+                                      alloc.ingredientName === ingredientName &&
+                                      delivery.batchCodes &&
+                                      delivery.batchCodes[ingredientName] === batchCode
+                                    )
+                                    .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                                  const foundStock = delivery.foundStock && delivery.foundStock[ingredientName]
+                                    ? parseFloat(delivery.foundStock[ingredientName]) || 0
+                                    : 0;
+                                  const availableStock = deliveredQty - allocatedQty + foundStock;
+                                  // Check if this delivery has an allocation for the viewing batch
+                                  const hasViewingBatchAllocation = (delivery.allocations || []).some(alloc =>
+                                    alloc.ingredientName === ingredientName &&
+                                    alloc.allocatedToBatchCode === viewingBatch.batch_code
+                                  );
+                                  // Filter logic: keep if availableStock > 0, or if it has allocation for viewing batch
+                                  return availableStock > 0 || hasViewingBatchAllocation;
+                                })
                                 .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate))
                                 .map(delivery => {
                                   const batchCode = delivery.batchCodes[ingredientName];

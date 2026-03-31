@@ -260,7 +260,7 @@ function BatchCodesSection({
           return (
             <div key={ingredient.id} className='ingredient container' style={{ color: (batchCode && isQuantitySufficient) ? 'inherit' : 'red' }}>
               <p>
-                <strong>{ingredient.name}:</strong>
+                <strong>{ingredient.name == "Flour (Caputo Red)"? 'Mix Flour (Red)': ingredient.name == "Patting-Out Flour" ? 'Patting-Out Flour (Blue)' : ingredient.name}:</strong>
                 {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Wholemeal Flour" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" &&
                   ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
                 }
@@ -280,9 +280,34 @@ function BatchCodesSection({
                   {shouldUseDeliveryDropdown(viewingBatch.batch_code) ? (
                     <div className="batchButtonContainer" style={{ marginTop: '10px' }}>
                       {(() => {
-                        // Show all deliveries, even with available stock <= 0
+                        // Filter deliveries: exclude those with unavailable stock unless they contain an allocation for the viewing batch
                         const sortedDeliveries = deliveries
-                          .filter(delivery => delivery.batchCodes && delivery.batchCodes[ingredient.name])
+                          .filter(delivery => {
+                            if (!(delivery.batchCodes && delivery.batchCodes[ingredient.name])) return false;
+                            // Calculate available stock
+                            const batchCode = delivery.batchCodes[ingredient.name];
+                            const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name]
+                              ? parseFloat(delivery.quantities[ingredient.name]) || 0
+                              : 0;
+                            const allocatedQty = (delivery.allocations || [])
+                              .filter(alloc =>
+                                alloc.ingredientName === ingredient.name &&
+                                delivery.batchCodes &&
+                                delivery.batchCodes[ingredient.name] === batchCode
+                              )
+                              .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                            const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name]
+                              ? parseFloat(delivery.foundStock[ingredient.name]) || 0
+                              : 0;
+                            const availableStock = deliveredQty - allocatedQty + foundStock;
+                            // Check if this delivery has an allocation for the viewing batch
+                            const hasViewingBatchAllocation = (delivery.allocations || []).some(alloc =>
+                              alloc.ingredientName === ingredient.name &&
+                              alloc.allocatedToBatchCode === viewingBatch.batch_code
+                            );
+                            // Filter logic: keep if availableStock > 0, or if it has allocation for viewing batch
+                            return availableStock > 0 || hasViewingBatchAllocation;
+                          })
                           .sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
                         const earliestDelivery = sortedDeliveries[sortedDeliveries.length - 1];
                         return sortedDeliveries.map((delivery, idx) => {

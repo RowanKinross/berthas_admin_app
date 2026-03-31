@@ -962,7 +962,7 @@ function InventoryView() {
         item.earliestExpiry && (isExpiringSoon(item.earliestExpiry) || isExpired(item.earliestExpiry))
       )
     : sortedInventory
-  ).filter(item => item.name !== 'Patting Out Flour');
+  ).filter(item => item.name !== 'Patting-Out Flour');
 
   if (loading) {
     return <div className="loading">Loading inventory...</div>;
