@@ -86,10 +86,13 @@ const PackagingIcon = ({ packaging, ingredientName, size = 'normal' }) => {
   );
 };
 
+
 function DeliveryHistory() {
-      // Inline edit state for checked by
-      const [editingCheckedBy, setEditingCheckedBy] = useState({});
-      const [tempCheckedBy, setTempCheckedBy] = useState({});
+  // Inline edit state for checked by
+  const [editingCheckedBy, setEditingCheckedBy] = useState({});
+  const [tempCheckedBy, setTempCheckedBy] = useState({});
+  // Batches state
+  const [batches, setBatches] = useState([]);
 
       // Save checked by to Firestore and update local state
       const handleCheckedBySave = async (deliveryId) => {
@@ -212,13 +215,17 @@ function DeliveryHistory() {
         const ingredientsSnapshot = await getDocs(collection(db, 'ingredients'));
         const ingredientsData = ingredientsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setIngredients(ingredientsData);
+
+        // Fetch batches for allocation pizza lookup
+        const batchesSnapshot = await getDocs(collection(db, 'batches'));
+        const batchesData = batchesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setBatches(batchesData);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-    
     fetchData();
   }, []);
 
@@ -262,7 +269,8 @@ function DeliveryHistory() {
           <div key={delivery.id} className="delivery-card">
             <div 
               className="delivery-header" 
-              onClick={() => toggleExpanded(delivery.id)}
+              onClick={() => toggleExpanded(delivery.id)
+              }
             >
               <div className="delivery-summary">
                 <h4>{delivery.supplier || 'Unknown Supplier'}</h4>
@@ -450,22 +458,58 @@ function DeliveryHistory() {
                               </span>
                             </div>
                             <div className="allocations-list" style={{ marginLeft: '30px' }}>
-                              {allocations.map((alloc, index) => (
-                                <div key={index} className="allocation-item" style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  padding: '4px 0',
-                                  borderBottom: '1px solid #f0f0f0',
-                                  fontSize: '0.8em'
-                                }}>
-                                  <div className="allocation-batch">
-                                     •  Batch: {alloc.allocatedToBatchCode || 'N/A'}
+                              {allocations.map((alloc, index) => {
+                                let pizzaList = null;
+                                if (alloc.batchType === 'pizzas' && alloc.allocatedToBatchId && batches.length > 0) {
+                                  const batch = batches.find(b => b.id === alloc.allocatedToBatchId);
+                                  if (batch && Array.isArray(batch.pizzas)) {
+                                    // Find pizzas in this batch that use this ingredient
+                                    const pizzasWithIngredient = batch.pizzas.filter(pizza => Array.isArray(pizza.ingredients) && pizza.ingredients.includes(alloc.ingredientName));
+                                    if (pizzasWithIngredient.length > 0) {
+                                      pizzaList = (
+                                        <div>
+                                          {pizzasWithIngredient.map(p => p.pizza_title || p.id).join(', ').toLowerCase()}
+                                        </div>
+                                      );
+                                    }
+                                  }
+                                }
+                                // For starter allocations, show all pizzas in batches using this starter batch code
+                                if (alloc.batchType === 'starter' && alloc.allocatedToBatchCode && batches.length > 0) {
+                                  const batchesWithStarter = batches.filter(b => b.starter_batch_code === alloc.allocatedToBatchCode);
+                                  if (batchesWithStarter.length > 0) {
+                                    pizzaList = (
+                                      <div>
+                                        {batchesWithStarter.map(b => b.batch_code || b.id).join(', ')}
+                                      </div>
+                                    );
+                                  }
+                                }
+                                return (
+                                  <div key={index} className="allocation-item" style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    padding: '4px 0',
+                                    borderBottom: '1px solid #f0f0f0',
+                                    fontSize: '0.8em'
+                                  }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                      <div className="allocationBatch">
+                                        •  Batch: <strong>{alloc.allocatedToBatchCode} </strong>
+                                        {alloc.batchType === 'starter'
+                                          ? `- Starter ➔ Batches: `
+                                          : alloc.batchType === 'dough balls'
+                                            ? `- Dough Balls`
+                                            : ''}
+                                        {pizzaList && <>- {pizzaList}</>}
+                                      </div>
+                                      <div className="allocation-quantity" style={{ fontWeight: 'bold' }}>
+                                        {(alloc.quantityAllocated || 0).toFixed(2)} {getIngredientData(good)?.packaging || 'units'}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="allocation-quantity" style={{ fontWeight: 'bold' }}>
-                                    {(alloc.quantityAllocated || 0).toFixed(2)} {getIngredientData(good)?.packaging || 'units'}
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );

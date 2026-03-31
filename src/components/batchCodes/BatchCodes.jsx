@@ -1496,40 +1496,6 @@ const formatDateDisplay = (dateStr) => {
             const selectedStarter = batches.find(batch => 
               batch.batch_type === 'starter' && batch.batch_code === value
             );
-
-            if (selectedStarter && selectedStarter.ingredientBatchCodes) {
-              const ryeCode = selectedStarter.ingredientBatchCodes['Rye Flour'];
-              const caputoBlueCode = selectedStarter.ingredientBatchCodes['Flour (Caputo Blue)'];
-              const wholemealCode = selectedStarter.ingredientBatchCodes['Wholemeal Flour'];
-
-              // Add to batch-level ingredientBatchCodes
-              if (ryeCode || caputoBlueCode || wholemealCode) {
-                const currentIngredientCodes = currentData.ingredientBatchCodes || {};
-                updateData.ingredientBatchCodes = {
-                  ...currentIngredientCodes,
-                  ...(ryeCode && { 'Starter Rye': ryeCode }),
-                  ...(caputoBlueCode && { 'Starter Caputo Blue': caputoBlueCode }),
-                  ...(wholemealCode && { 'Starter Wholemeal': wholemealCode })
-                };
-
-                // Also update first pizza's ingredientBatchCodes if pizzas exist
-                if (currentData.pizzas && currentData.pizzas.length > 0) {
-                  const updatedPizzas = [...currentData.pizzas];
-                  if (updatedPizzas[0]) {
-                    updatedPizzas[0] = {
-                      ...updatedPizzas[0],
-                      ingredientBatchCodes: {
-                        ...updatedPizzas[0].ingredientBatchCodes,
-                        ...(ryeCode && { 'Starter Rye': ryeCode }),
-                        ...(caputoBlueCode && { 'Starter Caputo Blue': caputoBlueCode }),
-                        ...(wholemealCode && { 'Starter Wholemeal': wholemealCode })
-                      }
-                    };
-                    updateData.pizzas = updatedPizzas;
-                  }
-                }
-              }
-            }
           }
 
           await updateDoc(batchRef, updateData);

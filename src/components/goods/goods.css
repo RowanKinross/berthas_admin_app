@@ -312,6 +312,10 @@
   padding: 10px 30px;
   background-color: var(--pale);
 }
+.allocationBatch {
+  display: flex;
+  gap: 0 3px;
+}
 
 .delivery-card {
   border: 1px solid var(--bertha);
