@@ -449,10 +449,6 @@ function BatchCodesSection({
         {sortIngredients(
           ingredients
             .filter(ingredient =>
-            // filter out patting out flour for now
-              ingredient.name !== 'Patting-Out Flour' &&
-
-
               viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
             )
         ).map(ingredient => {
@@ -471,8 +467,8 @@ function BatchCodesSection({
           return (
             <div key={ingredient.id} className='ingredient container' style={{ color: (batchCode && isQuantitySufficient) ? 'inherit' : 'red' }}>
               <p>
-                <strong>{ingredient.name == "Flour (Caputo Red)"? 'Mix Flour (Red)': ingredient.name == "Patting-Out Flour" ? 'Patting-Out Flour (Blue)' : ingredient.name}:</strong>
-                {ingredient.name !== "Flour (Caputo Blue)" && ingredient.name !== "Wholemeal Flour" && ingredient.name !== "Salt" && ingredient.name !== "Rye Flour" &&
+                <strong>{ingredient.name == "Flour (Caputo Red)"? 'Mix Flour (Red)': ingredient.name == "Flour (Caputo Blue)" ? 'Patting-Out Flour (Blue)' : ingredient.name}:</strong>
+                {
                   ` ${formatQuantity(numberOfUnits)} ${ingredientQuantity.unit}`
                 }
               </p>
