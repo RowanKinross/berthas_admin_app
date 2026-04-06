@@ -2721,9 +2721,57 @@ const formatDateDisplay = (dateStr) => {
                     const newValue = e.target.checked;
                     try {
                       await handleInlineSave("batch", null, "pizza_numbers_complete", newValue);
+                      if (newValue) {
+                        await rebalanceAllocationsForBatch(viewingBatch, ingredients, deliveries, handleInlineSave, calculateIngredientQuantities);
+                      }
                     } catch (error) {
                       console.error("Error updating checkbox:", error);
                     }
+                  // Rebalance allocations for all ingredients in the batch to match the new required amount
+                  async function rebalanceAllocationsForBatch(viewingBatch, ingredients, deliveries, handleInlineSave, calculateIngredientQuantities) {
+                    if (!viewingBatch || !viewingBatch.pizzas) return;
+                    const selectedPizzas = viewingBatch.pizzas.filter(p => p.quantity > 0);
+                    const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
+                    for (const ingredient of ingredients) {
+                      if (!selectedPizzas.some(pizza => pizza.ingredients.includes(ingredient.name))) continue;
+                      const required = ingredientQuantities[ingredient.name]?.quantity || 0;
+                      if (required <= 0) continue;
+
+                      // Find all deliveries for this ingredient, sorted by delivery date (oldest first)
+                      const relevantDeliveries = deliveries
+                        .filter(delivery => delivery.batchCodes && delivery.batchCodes[ingredient.name])
+                        .sort((a, b) => new Date(a.deliveryDate) - new Date(b.deliveryDate));
+
+                      let remaining = required;
+                      const allocations = [];
+                      for (const delivery of relevantDeliveries) {
+                        if (remaining <= 0) break;
+                        const batchCode = delivery.batchCodes[ingredient.name];
+                        const deliveredQty = delivery.quantities && delivery.quantities[ingredient.name]
+                          ? parseFloat(delivery.quantities[ingredient.name]) || 0
+                          : 0;
+                        const allocatedQty = (delivery.allocations || [])
+                          .filter(alloc =>
+                            alloc.ingredientName === ingredient.name &&
+                            delivery.batchCodes &&
+                            delivery.batchCodes[ingredient.name] === batchCode
+                          )
+                          .reduce((sum, alloc) => sum + (alloc.quantityAllocated || 0), 0);
+                        const foundStock = delivery.foundStock && delivery.foundStock[ingredient.name]
+                          ? parseFloat(delivery.foundStock[ingredient.name]) || 0
+                          : 0;
+                        const available = deliveredQty - allocatedQty + foundStock;
+                        if (available <= 0) continue;
+                        const take = Math.min(remaining, available);
+                        allocations.push({ code: batchCode, deliveryDate: delivery.deliveryDate, quantity: take });
+                        remaining -= take;
+                      }
+                      if (allocations.length > 0) {
+                        const value = allocations.map(b => `${b.code}:${b.deliveryDate}:${b.quantity.toFixed(2)}`).join(', ');
+                        await handleInlineSave("ingredient", ingredient.name, null, value);
+                      }
+                    }
+                  }
                   }}
                 />
               </p>
@@ -3444,22 +3492,7 @@ const formatDateDisplay = (dateStr) => {
                   onClick={() => setCarriedIngExpanded(!carriedIngExpanded)}
                 > {" "}{carriedIngExpanded ? '⌄' : '>'}</div>
               </p> */}
-              <p className='pizzaNumbers'>
-                <strong>              
-                  {viewingBatch.batch_type === 'dough balls' ? 'Dough Ball Numbers Complete:' : 'Pizzas Numbers Complete:'}</strong>{" "}
-                <input
-                  type="checkbox"
-                  checked={viewingBatch.pizza_numbers_complete || false}
-                  onChange={async (e) => {
-                    const newValue = e.target.checked;
-                    try {
-                      await handleInlineSave("batch", null, "pizza_numbers_complete", newValue);
-                    } catch (error) {
-                      console.error("Error updating checkbox:", error);
-                    }
-                  }}
-                />
-              </p>
+              
               
               <BatchCodesSection
                 viewingBatch={viewingBatch}
