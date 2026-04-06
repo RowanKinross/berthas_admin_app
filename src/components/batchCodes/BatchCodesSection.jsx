@@ -678,12 +678,26 @@ function BatchCodesSection({
                 }}>
                   {batchCode ? (
                     <div className='selectedBatch'>
+                      <div>
                       Batch Code{batchCode.includes(',') ? 's' : ''}: {
                         batchCode.split(',').map(item => {
                           const [code, qty] = item.trim().split(':');
                           return qty ? `${code}` : code;
                         }).join(', ')
                       }
+                      </div>
+                      <div>
+                        Qty Allocated: {
+                          (() => {
+                            const sum = batchCode.split(',').reduce((acc, item) => {
+                              const parts = item.trim().split(':');
+                              const qty = parts.length > 4 ? parseFloat(parts[4]) : 0;
+                              return acc + (isNaN(qty) ? 0 : qty);
+                            }, 0);
+                            return sum > 0 ? sum.toFixed(2) : 'N/A';
+                          })()
+                        }
+                      </div>
                     </div>
                   ) : (
                     <span style={{ color: 'red' }}>+</span>
