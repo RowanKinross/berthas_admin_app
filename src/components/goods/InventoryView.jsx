@@ -275,7 +275,8 @@ function InventoryView() {
               allocationsData.push({
                 ingredientName: allocation.ingredientName,
                 quantityUsed: allocation.quantityAllocated || 0,
-                ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+                ingredientBatchCode: allocation.batchCode || delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+                allocationDeliveryId: delivery.id,
                 allocatedToBatchId: allocation.allocatedToBatchId,
                 allocatedToBatchCode: allocation.allocatedToBatchCode,
                 allocationDate: allocation.allocationDate
@@ -346,11 +347,12 @@ function InventoryView() {
           const ingredientName = allocation.ingredientName;
           const quantityUsed = allocation.quantityUsed || 0;
           const batchCodeUsed = allocation.ingredientBatchCode;
+          const allocationDeliveryId = allocation.allocationDeliveryId;
           
           if (inventoryMap[ingredientName] && quantityUsed > 0) {
             // First try to subtract from the specific batch that was used
             const targetBatch = inventoryMap[ingredientName].batches.find(
-              batch => batch.batchCode === batchCodeUsed
+              batch => batch.batchCode === batchCodeUsed && batch.deliveryId === allocationDeliveryId
             );
             
             if (targetBatch && targetBatch.quantity >= quantityUsed) {
@@ -934,7 +936,8 @@ function InventoryView() {
             allocationsData.push({
               ingredientName: allocation.ingredientName,
               quantityUsed: allocation.quantityAllocated || 0,
-              ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+              ingredientBatchCode: allocation.batchCode || delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+              allocationDeliveryId: delivery.id,
               allocatedToBatchId: allocation.allocatedToBatchId,
               allocatedToBatchCode: allocation.allocatedToBatchCode,
               allocationDate: allocation.allocationDate
@@ -971,7 +974,7 @@ function InventoryView() {
             }
             
               const quantity = delivery.quantities && delivery.quantities[goodName] 
-                ? parseInt(delivery.quantities[goodName]) || 0 
+                ? parseFloat(delivery.quantities[goodName]) || 0 
                 : 0;
               
               // Add found stock to the quantity
@@ -1005,11 +1008,12 @@ function InventoryView() {
         const ingredientName = allocation.ingredientName;
         const quantityUsed = allocation.quantityUsed || 0;
         const batchCodeUsed = allocation.ingredientBatchCode;
+        const allocationDeliveryId = allocation.allocationDeliveryId;
         
         if (inventoryMap[ingredientName] && quantityUsed > 0) {
           // First try to subtract from the specific batch that was used
           const targetBatch = inventoryMap[ingredientName].batches.find(
-            batch => batch.batchCode === batchCodeUsed
+            batch => batch.batchCode === batchCodeUsed && batch.deliveryId === allocationDeliveryId
           );
           
           if (targetBatch && targetBatch.quantity >= quantityUsed) {
@@ -1135,6 +1139,12 @@ function InventoryView() {
                     {item.batches.map((batch, index) => {
                       const isExpiringBatch = isExpiringSoon(batch.useByDate);
                       const isExpiredBatch = isExpired(batch.useByDate);
+                      const sourceDelivery = deliveriesData.find(delivery => delivery.id === batch.deliveryId);
+                      const allocationsForBatch = (sourceDelivery?.allocations || []).filter(allocation => {
+                        if (allocation.ingredientName !== item.name) return false;
+                        if (allocation.batchCode) return allocation.batchCode === batch.batchCode;
+                        return sourceDelivery?.batchCodes?.[item.name] === batch.batchCode;
+                      });
                       
                       return (
                         <div 
@@ -1173,7 +1183,7 @@ function InventoryView() {
                               {isExpiredBatch && <div className="status-tag expired">EXPIRED</div>}
                               {isExpiringBatch && !isExpiredBatch && <div className="status-tag expiring">EXPIRING</div>}
                             </div>
-                            <div className="supplier">Supplier: {batch.supplier}</div>
+                            <div>Delivered: {formatDate(batch.deliveryDate)}</div>
                           </div>
                         </div>
                         
@@ -1183,11 +1193,22 @@ function InventoryView() {
                          selectedBatch.ingredientName === item.name && 
                          selectedBatch.batchCode === batch.batchCode &&
                          selectedBatch.deliveryId === batch.deliveryId && (
-                          <div className="stock-adjustment-controls" >
-                            <div className='deliveredBatchInfo'>
-                              <strong>Delivered:</strong> {formatDate(batch.deliveryDate)}
+                          <div >
+                            <div style={{ marginBottom: '8px', fontSize: '11px' }}>
+                              <strong>Allocations:</strong>
+                              {allocationsForBatch.length === 0 ? (
+                                <div style={{ color: '#666', marginTop: '4px' }}>No allocations</div>
+                              ) : (
+                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  {allocationsForBatch.map((allocation, allocIndex) => (
+                                    <div key={`${batch.deliveryId}-${batch.batchCode}-alloc-${allocIndex}`} style={{ color: '#444' }}>
+                                      {Number(allocation.quantityAllocated || 0).toFixed(2).replace(/\.00$/, '')} {item.packaging} to {allocation.allocatedToBatchCode || 'Unknown'}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
+                            <div>
                               <input
                                 type="number"
                                 min="0"
@@ -1201,28 +1222,24 @@ function InventoryView() {
                                 style={{
                                   padding: '4px 8px',
                                   border: '1px solid #bbb',
-                                  borderRadius: '3px',
+                                  borderRadius: '5px',
                                   fontSize: '11px',
-                                  width: '120px'
+                                  width: '50px'
                                 }}
                               />
                               <button
+                                className='updateQtyButton'
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   updateBatchQuantity(item.name, batch);
                                 }}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: '#1976d2',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  fontSize: '11px',
-                                  cursor: 'pointer'
-                                }}
+
                               >
-                                Update Quantity ({item.packaging})
+                                Update Qty in Stock ({item.packaging})
                               </button>
+                              <div className='updateQtyNote'>
+                                *quantity includes any ready-prepped ingredients i.e a prepped chilli honey in the walk-in contains 250g chillies in stock
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1236,7 +1253,7 @@ function InventoryView() {
             </div>
           ))}
         </div>
-      }
+      
     </div>
   );
 }

@@ -535,18 +535,19 @@
   width: 100%;
   max-width: 100%;
 }
-
-.stock-adjustment-controls.inline-controls {
-  position: static;
-  top: auto;
-  left: auto;
-  right: auto;
-  z-index: auto;
-  margin-top: 8px;
+.updateQtyButton {
+  background-color: var(--bertha);
+  border: 1px solid black;
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
 }
-.stock-adjustment-controls {
-  padding: 5px;
-  background: var(--pale);
+.updateQtyNote {
+  font-size: 11px;
+  font-style: italic;
+  color: #6c757d;
+  margin-top: 5px;
 }
 
 .item-header {
