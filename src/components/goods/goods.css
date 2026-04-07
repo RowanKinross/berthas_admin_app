@@ -332,6 +332,15 @@
 .deliveryHistoryTitle {
   margin-bottom: 30px;
 }
+.deliveryHistoryContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.downloadCSVButton {
+  padding: 8px;
+  cursor: pointer;
+}
 .stockAllocationsTitle {
   text-align: left;
   margin-bottom: 10px;
