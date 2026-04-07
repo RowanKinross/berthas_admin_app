@@ -320,6 +320,10 @@ function BatchCodesSection({
   // Update quantities logic: checks if qty allocated matches required, sets state for display
   const [ingredientQtyMatch, setIngredientQtyMatch] = React.useState({});
   const [manualTomatoTinEnabled, setManualTomatoTinEnabled] = React.useState(false);
+  const hasSavedTomatoTinsCode = React.useMemo(
+    () => viewingBatch.pizzas?.some(pizza => (pizza.ingredientBatchCodes?.['Tomato (Tins)'] || '').trim()),
+    [viewingBatch.pizzas]
+  );
 
   const updateQuantitiesToMatchRequired = React.useCallback(() => {
     const ingredientQuantities = calculateIngredientQuantities(viewingBatch.pizzas);
@@ -454,7 +458,7 @@ function BatchCodesSection({
             viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
           );
 
-          if (viewingBatch.batch_type === 'pizzas' && manualTomatoTinEnabled) {
+          if (viewingBatch.batch_type === 'pizzas' && (manualTomatoTinEnabled || hasSavedTomatoTinsCode)) {
             const hasTomatoTins = activeIngredients.some(i => i.name.toLowerCase() === 'tomato (tins)');
             if (!hasTomatoTins) {
               const tomatoTinsIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato (tins)');
@@ -471,8 +475,14 @@ function BatchCodesSection({
             .find(code => code);
           const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
           const baseUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
-          const isManualTomatoTin = viewingBatch.batch_type === 'pizzas' && manualTomatoTinEnabled && ingredient.name.toLowerCase() === 'tomato (tins)';
-          const numberOfUnits = baseUnits + (isManualTomatoTin ? 1 : 0);
+          const isTomatoTinsIngredient = ingredient.name.toLowerCase() === 'tomato (tins)';
+          const isTomatoTinsActive = viewingBatch.batch_type === 'pizzas' && isTomatoTinsIngredient && (manualTomatoTinEnabled || hasSavedTomatoTinsCode);
+          const savedTomatoTinsUnits = isTomatoTinsIngredient && batchCode
+            ? parseBatchAllocations(batchCode).reduce((sum, allocation) => sum + (allocation.quantity || 0), 0)
+            : 0;
+          const numberOfUnits = isTomatoTinsActive
+            ? (manualTomatoTinEnabled ? 1 : (savedTomatoTinsUnits || 1))
+            : baseUnits;
 
           // Check if quantities are sufficient
           const isQuantitySufficient = ingredient.name === 'starter'
