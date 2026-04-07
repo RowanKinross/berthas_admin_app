@@ -115,6 +115,12 @@ textarea.input {
 .batchDivDraft {
   border: 3px dashed var(--bertha);
 }
+.addTomatoPizzaButton {
+  font-style: italic;
+  cursor: pointer;
+  font-weight: 400;
+  padding-top: 0;
+}
 
 .total, .pizzaNumbers {
   padding: 10px 0 0 10px;

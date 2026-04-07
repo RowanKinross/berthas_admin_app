@@ -243,6 +243,9 @@ function InventoryView() {
   // selectedBatch uniquely identified by ingredientName, batchCode, and deliveryId
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [deliveriesData, setDeliveriesData] = useState([]);
+  const [updatedBatchQuantities, setUpdatedBatchQuantities] = useState({});
+
+  const getBatchInputKey = (ingredientName, batchCode, deliveryId) => `${ingredientName}__${batchCode}__${deliveryId || 'no-delivery'}`;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -272,7 +275,8 @@ function InventoryView() {
               allocationsData.push({
                 ingredientName: allocation.ingredientName,
                 quantityUsed: allocation.quantityAllocated || 0,
-                ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+                ingredientBatchCode: allocation.batchCode || delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+                allocationDeliveryId: delivery.id,
                 allocatedToBatchId: allocation.allocatedToBatchId,
                 allocatedToBatchCode: allocation.allocatedToBatchCode,
                 allocationDate: allocation.allocationDate
@@ -343,11 +347,12 @@ function InventoryView() {
           const ingredientName = allocation.ingredientName;
           const quantityUsed = allocation.quantityUsed || 0;
           const batchCodeUsed = allocation.ingredientBatchCode;
+          const allocationDeliveryId = allocation.allocationDeliveryId;
           
           if (inventoryMap[ingredientName] && quantityUsed > 0) {
             // First try to subtract from the specific batch that was used
             const targetBatch = inventoryMap[ingredientName].batches.find(
-              batch => batch.batchCode === batchCodeUsed
+              batch => batch.batchCode === batchCodeUsed && batch.deliveryId === allocationDeliveryId
             );
             
             if (targetBatch && targetBatch.quantity >= quantityUsed) {
@@ -690,21 +695,32 @@ function InventoryView() {
         return;
       }
 
-      // Create allocation for waste/restaurant transfer
-      const allocation = {
-        ingredientName,
-        quantityAllocated: remainingQuantity,
-        batchCode,
-        allocatedToBatchId: 'waste-restaurant',
-        allocatedToBatchCode: 'Waste/Restaurant Transfer',
-        allocationDate: new Date().toISOString(),
-        reason: 'Wasted or sent to restaurant'
+      const deliveryRef = doc(db, 'deliveries', targetDelivery.id);
+      const nowIso = new Date().toISOString();
+      const currentFoundStock = targetDelivery.foundStock?.[ingredientName] || 0;
+      const consumeFromFound = Math.min(currentFoundStock, remainingQuantity);
+      const allocationAmount = remainingQuantity - consumeFromFound;
+
+      const newFoundStock = {
+        ...(targetDelivery.foundStock || {}),
+        [ingredientName]: currentFoundStock - consumeFromFound
       };
 
-      const deliveryRef = doc(db, 'deliveries', targetDelivery.id);
-      const updatedAllocations = [...(targetDelivery.allocations || []), allocation];
+      const updatedAllocations = [...(targetDelivery.allocations || [])];
+      if (allocationAmount > 0) {
+        updatedAllocations.push({
+          ingredientName,
+          quantityAllocated: allocationAmount,
+          batchCode,
+          allocatedToBatchId: 'waste-restaurant',
+          allocatedToBatchCode: 'Waste/Restaurant Transfer',
+          allocationDate: nowIso,
+          reason: 'Wasted or sent to restaurant'
+        });
+      }
 
       await updateDoc(deliveryRef, {
+        foundStock: newFoundStock,
         allocations: updatedAllocations,
         stockAdjustments: [
           ...(targetDelivery.stockAdjustments || []),
@@ -713,7 +729,7 @@ function InventoryView() {
             batchCode,
             adjustment: -remainingQuantity,
             reason: 'Wasted or sent to restaurant',
-            date: new Date().toISOString(),
+            date: nowIso,
             type: 'waste-restaurant'
           }
         ]
@@ -724,6 +740,7 @@ function InventoryView() {
         del.id === targetDelivery.id 
           ? { 
               ...del, 
+                foundStock: newFoundStock,
               allocations: updatedAllocations,
               stockAdjustments: [
                 ...(del.stockAdjustments || []),
@@ -732,7 +749,7 @@ function InventoryView() {
                   batchCode,
                   adjustment: -remainingQuantity,
                   reason: 'Wasted or sent to restaurant',
-                  date: new Date().toISOString(),
+                    date: nowIso,
                   type: 'waste-restaurant'
                 }
               ]
@@ -753,7 +770,8 @@ function InventoryView() {
                   const newQuantity = Math.max(0, batch.quantity - remainingQuantity);
                   return {
                     ...batch,
-                    quantity: newQuantity
+                    quantity: newQuantity,
+                    foundStock: Math.max(0, (batch.foundStock || 0) - consumeFromFound)
                   };
                 }
                 return batch;
@@ -767,6 +785,133 @@ function InventoryView() {
     } catch (error) {
       console.error('Error processing waste/restaurant transfer:', error);
       alert('Failed to process waste/restaurant transfer. Please try again.');
+    }
+  };
+
+  const updateBatchQuantity = async (ingredientName, batch) => {
+    try {
+      const inputKey = getBatchInputKey(ingredientName, batch.batchCode, batch.deliveryId);
+      const requestedQuantity = parseFloat(updatedBatchQuantities[inputKey]);
+      if (Number.isNaN(requestedQuantity) || requestedQuantity < 0) {
+        alert('Please enter a valid quantity (0 or more).');
+        return;
+      }
+
+      const currentQuantity = parseFloat(batch.quantity) || 0;
+      if (Math.abs(requestedQuantity - currentQuantity) < 0.0001) {
+        return;
+      }
+
+      const targetDelivery = deliveriesData.find(delivery => delivery.id === batch.deliveryId)
+        || deliveriesData.find(delivery => delivery.batchCodes && delivery.batchCodes[ingredientName] === batch.batchCode);
+
+      if (!targetDelivery) {
+        alert('Delivery not found for this batch');
+        return;
+      }
+
+      const deliveryRef = doc(db, 'deliveries', targetDelivery.id);
+      const nowIso = new Date().toISOString();
+      const currentAllocations = [...(targetDelivery.allocations || [])];
+      const currentFoundStock = { ...(targetDelivery.foundStock || {}) };
+      const currentAdjustments = [...(targetDelivery.stockAdjustments || [])];
+
+      if (requestedQuantity < currentQuantity) {
+        const difference = currentQuantity - requestedQuantity;
+        const foundForIngredient = parseFloat(currentFoundStock[ingredientName]) || 0;
+        const consumeFromFound = Math.min(foundForIngredient, difference);
+        const allocationDifference = difference - consumeFromFound;
+
+        if (consumeFromFound > 0) {
+          currentFoundStock[ingredientName] = foundForIngredient - consumeFromFound;
+        }
+
+        const existingWasteIdx = currentAllocations.findIndex(allocation =>
+          allocation.ingredientName === ingredientName
+          && allocation.batchCode === batch.batchCode
+          && allocation.allocatedToBatchCode === 'Waste/Restaurant Transfer'
+        );
+
+        if (allocationDifference > 0 && existingWasteIdx >= 0) {
+          const existing = currentAllocations[existingWasteIdx];
+          currentAllocations[existingWasteIdx] = {
+            ...existing,
+            quantityAllocated: (parseFloat(existing.quantityAllocated) || 0) + allocationDifference,
+            allocationDate: nowIso
+          };
+        } else if (allocationDifference > 0) {
+          currentAllocations.push({
+            ingredientName,
+            quantityAllocated: allocationDifference,
+            batchCode: batch.batchCode,
+            allocatedToBatchId: 'waste-restaurant',
+            allocatedToBatchCode: 'Waste/Restaurant Transfer',
+            allocationDate: nowIso
+          });
+        }
+
+        await updateDoc(deliveryRef, {
+          allocations: currentAllocations,
+          foundStock: currentFoundStock
+        });
+      } else {
+        let remainingIncrease = requestedQuantity - currentQuantity;
+
+        // Reverse existing waste/restaurant allocations first for this ingredient batch.
+        const wasteAllocationIndexes = currentAllocations
+          .map((allocation, index) => ({ allocation, index }))
+          .filter(({ allocation }) =>
+            allocation.ingredientName === ingredientName
+            && allocation.batchCode === batch.batchCode
+            && allocation.allocatedToBatchCode === 'Waste/Restaurant Transfer'
+          )
+          .map(({ index }) => index);
+
+        wasteAllocationIndexes.forEach((index) => {
+          if (remainingIncrease <= 0) return;
+          const allocation = currentAllocations[index];
+          const allocatedQty = parseFloat(allocation.quantityAllocated) || 0;
+          if (allocatedQty <= 0) return;
+
+          const restoreAmount = Math.min(allocatedQty, remainingIncrease);
+          const nextQty = allocatedQty - restoreAmount;
+
+          currentAllocations[index] = {
+            ...allocation,
+            quantityAllocated: nextQty,
+            allocationDate: nowIso
+          };
+
+          remainingIncrease -= restoreAmount;
+        });
+
+        // Drop any exhausted waste allocations after reversal.
+        const cleanedAllocations = currentAllocations.filter((allocation) => (parseFloat(allocation.quantityAllocated) || 0) > 0);
+
+        // Only treat leftover increase as found stock.
+        if (remainingIncrease > 0) {
+          currentFoundStock[ingredientName] = (parseFloat(currentFoundStock[ingredientName]) || 0) + remainingIncrease;
+
+          currentAdjustments.push({
+            ingredientName,
+            batchCode: batch.batchCode,
+            adjustment: remainingIncrease,
+            date: nowIso,
+            type: 'found-adjustment'
+          });
+        }
+
+        await updateDoc(deliveryRef, {
+          allocations: cleanedAllocations,
+          foundStock: currentFoundStock,
+          stockAdjustments: currentAdjustments
+        });
+      }
+
+      await refreshInventoryData();
+    } catch (error) {
+      console.error('Error updating batch quantity:', error);
+      alert('Failed to update quantity. Please try again.');
     }
   };
 
@@ -791,7 +936,8 @@ function InventoryView() {
             allocationsData.push({
               ingredientName: allocation.ingredientName,
               quantityUsed: allocation.quantityAllocated || 0,
-              ingredientBatchCode: delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+              ingredientBatchCode: allocation.batchCode || delivery.batchCodes?.[allocation.ingredientName] || 'N/A',
+              allocationDeliveryId: delivery.id,
               allocatedToBatchId: allocation.allocatedToBatchId,
               allocatedToBatchCode: allocation.allocatedToBatchCode,
               allocationDate: allocation.allocationDate
@@ -828,7 +974,7 @@ function InventoryView() {
             }
             
               const quantity = delivery.quantities && delivery.quantities[goodName] 
-                ? parseInt(delivery.quantities[goodName]) || 0 
+                ? parseFloat(delivery.quantities[goodName]) || 0 
                 : 0;
               
               // Add found stock to the quantity
@@ -862,11 +1008,12 @@ function InventoryView() {
         const ingredientName = allocation.ingredientName;
         const quantityUsed = allocation.quantityUsed || 0;
         const batchCodeUsed = allocation.ingredientBatchCode;
+        const allocationDeliveryId = allocation.allocationDeliveryId;
         
         if (inventoryMap[ingredientName] && quantityUsed > 0) {
           // First try to subtract from the specific batch that was used
           const targetBatch = inventoryMap[ingredientName].batches.find(
-            batch => batch.batchCode === batchCodeUsed
+            batch => batch.batchCode === batchCodeUsed && batch.deliveryId === allocationDeliveryId
           );
           
           if (targetBatch && targetBatch.quantity >= quantityUsed) {
@@ -992,17 +1139,30 @@ function InventoryView() {
                     {item.batches.map((batch, index) => {
                       const isExpiringBatch = isExpiringSoon(batch.useByDate);
                       const isExpiredBatch = isExpired(batch.useByDate);
+                      const sourceDelivery = deliveriesData.find(delivery => delivery.id === batch.deliveryId);
+                      const allocationsForBatch = (sourceDelivery?.allocations || []).filter(allocation => {
+                        if (allocation.ingredientName !== item.name) return false;
+                        if (allocation.batchCode) return allocation.batchCode === batch.batchCode;
+                        return sourceDelivery?.batchCodes?.[item.name] === batch.batchCode;
+                      });
                       
                       return (
                         <div 
                           key={`${batch.batchCode}-${batch.deliveryId || index}`}
                           className={`batch-info${selectedBatch && selectedBatch.ingredientName === item.name && selectedBatch.batchCode === batch.batchCode && selectedBatch.deliveryId === batch.deliveryId ? ' selected' : ''}`}
                           style={{ position: 'relative', cursor: 'pointer' }}
-                          onClick={() => setSelectedBatch({
-                            ingredientName: item.name,
-                            batchCode: batch.batchCode,
-                            deliveryId: batch.deliveryId
-                          })}
+                          onClick={() => {
+                            setSelectedBatch({
+                              ingredientName: item.name,
+                              batchCode: batch.batchCode,
+                              deliveryId: batch.deliveryId
+                            });
+                            const inputKey = getBatchInputKey(item.name, batch.batchCode, batch.deliveryId);
+                            setUpdatedBatchQuantities(prev => ({
+                              ...prev,
+                              [inputKey]: String(Number(batch.quantity) % 1 === 0 ? batch.quantity : Number(batch.quantity).toFixed(2).replace(/\.?0+$/, ''))
+                            }));
+                          }}
                         >
                          
                         <div 
@@ -1023,7 +1183,7 @@ function InventoryView() {
                               {isExpiredBatch && <div className="status-tag expired">EXPIRED</div>}
                               {isExpiringBatch && !isExpiredBatch && <div className="status-tag expiring">EXPIRING</div>}
                             </div>
-                            <div className="supplier">Supplier: {batch.supplier}</div>
+                            <div>Delivered: {formatDate(batch.deliveryDate)}</div>
                           </div>
                         </div>
                         
@@ -1033,62 +1193,53 @@ function InventoryView() {
                          selectedBatch.ingredientName === item.name && 
                          selectedBatch.batchCode === batch.batchCode &&
                          selectedBatch.deliveryId === batch.deliveryId && (
-                          <div className="stock-adjustment-controls" >
-                            <div className='deliveredBatchInfo'>
-                              <strong>Delivered:</strong> {formatDate(batch.deliveryDate)}
+                          <div >
+                            <div style={{ marginBottom: '8px', fontSize: '11px' }}>
+                              <strong>Allocations:</strong>
+                              {allocationsForBatch.length === 0 ? (
+                                <div style={{ color: '#666', marginTop: '4px' }}>No allocations</div>
+                              ) : (
+                                <div style={{ marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  {allocationsForBatch.map((allocation, allocIndex) => (
+                                    <div key={`${batch.deliveryId}-${batch.batchCode}-alloc-${allocIndex}`} style={{ color: '#444' }}>
+                                      {Number(allocation.quantityAllocated || 0).toFixed(2).replace(/\.00$/, '')} {item.packaging} to {allocation.allocatedToBatchCode || 'Unknown'}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', flexWrap: 'wrap' }}>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addFoundStock(item.name, batch.batchCode);
+                            <div>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={updatedBatchQuantities[getBatchInputKey(item.name, batch.batchCode, batch.deliveryId)] || ''}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const inputKey = getBatchInputKey(item.name, batch.batchCode, batch.deliveryId);
+                                  setUpdatedBatchQuantities(prev => ({ ...prev, [inputKey]: e.target.value }));
                                 }}
                                 style={{
                                   padding: '4px 8px',
-                                  backgroundColor: '#4CAF50',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '3px',
+                                  border: '1px solid #bbb',
+                                  borderRadius: '5px',
                                   fontSize: '11px',
-                                  cursor: 'pointer'
+                                  width: '50px'
                                 }}
-                              >
-                                + Add Found ({getFoundIncrementAmount(item.name)} {item.packaging})
-                              </button>
+                              />
                               <button
+                                className='updateQtyButton'
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  wasteOrSendSingleUnit(item.name, batch.batchCode);
+                                  updateBatchQuantity(item.name, batch);
                                 }}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: '#FF9800',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  fontSize: '11px',
-                                  cursor: 'pointer'
-                                }}
+
                               >
-                                − Waste (1 {item.packaging})
+                                Update Qty in Stock ({item.packaging})
                               </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  wasteOrSendStock(item.name, batch.batchCode, batch.quantity);
-                                }}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: '#f44336',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  fontSize: '11px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                − Waste Remaining ({batch.quantity} {item.packaging})
-                              </button>
+                              <div className='updateQtyNote'>
+                                *quantity includes any ready-prepped ingredients i.e a prepped chilli honey in the walk-in contains 250g chillies in stock
+                              </div>
                             </div>
                           </div>
                         )}
@@ -1102,7 +1253,7 @@ function InventoryView() {
             </div>
           ))}
         </div>
-      }
+      
     </div>
   );
 }

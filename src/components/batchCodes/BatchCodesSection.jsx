@@ -319,6 +319,11 @@ function BatchCodesSection({
 
   // Update quantities logic: checks if qty allocated matches required, sets state for display
   const [ingredientQtyMatch, setIngredientQtyMatch] = React.useState({});
+  const [manualTomatoTinEnabled, setManualTomatoTinEnabled] = React.useState(false);
+  const hasSavedTomatoTinsCode = React.useMemo(
+    () => viewingBatch.pizzas?.some(pizza => (pizza.ingredientBatchCodes?.['Tomato (Tins)'] || '').trim()),
+    [viewingBatch.pizzas]
+  );
 
   const updateQuantitiesToMatchRequired = React.useCallback(() => {
     const ingredientQuantities = calculateIngredientQuantities(viewingBatch.pizzas);
@@ -378,19 +383,21 @@ function BatchCodesSection({
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
         <h4>Batch Codes:</h4>
-        {userRole === 'admin' && shouldUseDeliveryDropdown(viewingBatch.batch_code) && (
-          <>
-          <button
-            type="button"
-            className="button autoFillButton"
-            onClick={autoFillAllBatchCodes}
-            title="Automatically fill all ingredient batch codes with available stock"
-          >
-            Auto-Fill All
-          </button>
-          {/* Update Quantities button removed; now handled automatically by useEffect */}
-          </>
-        )}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {userRole === 'admin' && shouldUseDeliveryDropdown(viewingBatch.batch_code) && (
+            <>
+            <button
+              type="button"
+              className="button autoFillButton"
+              onClick={autoFillAllBatchCodes}
+              title="Automatically fill all ingredient batch codes with available stock"
+            >
+              Auto-Fill All
+            </button>
+            {/* Update Quantities button removed; now handled automatically by useEffect */}
+            </>
+          )}
+        </div>
       </div>
       <div className='ingredientBatchcodeBox'>
         <div className='ingredient container' style={{
@@ -446,17 +453,36 @@ function BatchCodesSection({
 
         
 
-        {sortIngredients(
-          ingredients
-            .filter(ingredient =>
-              viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
-            )
-        ).map(ingredient => {
+        {sortIngredients((() => {
+          const activeIngredients = ingredients.filter(ingredient =>
+            viewingBatch.pizzas.some(pizza => pizza.quantity > 0 && pizza.ingredients.includes(ingredient.name))
+          );
+
+          if (viewingBatch.batch_type === 'pizzas' && (manualTomatoTinEnabled || hasSavedTomatoTinsCode)) {
+            const hasTomatoTins = activeIngredients.some(i => i.name.toLowerCase() === 'tomato (tins)');
+            if (!hasTomatoTins) {
+              const tomatoTinsIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato (tins)');
+              if (tomatoTinsIngredient) {
+                activeIngredients.push(tomatoTinsIngredient);
+              }
+            }
+          }
+
+          return activeIngredients;
+        })()).map(ingredient => {
           const batchCode = viewingBatch.pizzas
-            .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
+            .flatMap(pizza => pizza.ingredientBatchCodes?.[ingredient.name] ? [pizza.ingredientBatchCodes[ingredient.name]] : [])
             .find(code => code);
           const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
-          const numberOfUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
+          const baseUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
+          const isTomatoTinsIngredient = ingredient.name.toLowerCase() === 'tomato (tins)';
+          const isTomatoTinsActive = viewingBatch.batch_type === 'pizzas' && isTomatoTinsIngredient && (manualTomatoTinEnabled || hasSavedTomatoTinsCode);
+          const savedTomatoTinsUnits = isTomatoTinsIngredient && batchCode
+            ? parseBatchAllocations(batchCode).reduce((sum, allocation) => sum + (allocation.quantity || 0), 0)
+            : 0;
+          const numberOfUnits = isTomatoTinsActive
+            ? (manualTomatoTinEnabled ? 1 : (savedTomatoTinsUnits || 1))
+            : baseUnits;
 
           // Check if quantities are sufficient
           const isQuantitySufficient = ingredient.name === 'starter'
@@ -855,7 +881,7 @@ function BatchCodesSection({
                                             setBatchQuantityInput('');
                                           }
                                         }}
-                                      />
+                                        />
                                     </div>
                                   )}
                                 </div>
@@ -929,6 +955,28 @@ function BatchCodesSection({
             </div>
           );
         })}
+        {viewingBatch.batch_type === 'pizzas' && shouldUseDeliveryDropdown(viewingBatch.batch_code) && (
+          <button
+            type="button"
+            className="addTomatoPizzaButton"
+            onClick={() => {
+              const tomatoTinsIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato (tins)');
+              if (!tomatoTinsIngredient) {
+                alert('Tomato (Tins) ingredient not found in ingredients list.');
+                return;
+              }
+              setManualTomatoTinEnabled(true);
+              const tomatoBatchCode = viewingBatch.pizzas
+                .flatMap(pizza => pizza.ingredientBatchCodes?.['Tomato (Tins)'] ? [pizza.ingredientBatchCodes['Tomato (Tins)']] : [])
+                .find(code => code);
+              setEditingField('ingredient-Tomato (Tins)');
+              setEditingValue(tomatoBatchCode || '');
+            }}
+            title="Add 1 tomato tin and select delivered batch"
+          >
+            + Add Tomato Tins
+          </button>
+        )}
 
         
       </div>

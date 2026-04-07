@@ -157,20 +157,21 @@
 /* plus minus on the available */
 .availableControls {
   display: flex;
+  justify-content: flex-start;
+  align-items: start;
 }
 .available {
   padding-right: 10px;
 }
-.minusArch, .plusArch {
-  padding: 0 1%;
-  border: solid 1px var(--darkLight);
-  border-radius: 25%;
+.updateAvailableButton {
+  padding: 5px;
+  margin: 5px;
   cursor: pointer;
-  font-weight: bold;
 }
-
-.minusArch:hover, .plusArch:hover {
-  background-color: var(--berthaLight);
+.availableInput {
+  max-width: 70px;
+  padding: 0;
+  text-align: center;
 }
 
 

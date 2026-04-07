@@ -1648,7 +1648,8 @@ const formatDateDisplay = (dateStr) => {
       // For pizza/dough ball batches, use existing logic plus new checks
       const selectedPizzas = viewingBatch.pizzas?.filter(p => p.quantity > 0) || [];
       const ingredientQuantities = calculateIngredientQuantities(selectedPizzas);
-      const requiredIngredients = Object.keys(ingredientQuantities);
+      const requiredIngredients = Object.keys(ingredientQuantities)
+        .filter(ingredient => ingredient !== 'Tomato (Tins)');
     
       const mergedIngredientCodes = {};
       selectedPizzas.forEach(pizza => {
@@ -3261,11 +3262,11 @@ const formatDateDisplay = (dateStr) => {
 <div >
 {!showPizzaPicker ? (
   <span
-    style={{ fontStyle: 'italic', cursor: 'pointer' }}
+    className='addTomatoPizzaButton'
     onClick={() => setShowPizzaPicker(true)}
   >
     {viewingBatch.batch_type === 'dough balls' ? '+ Add Dough Ball Type' : 
-  viewingBatch.batch_type === 'starter' ? '' : '+ Add a Pizza Type:'}
+  viewingBatch.batch_type === 'starter' ? '' : '+ Add a Pizza Type'}
   </span>
 ) : (
   <select

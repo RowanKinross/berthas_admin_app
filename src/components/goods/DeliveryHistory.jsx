@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, deleteDoc, doc} from '@firebase/firestore';
 import { db } from '../firebase/firebase';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDownload } from '@fortawesome/free-solid-svg-icons';
 
 // Component to render visual packaging indicators
 const PackagingIcon = ({ packaging, ingredientName, size = 'normal' }) => {
@@ -149,6 +151,10 @@ function DeliveryHistory() {
   const [editingUseBy, setEditingUseBy] = useState({});
   // Temp value state: { [deliveryId_good]: dateString }
   const [tempUseBy, setTempUseBy] = useState({});
+  // Inline edit state for allocation quantity: { [deliveryId_allocationIndex]: true }
+  const [editingAllocationQty, setEditingAllocationQty] = useState({});
+  // Temp value state for allocation quantity: { [deliveryId_allocationIndex]: quantityString }
+  const [tempAllocationQty, setTempAllocationQty] = useState({});
   // Save use by date to Firestore and update local state
   const handleUseBySave = async (deliveryId, good) => {
     const key = `${deliveryId}_${good}`;
@@ -194,6 +200,46 @@ function DeliveryHistory() {
     } catch (err) {
       alert('Error deleting delivery: ' + err.message);
     }
+  };
+
+  const isManualAllocationBatch = (batchCode) => {
+    const normalized = String(batchCode || '').trim().toLowerCase();
+    return normalized === 'waste' || normalized === 'restaurant transfer' || normalized === 'waste/restaurant transfer';
+  };
+
+  const handleAllocationQuantitySave = async (deliveryId, allocationIndex) => {
+    const key = `${deliveryId}_${allocationIndex}`;
+    const newQuantityRaw = tempAllocationQty[key];
+    const newQuantity = Number.parseFloat(newQuantityRaw);
+
+    if (newQuantityRaw === undefined || newQuantityRaw === '' || Number.isNaN(newQuantity) || newQuantity < 0) {
+      alert('Please enter a valid quantity.');
+      return;
+    }
+
+    try {
+      const deliveryRef = doc(db, 'deliveries', deliveryId);
+      const delivery = deliveries.find(d => d.id === deliveryId);
+      if (!delivery || !Array.isArray(delivery.allocations) || !delivery.allocations[allocationIndex]) return;
+
+      const updatedAllocations = [...delivery.allocations];
+      updatedAllocations[allocationIndex] = {
+        ...updatedAllocations[allocationIndex],
+        quantityAllocated: newQuantity
+      };
+
+      await import('firebase/firestore').then(({ updateDoc }) =>
+        updateDoc(deliveryRef, { allocations: updatedAllocations })
+      );
+
+      setDeliveries((prev) => prev.map(d =>
+        d.id === deliveryId ? { ...d, allocations: updatedAllocations } : d
+      ));
+    } catch (err) {
+      alert('Error saving allocation quantity: ' + err.message);
+    }
+
+    setEditingAllocationQty((prev) => ({ ...prev, [key]: false }));
   };
   
   
@@ -246,6 +292,138 @@ function DeliveryHistory() {
     });
   };
 
+  const formatDateForCSV = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  };
+
+  const csvEscape = (value) => {
+    if (value === null || value === undefined) return '';
+    const stringValue = String(value);
+    if (/[",\n]/.test(stringValue)) {
+      return `"${stringValue.replace(/"/g, '""')}"`;
+    }
+    return stringValue;
+  };
+
+  const formatQuantityForCSV = (value) => {
+    const parsed = Number.parseFloat(value);
+    if (Number.isNaN(parsed)) return '';
+    return parsed.toFixed(2).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+  };
+
+  const generateDeliveryCSV = () => {
+    const rows = deliveries.map((delivery) => {
+      const allocations = Array.isArray(delivery.allocations) ? delivery.allocations : [];
+      const selectedGoods = Array.isArray(delivery.selectedGoods) ? delivery.selectedGoods : [];
+
+      const ingredientRows = selectedGoods.map((good) => {
+        const ingredientBatchCode = delivery.batchCodes?.[good] || '';
+        const allocationsForGood = allocations.filter((allocation) => allocation.ingredientName === good);
+        const qtyDelivered = formatQuantityForCSV(delivery.quantities?.[good] ?? '');
+        const qtyAllocated = formatQuantityForCSV(
+          allocationsForGood.reduce((sum, allocation) => {
+            const parsed = Number.parseFloat(allocation.quantityAllocated);
+            return sum + (Number.isNaN(parsed) ? 0 : parsed);
+          }, 0)
+        );
+        const allocationSummary = allocationsForGood
+          .map((allocation) => {
+            const batchCode = allocation.allocatedToBatchCode || '';
+            const quantity = formatQuantityForCSV(allocation.quantityAllocated);
+            return `${batchCode}:${quantity}`;
+          })
+          .filter((entry) => !entry.endsWith(':'))
+          .join(', ');
+
+        const goodLabel = `${String(good).toUpperCase()}(${ingredientBatchCode})`;
+        return {
+          goodsDelivered: allocationSummary ? `${goodLabel} - ${allocationSummary}` : goodLabel,
+          qtyDelivered,
+          qtyAllocated
+        };
+      });
+
+      return {
+        deliveryId: delivery.id || '',
+        supplier: delivery.supplier || '',
+        deliveryDate: formatDateForCSV(delivery.deliveryDate),
+        poNumber: delivery.poNumber || '',
+        checkedBy: delivery.staffInitials || '',
+        qualityChecked: delivery.deliveryChecksComplete ? 'Yes' : 'No',
+        goodsDeliveredEntries: ingredientRows.map((row) => row.goodsDelivered),
+        qtyDeliveredEntries: ingredientRows.map((row) => row.qtyDelivered),
+        qtyAllocatedEntries: ingredientRows.map((row) => row.qtyAllocated)
+      };
+    });
+
+    const maxGoodsColumns = rows.reduce(
+      (max, row) => Math.max(max, row.goodsDeliveredEntries.length),
+      0
+    );
+
+    const goodsHeaders = Array.from({ length: maxGoodsColumns }, (_, index) => `goodsDelivered_${index}`);
+    const qtyDeliveredHeaders = Array.from({ length: maxGoodsColumns }, (_, index) => `qtyDelivered_${index}`);
+    const qtyAllocatedHeaders = Array.from({ length: maxGoodsColumns }, (_, index) => `qtyAllocated_${index}`);
+
+    const ingredientTripletHeaders = Array.from({ length: maxGoodsColumns }, (_, index) => [
+      goodsHeaders[index],
+      qtyDeliveredHeaders[index],
+      qtyAllocatedHeaders[index]
+    ]).flat();
+
+    const headers = [
+      'deliveryId',
+      'supplier',
+      'deliveryDate',
+      'poNumber',
+      'checkedBy',
+      'qualityChecked',
+      ...ingredientTripletHeaders
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => {
+        const csvRow = {
+          deliveryId: row.deliveryId,
+          supplier: row.supplier,
+          deliveryDate: row.deliveryDate,
+          poNumber: row.poNumber,
+          checkedBy: row.checkedBy,
+          qualityChecked: row.qualityChecked
+        };
+
+        goodsHeaders.forEach((header, index) => {
+          csvRow[header] = row.goodsDeliveredEntries[index] || '';
+        });
+
+        qtyDeliveredHeaders.forEach((header, index) => {
+          csvRow[header] = row.qtyDeliveredEntries[index] || '';
+        });
+
+        qtyAllocatedHeaders.forEach((header, index) => {
+          csvRow[header] = row.qtyAllocatedEntries[index] || '';
+        });
+
+        return headers.map((header) => csvEscape(csvRow[header])).join(',');
+      })
+    ].join('\n');
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `deliveries_allocations_${dateStamp}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return <div className="loading">Loading delivery history...</div>;
   }
@@ -263,7 +441,16 @@ function DeliveryHistory() {
 
   return (
     <div className="delivery-history">
-      <h3 className='deliveryHistoryTitle'>Delivery History</h3>
+      <div className='deliveryHistoryContainer'>
+        <h3 className='deliveryHistoryTitle'>Delivery History </h3>
+        <div 
+          className="downloadCSVButton"
+          onClick={generateDeliveryCSV}
+          title="Download delivery CSV"
+        >
+          <FontAwesomeIcon icon={faDownload} aria-hidden="true" />
+        </div>
+      </div>
       <div className="deliveries-list">
         {deliveries.map(delivery => (
           <div key={delivery.id} className="delivery-card">
@@ -459,6 +646,9 @@ function DeliveryHistory() {
                             </div>
                             <div className="allocations-list" style={{ marginLeft: '30px' }}>
                               {allocations.map((alloc, index) => {
+                                const allocationIndex = (delivery.allocations || []).findIndex(a => a === alloc);
+                                const allocationKey = `${delivery.id}_${allocationIndex}`;
+                                const canEditQuantity = allocationIndex !== -1 && isManualAllocationBatch(alloc.allocatedToBatchCode);
                                 let pizzaList = null;
                                 if (alloc.batchType === 'pizzas' && alloc.allocatedToBatchId && batches.length > 0) {
                                   const batch = batches.find(b => b.id === alloc.allocatedToBatchId);
@@ -504,7 +694,45 @@ function DeliveryHistory() {
                                         {pizzaList && <>- {pizzaList}</>}
                                       </div>
                                       <div className="allocation-quantity" style={{ fontWeight: 'bold' }}>
-                                        {(alloc.quantityAllocated || 0).toFixed(2)} {getIngredientData(good)?.packaging || 'units'}
+                                        {canEditQuantity && editingAllocationQty[allocationKey] ? (
+                                          <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={
+                                              tempAllocationQty[allocationKey] !== undefined
+                                                ? tempAllocationQty[allocationKey]
+                                                : String(alloc.quantityAllocated ?? '')
+                                            }
+                                            onChange={e => {
+                                              setTempAllocationQty(prev => ({ ...prev, [allocationKey]: e.target.value }));
+                                            }}
+                                            onBlur={() => handleAllocationQuantitySave(delivery.id, allocationIndex)}
+                                            onKeyDown={e => {
+                                              if (e.key === 'Enter') {
+                                                e.currentTarget.blur();
+                                              }
+                                            }}
+                                            autoFocus
+                                            style={{ width: 70 }}
+                                          />
+                                        ) : (
+                                          <span
+                                            style={canEditQuantity ? { cursor: 'pointer', borderBottom: '1px dashed #888' } : undefined}
+                                            title={canEditQuantity ? 'Click to edit quantity' : undefined}
+                                            onClick={() => {
+                                              if (!canEditQuantity) return;
+                                              setEditingAllocationQty(prev => ({ ...prev, [allocationKey]: true }));
+                                              setTempAllocationQty(prev => ({
+                                                ...prev,
+                                                [allocationKey]: String(alloc.quantityAllocated ?? '')
+                                              }));
+                                            }}
+                                          >
+                                            {(alloc.quantityAllocated || 0).toFixed(2)} 
+                                          </span>
+                                        )}{' '}
+                                        {getIngredientData(good)?.packaging || 'units'}
                                       </div>
                                     </div>
                                   </div>
