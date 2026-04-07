@@ -3261,11 +3261,11 @@ const formatDateDisplay = (dateStr) => {
 <div >
 {!showPizzaPicker ? (
   <span
-    style={{ fontStyle: 'italic', cursor: 'pointer' }}
+    className='addTomatoPizzaButton'
     onClick={() => setShowPizzaPicker(true)}
   >
     {viewingBatch.batch_type === 'dough balls' ? '+ Add Dough Ball Type' : 
-  viewingBatch.batch_type === 'starter' ? '' : '+ Add a Pizza Type:'}
+  viewingBatch.batch_type === 'starter' ? '' : '+ Add a Pizza Type'}
   </span>
 ) : (
   <select
