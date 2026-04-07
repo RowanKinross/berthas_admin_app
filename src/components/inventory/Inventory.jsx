@@ -1,6 +1,6 @@
 // import berthasLogo from './bertha_logo'
 import './inventory.css';
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect} from 'react';
 import { app, db } from '../firebase/firebase';
 import { collection, addDoc, getDocs, getDoc, doc, updateDoc } from '@firebase/firestore'; 
 import { Dropdown, Button, Form } from 'react-bootstrap';
@@ -37,7 +37,7 @@ function Inventory() {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [selectedPizzaId, setSelectedPizzaId] = useState(null);
-  const [archiveQty, setArchiveQty] = useState('');
+  const [availableInput, setAvailableInput] = useState('');
   const [orders, setOrders] = useState([]);
 
 
@@ -272,95 +272,29 @@ function Inventory() {
 
 
 
-// Batching for minus (archive) and plus (un-archive) actions
-const minusArchiveCountRef = useRef(0);
-const plusArchiveCountRef = useRef(0);
-const minusArchiveTimeoutRef = useRef(null);
-const plusArchiveTimeoutRef = useRef(null);
+  const getBatchMetrics = (batchData, pizzaId) => {
+    const match = batchData?.pizzas?.find(p => p.id === pizzaId);
+    const total = match?.quantity || 0;
 
-const adjustArchive = (delta) => {
-  if (delta === -1) {
-    minusArchiveCountRef.current += 1;
-    if (minusArchiveTimeoutRef.current) clearTimeout(minusArchiveTimeoutRef.current);
-    minusArchiveTimeoutRef.current = setTimeout(() => {
-      doMinusArchiveBatch();
-    }, 500); // 500ms debounce
-  } else if (delta === 1) {
-    plusArchiveCountRef.current += 1;
-    if (plusArchiveTimeoutRef.current) clearTimeout(plusArchiveTimeoutRef.current);
-    plusArchiveTimeoutRef.current = setTimeout(() => {
-      doPlusArchiveBatch();
-    }, 500); // 500ms debounce
-  }
-};
+    const completed = (batchData?.pizza_allocations || [])
+      .filter(a => a.pizzaId === pizzaId && a.status === "completed")
+      .reduce((sum, a) => sum + a.quantity, 0);
 
-const doMinusArchiveBatch = async () => {
-  const count = minusArchiveCountRef.current;
-  if (count === 0) return;
-  minusArchiveCountRef.current = 0;
-  try {
-    const batchRef = doc(db, "batches", selectedBatch.id);
-    const batchSnap = await getDoc(batchRef);
-    const batchData = batchSnap.data();
-    const allocations = [...(batchData.pizza_allocations || [])];
-    const pizzas = [...(batchData.pizzas || [])];
-    const pizzaIndex = pizzas.findIndex(p => p.id === selectedPizzaId);
-    const archivedIndex = allocations.findIndex(a =>
-      a.pizzaId === selectedPizzaId &&
-      a.orderId === 'archived' &&
-      a.status === 'completed'
-    );
-    if (pizzaIndex === -1) return;
-    const completed = allocations
-      .filter(a => a.pizzaId === selectedPizzaId && a.status === "completed")
+    const active = (batchData?.pizza_allocations || [])
+      .filter(a => a.pizzaId === pizzaId && a.status !== "completed")
       .reduce((sum, a) => sum + a.quantity, 0);
-    const active = allocations
-      .filter(a => a.pizzaId === selectedPizzaId && a.status !== "completed")
-      .reduce((sum, a) => sum + a.quantity, 0);
-    const effective = pizzas[pizzaIndex].quantity - completed;
+
+    const effective = total - completed;
     const available = effective - active;
-    const toArchive = Math.min(count, available);
-    if (toArchive <= 0) return;
-    if (archivedIndex > -1) {
-      allocations[archivedIndex].quantity += toArchive;
-    } else {
-      allocations.push({
-        pizzaId: selectedPizzaId,
-        orderId: 'archived',
-        quantity: toArchive,
-        status: 'completed'
-      });
-    }
-    await updateDoc(batchRef, {
-      pizza_allocations: allocations,
-      pizzas: pizzas
-    });
-    const updatedBatch = {
-      ...selectedBatch,
-      pizza_allocations: allocations,
-      pizzas: pizzas
-    };
-    setSelectedBatch(updatedBatch);
-    setStock(prevStock =>
-      prevStock.map(batch =>
-        batch.id === selectedBatch.id
-          ? {
-              ...batch,
-              pizza_allocations: allocations,
-              pizzas: pizzas
-            }
-          : batch
-      )
-    );
-  } catch (error) {
-    console.error("❌ Error adjusting archive (batch):", error);
-  }
-};
 
-const doPlusArchiveBatch = async () => {
-  const count = plusArchiveCountRef.current;
-  if (count === 0) return;
-  plusArchiveCountRef.current = 0;
+    return { total, completed, active, effective, available };
+  };
+
+  const updateAvailableQuantity = async () => {
+    if (!selectedBatch || !selectedPizzaId) return;
+
+    const desiredAvailable = Math.max(0, Math.floor(parseFloat(availableInput) || 0));
+
   try {
     const batchRef = doc(db, "batches", selectedBatch.id);
     const batchSnap = await getDoc(batchRef);
@@ -368,17 +302,49 @@ const doPlusArchiveBatch = async () => {
     const allocations = [...(batchData.pizza_allocations || [])];
     const pizzas = [...(batchData.pizzas || [])];
     const pizzaIndex = pizzas.findIndex(p => p.id === selectedPizzaId);
+    if (pizzaIndex === -1) return;
+
+    const { available } = getBatchMetrics(batchData, selectedPizzaId);
+    if (desiredAvailable === available) return;
+
     const archivedIndex = allocations.findIndex(a =>
       a.pizzaId === selectedPizzaId &&
       a.orderId === 'archived' &&
       a.status === 'completed'
     );
-    if (archivedIndex === -1) return;
-    const toUnarchive = Math.min(count, allocations[archivedIndex].quantity);
-    allocations[archivedIndex].quantity -= toUnarchive;
-    if (allocations[archivedIndex].quantity <= 0) {
-      allocations.splice(archivedIndex, 1);
+
+    if (desiredAvailable < available) {
+      const toArchive = available - desiredAvailable;
+      if (archivedIndex > -1) {
+        allocations[archivedIndex].quantity += toArchive;
+      } else {
+        allocations.push({
+          pizzaId: selectedPizzaId,
+          orderId: 'archived',
+          quantity: toArchive,
+          status: 'completed'
+        });
+      }
+    } else {
+      let toIncrease = desiredAvailable - available;
+
+      // First unarchive existing archived quantity.
+      if (archivedIndex > -1) {
+        const archivedQty = allocations[archivedIndex].quantity;
+        const toUnarchive = Math.min(toIncrease, archivedQty);
+        allocations[archivedIndex].quantity -= toUnarchive;
+        toIncrease -= toUnarchive;
+        if (allocations[archivedIndex].quantity <= 0) {
+          allocations.splice(archivedIndex, 1);
+        }
+      }
+
+      // Then add remaining increase directly to batch quantity.
+      if (toIncrease > 0) {
+        pizzas[pizzaIndex].quantity += toIncrease;
+      }
     }
+
     await updateDoc(batchRef, {
       pizza_allocations: allocations,
       pizzas: pizzas
@@ -389,6 +355,8 @@ const doPlusArchiveBatch = async () => {
       pizzas: pizzas
     };
     setSelectedBatch(updatedBatch);
+    const refreshedMetrics = getBatchMetrics(updatedBatch, selectedPizzaId);
+    setAvailableInput(String(Math.max(0, refreshedMetrics.available)));
     setStock(prevStock =>
       prevStock.map(batch =>
         batch.id === selectedBatch.id
@@ -401,9 +369,15 @@ const doPlusArchiveBatch = async () => {
       )
     );
   } catch (error) {
-    console.error("❌ Error adjusting archive (plus batch):", error);
+    console.error("❌ Error updating available quantity:", error);
   }
-};
+  };
+
+  useEffect(() => {
+    if (!showArchiveModal || !selectedBatch || !selectedPizzaId) return;
+    const metrics = getBatchMetrics(selectedBatch, selectedPizzaId);
+    setAvailableInput(String(Math.max(0, metrics.available)));
+  }, [showArchiveModal, selectedBatch, selectedPizzaId]);
 
 
 
@@ -616,13 +590,6 @@ return (
       const effective = total - completed;
       const available = effective - active;
 
-      const hasArchivedAllocation = (selectedBatch.pizza_allocations || []).some(
-        a => a.pizzaId === selectedPizzaId &&
-            a.orderId === 'archived' &&
-            a.status === 'completed' &&
-            a.quantity > 0
-      );
-
       return (
       <div 
         className="modal"
@@ -670,13 +637,26 @@ return (
                     <strong>{a.accountName}: {a.quantity}</strong> {a.deliveryDay}
                   </p>
                 ))}
-              <div style={{ marginTop: '1rem' }}>
+              <div >
                 <p><strong>Total:</strong> {effective}</p>
                 <p><strong>On order:</strong> {active}</p>
                 <div className='availableControls'>
-                  <p className='available'><strong>Available:</strong> {available} </p>
-                    <p onClick={() => adjustArchive(-1)} disabled={available <= 0} className='minusArch'> − </p>{' '}
-                    <p onClick={() => adjustArchive(1)} disabled={!hasArchivedAllocation} className='plusArch'> + </p>
+                  <p className='available'><strong>Available:</strong></p>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={availableInput}
+                    onChange={(e) => setAvailableInput(e.target.value)}
+                    className='availableInput'
+                  />
+                  <div                    
+                    type="button"
+                    className='button updateAvailableButton'
+                    onClick={updateAvailableQuantity}
+                  >
+                     <strong>→</strong> update
+                  </div>
               </div>
               </div>
             </div>
