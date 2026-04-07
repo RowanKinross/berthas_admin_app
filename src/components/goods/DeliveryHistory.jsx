@@ -729,7 +729,7 @@ function DeliveryHistory() {
                                               }));
                                             }}
                                           >
-                                            {(alloc.quantityAllocated || 0).toFixed(2)}
+                                            {(alloc.quantityAllocated || 0).toFixed(2)} 
                                           </span>
                                         )}{' '}
                                         {getIngredientData(good)?.packaging || 'units'}
