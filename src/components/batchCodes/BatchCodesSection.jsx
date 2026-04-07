@@ -455,11 +455,11 @@ function BatchCodesSection({
           );
 
           if (viewingBatch.batch_type === 'pizzas' && manualTomatoTinEnabled) {
-            const hasTomato = activeIngredients.some(i => i.name.toLowerCase() === 'tomato');
-            if (!hasTomato) {
-              const tomatoIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato');
-              if (tomatoIngredient) {
-                activeIngredients.push(tomatoIngredient);
+            const hasTomatoTins = activeIngredients.some(i => i.name.toLowerCase() === 'tomato (tins)');
+            if (!hasTomatoTins) {
+              const tomatoTinsIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato (tins)');
+              if (tomatoTinsIngredient) {
+                activeIngredients.push(tomatoTinsIngredient);
               }
             }
           }
@@ -467,11 +467,11 @@ function BatchCodesSection({
           return activeIngredients;
         })()).map(ingredient => {
           const batchCode = viewingBatch.pizzas
-            .flatMap(pizza => pizza.ingredients.includes(ingredient.name) ? pizza.ingredientBatchCodes[ingredient.name] : [])
+            .flatMap(pizza => pizza.ingredientBatchCodes?.[ingredient.name] ? [pizza.ingredientBatchCodes[ingredient.name]] : [])
             .find(code => code);
           const ingredientQuantity = calculateIngredientQuantities(viewingBatch.pizzas)[ingredient.name] || { quantity: 0, unitWeight: 1, unit: '' };
           const baseUnits = ingredientQuantity.quantity / ingredientQuantity.unitWeight;
-          const isManualTomatoTin = viewingBatch.batch_type === 'pizzas' && manualTomatoTinEnabled && ingredient.name.toLowerCase() === 'tomato';
+          const isManualTomatoTin = viewingBatch.batch_type === 'pizzas' && manualTomatoTinEnabled && ingredient.name.toLowerCase() === 'tomato (tins)';
           const numberOfUnits = baseUnits + (isManualTomatoTin ? 1 : 0);
 
           // Check if quantities are sufficient
@@ -950,16 +950,16 @@ function BatchCodesSection({
             type="button"
             className="addTomatoPizzaButton"
             onClick={() => {
-              const tomatoIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato');
-              if (!tomatoIngredient) {
-                alert('Tomato ingredient not found in ingredients list.');
+              const tomatoTinsIngredient = ingredients.find(i => i.name.toLowerCase() === 'tomato (tins)');
+              if (!tomatoTinsIngredient) {
+                alert('Tomato (Tins) ingredient not found in ingredients list.');
                 return;
               }
               setManualTomatoTinEnabled(true);
               const tomatoBatchCode = viewingBatch.pizzas
-                .flatMap(pizza => pizza.ingredientBatchCodes?.Tomato ? [pizza.ingredientBatchCodes.Tomato] : [])
+                .flatMap(pizza => pizza.ingredientBatchCodes?.['Tomato (Tins)'] ? [pizza.ingredientBatchCodes['Tomato (Tins)']] : [])
                 .find(code => code);
-              setEditingField('ingredient-Tomato');
+              setEditingField('ingredient-Tomato (Tins)');
               setEditingValue(tomatoBatchCode || '');
             }}
             title="Add 1 tomato tin and select delivered batch"
